@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
+import 'tentang_view.dart';
 
 class BerandaView extends StatelessWidget {
   final Function(int)? onNavigateTab;
@@ -141,7 +142,10 @@ class BerandaView extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 ElevatedButton(
-                  onPressed: () => onNavigateTab?.call(3),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TentangView()),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.gold,
                     foregroundColor: Colors.white,
