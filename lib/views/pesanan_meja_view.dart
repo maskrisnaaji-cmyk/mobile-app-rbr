@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
+import '../widgets/mobile_frame.dart';
 import '../widgets/payment_option_card.dart';
 import '../widgets/price_summary_card.dart';
 
@@ -16,73 +17,75 @@ class _PesananMejaViewState extends State<PesananMejaView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgCanvas,
-      appBar: AppBar(
+    return MobileFrame(
+      child: Scaffold(
         backgroundColor: AppColors.bgCanvas,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.darkText),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Pesanan Meja',
-          style: GoogleFonts.lora(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText,
+        appBar: AppBar(
+          backgroundColor: AppColors.bgCanvas,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.darkText),
+            onPressed: () => Navigator.pop(context),
           ),
-        ),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined, color: AppColors.darkText, size: 20),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline_rounded, color: AppColors.darkText, size: 20),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Banner Pendopo
-            _buildBannerPendopo(),
-            const SizedBox(height: 16),
-
-            // Card Detail Outlet
-            _buildOutletCard(),
-            const SizedBox(height: 16),
-
-            // Ringkasan Menu
-            _buildMenuSummary(),
-            const SizedBox(height: 16),
-
-            // Kupon & Promo
-            _buildPromoSection(),
-            const SizedBox(height: 16),
-
-            // Rincian Pembayaran (menggunakan Widget PriceSummaryCard)
-            const PriceSummaryCard(
-              subtotal: 'Rp 35.000',
-              taxFee: 'Rp 0',
-              discount: '-Rp 0',
-              totalPrice: 'Rp 35.000',
+          title: Text(
+            'Pesanan Meja',
+            style: GoogleFonts.lora(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.darkText,
             ),
-            const SizedBox(height: 16),
-
-            // Metode Pembayaran (menggunakan Widget PaymentOptionCard)
-            _buildPaymentSection(),
-            const SizedBox(height: 24),
-
-            // Tombol Konfirmasi Bayar
-            _buildConfirmButton(),
-            const SizedBox(height: 20),
+          ),
+          centerTitle: false,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.share_outlined, color: AppColors.darkText, size: 20),
+              onPressed: () {},
+            ),
+            IconButton(
+              icon: const Icon(Icons.person_outline_rounded, color: AppColors.darkText, size: 20),
+              onPressed: () {},
+            ),
           ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Banner Pendopo
+              _buildBannerPendopo(),
+              const SizedBox(height: 16),
+
+              // Card Detail Outlet
+              _buildOutletCard(),
+              const SizedBox(height: 16),
+
+              // Ringkasan Menu
+              _buildMenuSummary(),
+              const SizedBox(height: 16),
+
+              // Kupon & Promo
+              _buildPromoSection(),
+              const SizedBox(height: 16),
+
+              // Rincian Pembayaran (menggunakan Widget PriceSummaryCard)
+              const PriceSummaryCard(
+                subtotal: 'Rp 35.000',
+                taxFee: 'Rp 0',
+                discount: '-Rp 0',
+                totalPrice: 'Rp 35.000',
+              ),
+              const SizedBox(height: 16),
+
+              // Metode Pembayaran (menggunakan Widget PaymentOptionCard)
+              _buildPaymentSection(),
+              const SizedBox(height: 24),
+
+              // Tombol Konfirmasi Bayar
+              _buildConfirmButton(),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../widgets/mobile_frame.dart';
 import 'agenda_view.dart';
 import 'beranda_view.dart';
 import 'kedai_kopi_view.dart';
@@ -14,7 +15,7 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 1;
+  int _selectedIndex = 0; // 0 = Beranda (halaman awal setelah login)
 
   final List<Widget> _views = const [
     BerandaView(),
@@ -32,41 +33,43 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _views[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onSelectTab,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.maroon,
-        unselectedItemColor: AppColors.greyText,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Beranda',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_cafe_outlined),
-            activeIcon: Icon(Icons.local_cafe),
-            label: 'Kedai Kopi',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book_outlined),
-            activeIcon: Icon(Icons.menu_book),
-            label: 'Pustaka',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            activeIcon: Icon(Icons.calendar_today),
-            label: 'Agenda',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            activeIcon: Icon(Icons.people),
-            label: 'Komunitas',
-          ),
-        ],
+    return MobileFrame(
+      child: Scaffold(
+        body: _views[_selectedIndex],
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onSelectTab,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: AppColors.maroon,
+          unselectedItemColor: AppColors.greyText,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Beranda',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.local_cafe_outlined),
+              activeIcon: Icon(Icons.local_cafe),
+              label: 'Kedai Kopi',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.menu_book_outlined),
+              activeIcon: Icon(Icons.menu_book),
+              label: 'Pustaka',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_today_outlined),
+              activeIcon: Icon(Icons.calendar_today),
+              label: 'Agenda',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_outline),
+              activeIcon: Icon(Icons.people),
+              label: 'Komunitas',
+            ),
+          ],
+        ),
       ),
     );
   }
