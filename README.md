@@ -1,17 +1,27 @@
-# mobile_app
 
-A new Flutter project.
+### 2️⃣ File README.md untuk mobile_app (mobile-app-rbr)
 
-## Getting Started
+markdown
+# Rumah Budaya Ratna - Mobile Application
 
-This project is a starting point for a Flutter application.
+Aplikasi mobile resmi **Rumah Budaya Ratna** untuk pengunjung dan penikmat budaya. Memungkinkan pengguna untuk menjelajahi katalog perpustakaan, melihat agenda kegiatan budaya, serta memesan tempat di cafe.
 
-A few resources to get you started if this is your first Flutter project:
+## 🛠️ Deskripsi Proyek
+Aplikasi mobile ini dibangun menggunakan Flutter (Dart) dengan pendekatan komponen modular untuk memberikan performa native yang mulus di perangkat Android dan iOS.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## 📦 Daftar Library / Package yang Digunakan
+- **Flutter SDK** (`3.x+`) - Cross-platform Framework
+- **Cupertino Icons & Material** - Icon Systems
+- **Google Fonts** - Typography System
+- **HTTP / Dio** - REST API Client
+- **Shared Preferences** - Local Data Storage
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🚀 Panduan Menjalankan Aplikasi
+
+Jalankan perintah berikut secara berurutan di terminal (pastikan emulator/HP fisik sudah terhubung):
+
+bash
+git clone [https://github.com/maskrisnaaji-cmyk/mobile-app-rbr.git](https://github.com/maskrisnaaji-cmyk/mobile-app-rbr.git)
+cd mobile-app-rbr
+flutter pub get
+flutter run
