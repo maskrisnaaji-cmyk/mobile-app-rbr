@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
+import 'booking_checkout_view.dart';
 
 class AgendaView extends StatelessWidget {
   const AgendaView({super.key});
@@ -58,6 +59,7 @@ class AgendaView extends StatelessWidget {
 
           // Event Card 1
           _buildEventCard(
+            context,
             category: 'Lokakarya',
             time: '10 Sep • 15:30 WIB',
             seats: 'Sisa 4 Kursi',
@@ -70,6 +72,7 @@ class AgendaView extends StatelessWidget {
 
           // Event Card 2
           _buildEventCard(
+            context,
             category: 'Wicara Seni',
             time: '10 Sep • 19:00 WIB',
             seats: 'Sisa 12 Kursi',
@@ -126,7 +129,8 @@ class AgendaView extends StatelessWidget {
     );
   }
 
-  Widget _buildEventCard({
+  Widget _buildEventCard(
+    BuildContext context, {
     required String category,
     required String time,
     required String seats,
@@ -212,7 +216,20 @@ class AgendaView extends StatelessWidget {
                       ],
                     ),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BookingCheckoutView(
+                              eventTitle: title,
+                              category: category,
+                              time: time,
+                              location: location,
+                              basePrice: price,
+                            ),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.maroon,
                         foregroundColor: Colors.white,
