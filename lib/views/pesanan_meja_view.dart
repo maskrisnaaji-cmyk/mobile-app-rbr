@@ -4,6 +4,9 @@ import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
 import '../widgets/payment_option_card.dart';
 import '../widgets/price_summary_card.dart';
+import 'package:mobile_app/views/qris_payment_view.dart';
+import 'package:mobile_app/views/va_payment_view.dart';
+import 'package:mobile_app/views/struk_pembayaran_view.dart';
 
 class PesananMejaView extends StatefulWidget {
   const PesananMejaView({super.key});
@@ -477,9 +480,22 @@ class _PesananMejaViewState extends State<PesananMejaView> {
       height: 52,
       child: ElevatedButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pesanan berhasil dibuat!')),
-          );
+          if (_selectedPaymentMethod == 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const QrisPaymentView()),
+            );
+          } else if (_selectedPaymentMethod == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const VaPaymentView()),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StrukPembayaranView()),
+            );
+          }
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.maroon,
