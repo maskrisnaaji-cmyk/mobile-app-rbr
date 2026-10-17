@@ -4,6 +4,42 @@ import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
 import 'struk_tiket_view.dart';
 
+const Color _paymentEspresso = Color(0xFF2C1810);
+const Color _paymentTerracotta = Color(0xFF8B2B1B);
+const Color _paymentSoftTint = Color(0xFFFFFDFB);
+const Color _paymentMuted = Color(0xFF7A6E67);
+
+enum _PaymentMethod {
+  qris(
+    label: 'QRIS Nasional',
+    description: 'GoPay, OVO, DANA, ShopeePay, & m-Banking',
+    icon: Icons.qr_code_2_rounded,
+    badge: 'INSTAN',
+  ),
+  bankTransfer(
+    label: 'Transfer Bank VA',
+    description: 'BCA, Mandiri, BNI, BRI (Verifikasi Otomatis)',
+    icon: Icons.account_balance_rounded,
+  ),
+  cashier(
+    label: 'Bayar di Kasir (Tunai / EDC)',
+    description: 'Tunjukkan kode booking ke barista / kasir venue',
+    icon: Icons.payments_outlined,
+  );
+
+  const _PaymentMethod({
+    required this.label,
+    required this.description,
+    required this.icon,
+    this.badge,
+  });
+
+  final String label;
+  final String description;
+  final IconData icon;
+  final String? badge;
+}
+
 class BookingCheckoutView extends StatefulWidget {
   final String eventTitle;
   final String category;
@@ -32,6 +68,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
   // State Pilihan Tiket (0 = Presale, 1 = Reguler)
   int _selectedTicketType = 0;
   int _ticketQuantity = 1;
+  _PaymentMethod _selectedPaymentMethod = _PaymentMethod.qris;
 
   final int _presalePrice = 25000;
   final int _regulerPrice = 35000;
@@ -57,7 +94,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     super.dispose();
   }
 
-  int get _currentUnitPrice => _selectedTicketType == 0 ? _presalePrice : _regulerPrice;
+  int get _currentUnitPrice =>
+      _selectedTicketType == 0 ? _presalePrice : _regulerPrice;
   int get _totalAmount => _currentUnitPrice * _ticketQuantity;
 
   String _formatRupiah(int amount) {
@@ -73,7 +111,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           backgroundColor: AppColors.bgCanvas,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
+            icon:
+                const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -87,7 +126,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           centerTitle: false,
           actions: [
             IconButton(
-              icon: const Icon(Icons.info_outline_rounded, color: AppColors.textMain, size: 20),
+              icon: const Icon(Icons.info_outline_rounded,
+                  color: AppColors.textMain, size: 20),
               onPressed: () {},
             ),
           ],
@@ -115,11 +155,15 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                 _buildBookerFormSection(),
                 const SizedBox(height: 16),
 
-                // 5. Ringkasan Biaya
+                // 5. Metode Pembayaran
+                _buildPaymentMethodSection(),
+                const SizedBox(height: 16),
+
+                // 6. Ringkasan Biaya
                 _buildPriceSummaryCard(),
                 const SizedBox(height: 20),
 
-                // 6. Tombol Lanjut ke Pembayaran
+                // 7. Tombol Lanjut ke Pembayaran
                 _buildSubmitButton(),
                 const SizedBox(height: 24),
               ],
@@ -169,7 +213,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
               ),
               Row(
                 children: [
-                  const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
+                  const Icon(Icons.star_rounded,
+                      color: Color(0xFFF59E0B), size: 16),
                   const SizedBox(width: 4),
                   Text(
                     'Pilihan Komunitas',
@@ -195,7 +240,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.access_time_rounded, size: 13, color: AppColors.maroon),
+              const Icon(Icons.access_time_rounded,
+                  size: 13, color: AppColors.maroon),
               const SizedBox(width: 6),
               Text(
                 widget.time,
@@ -210,7 +256,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           const SizedBox(height: 5),
           Row(
             children: [
-              const Icon(Icons.location_on_outlined, size: 14, color: AppColors.maroon),
+              const Icon(Icons.location_on_outlined,
+                  size: 14, color: AppColors.maroon),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -271,7 +318,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
             badgeColor: const Color(0xFF047857),
             badgeBgColor: const Color(0xFF10B981).withValues(alpha: 0.12),
             price: _formatRupiah(_presalePrice),
-            description: 'Akses penuh lokakarya, booklet materi, dan free kopi seduh.',
+            description:
+                'Akses penuh lokakarya, booklet materi, dan free kopi seduh.',
           ),
           const SizedBox(height: 10),
 
@@ -306,7 +354,9 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.maroon.withValues(alpha: 0.03) : AppColors.bgCanvas,
+          color: isSelected
+              ? AppColors.maroon.withValues(alpha: 0.03)
+              : AppColors.bgCanvas,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.maroon : AppColors.border,
@@ -314,76 +364,80 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           ),
         ),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                    color: isSelected ? AppColors.maroon : AppColors.textMuted,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textMain,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeBgColor,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  badge,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: badgeColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 26.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  description,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    color: AppColors.textMuted,
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      isSelected
+                          ? Icons.radio_button_checked_rounded
+                          : Icons.radio_button_off_rounded,
+                      color:
+                          isSelected ? AppColors.maroon : AppColors.textMuted,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textMain,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$price / orang',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.maroon,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: badgeBgColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    badge,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: badgeColor,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 26.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    description,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$price / orang',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.maroon,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // --- Widget: Pengatur Jumlah Tiket (+ dan -) ---
   Widget _buildTicketQuantitySection() {
@@ -430,11 +484,13 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.remove, size: 16, color: AppColors.maroon),
+                  icon: const Icon(Icons.remove,
+                      size: 16, color: AppColors.maroon),
                   onPressed: _ticketQuantity > 1
                       ? () => setState(() => _ticketQuantity--)
                       : null,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 36),
                   padding: EdgeInsets.zero,
                 ),
                 Container(
@@ -450,11 +506,13 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add, size: 16, color: AppColors.maroon),
+                  icon:
+                      const Icon(Icons.add, size: 16, color: AppColors.maroon),
                   onPressed: _ticketQuantity < 5
                       ? () => setState(() => _ticketQuantity++)
                       : null,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 36),
                   padding: EdgeInsets.zero,
                 ),
               ],
@@ -479,7 +537,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
         children: [
           Row(
             children: [
-              const Icon(Icons.badge_outlined, color: AppColors.maroon, size: 17),
+              const Icon(Icons.badge_outlined,
+                  color: AppColors.maroon, size: 17),
               const SizedBox(width: 8),
               Text(
                 'INFORMASI PEMESAN',
@@ -508,7 +567,9 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
             label: 'Nama Lengkap',
             icon: Icons.person_outline_rounded,
             hint: 'Contoh: Budi Santoso',
-            validator: (value) => value == null || value.trim().isEmpty ? 'Nama wajib diisi' : null,
+            validator: (value) => value == null || value.trim().isEmpty
+                ? 'Nama wajib diisi'
+                : null,
           ),
           const SizedBox(height: 12),
 
@@ -519,7 +580,9 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
             icon: Icons.mail_outline_rounded,
             hint: 'Contoh: budi@gmail.com',
             keyboardType: TextInputType.emailAddress,
-            validator: (value) => value == null || !value.contains('@') ? 'Email tidak valid' : null,
+            validator: (value) => value == null || !value.contains('@')
+                ? 'Email tidak valid'
+                : null,
           ),
           const SizedBox(height: 12),
 
@@ -530,9 +593,164 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
             icon: Icons.phone_android_rounded,
             hint: 'Contoh: 081234567890',
             keyboardType: TextInputType.phone,
-            validator: (value) => value == null || value.trim().length < 8 ? 'Nomor HP tidak valid' : null,
+            validator: (value) => value == null || value.trim().length < 8
+                ? 'Nomor HP tidak valid'
+                : null,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodSection() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'METODE PEMBAYARAN',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.8,
+                color: _paymentEspresso,
+              ),
+            ),
+            Text(
+              'Pilih salah satu',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                color: _paymentMuted,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        for (final method in _PaymentMethod.values) ...[
+          _buildPaymentMethodOption(method),
+          if (method != _PaymentMethod.values.last) const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPaymentMethodOption(_PaymentMethod method) {
+    final isSelected = _selectedPaymentMethod == method;
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      child: InkWell(
+        onTap: () => setState(() => _selectedPaymentMethod = method),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isSelected ? _paymentSoftTint : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? _paymentTerracotta : AppColors.border,
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.025),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _paymentTerracotta.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  method.icon,
+                  color: _paymentTerracotta,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            method.label,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _paymentEspresso,
+                            ),
+                          ),
+                        ),
+                        if (method.badge case final badge?) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE5F4E8),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              badge,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF39734D),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      method.description,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 9,
+                        color: _paymentMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? _paymentTerracotta : _paymentMuted,
+                    width: 1.5,
+                  ),
+                ),
+                child: isSelected
+                    ? Center(
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: const BoxDecoration(
+                            color: _paymentTerracotta,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -573,7 +791,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
               fontSize: 12,
               color: AppColors.textMuted.withValues(alpha: 0.6),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             filled: true,
             fillColor: AppColors.bgCanvas,
             border: OutlineInputBorder(
@@ -696,6 +915,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                   ticketType: _selectedTicketType == 0 ? 'Presale' : 'Reguler',
                   ticketCount: _ticketQuantity,
                   totalPrice: _formatRupiah(_totalAmount),
+                  paymentMethod: _selectedPaymentMethod.label,
                 ),
               ),
             );
@@ -721,7 +941,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+            const Icon(Icons.arrow_forward_rounded,
+                color: Colors.white, size: 18),
           ],
         ),
       ),

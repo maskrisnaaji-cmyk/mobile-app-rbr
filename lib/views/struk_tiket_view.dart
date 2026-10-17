@@ -16,6 +16,7 @@ class StrukTiketView extends StatelessWidget {
   final String ticketType;
   final int ticketCount;
   final String totalPrice;
+  final String paymentMethod;
 
   const StrukTiketView({
     super.key,
@@ -30,6 +31,7 @@ class StrukTiketView extends StatelessWidget {
     this.ticketType = 'Presale',
     this.ticketCount = 2,
     this.totalPrice = 'Rp 50.000',
+    this.paymentMethod = 'QRIS Nasional',
   });
 
   @override
@@ -41,7 +43,8 @@ class StrukTiketView extends StatelessWidget {
           backgroundColor: AppColors.bgCanvas,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
+            icon:
+                const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
             onPressed: () {
               Navigator.pushAndRemoveUntil(
                 context,
@@ -61,7 +64,8 @@ class StrukTiketView extends StatelessWidget {
           centerTitle: false,
           actions: [
             IconButton(
-              icon: const Icon(Icons.share_outlined, color: AppColors.textMain, size: 20),
+              icon: const Icon(Icons.share_outlined,
+                  color: AppColors.textMain, size: 20),
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -199,7 +203,8 @@ class StrukTiketView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.confirmation_number_outlined, color: Colors.white, size: 16),
+                    const Icon(Icons.confirmation_number_outlined,
+                        color: Colors.white, size: 16),
                     const SizedBox(width: 6),
                     Text(
                       'RUMAH BUDAYA RATNA',
@@ -213,7 +218,8 @@ class StrukTiketView extends StatelessWidget {
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
@@ -238,7 +244,8 @@ class StrukTiketView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.tagBg,
                     borderRadius: BorderRadius.circular(6),
@@ -266,7 +273,8 @@ class StrukTiketView extends StatelessWidget {
                 // Waktu & Tempat
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today_outlined, size: 13, color: AppColors.maroon),
+                    const Icon(Icons.calendar_today_outlined,
+                        size: 13, color: AppColors.maroon),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -283,7 +291,8 @@ class StrukTiketView extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 14, color: AppColors.maroon),
+                    const Icon(Icons.location_on_outlined,
+                        size: 14, color: AppColors.maroon),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -309,7 +318,8 @@ class StrukTiketView extends StatelessWidget {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: AppColors.bgCanvas,
-                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(12)),
+                    borderRadius: const BorderRadius.horizontal(
+                        right: Radius.circular(12)),
                     border: Border.all(color: AppColors.border),
                   ),
                 ),
@@ -328,7 +338,9 @@ class StrukTiketView extends StatelessWidget {
                         return const SizedBox(
                           width: dashWidth,
                           height: dashHeight,
-                          child: DecoratedBox(decoration: BoxDecoration(color: AppColors.border)),
+                          child: DecoratedBox(
+                              decoration:
+                                  BoxDecoration(color: AppColors.border)),
                         );
                       }),
                     );
@@ -341,7 +353,8 @@ class StrukTiketView extends StatelessWidget {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: AppColors.bgCanvas,
-                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                    borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(12)),
                     border: Border.all(color: AppColors.border),
                   ),
                 ),
@@ -357,7 +370,9 @@ class StrukTiketView extends StatelessWidget {
                 _buildInfoRow('Nama Pemesan', buyerName),
                 _buildInfoRow('Email Aktif', buyerEmail),
                 _buildInfoRow('No. WhatsApp', buyerPhone),
-                _buildInfoRow('Jenis Tiket', '$ticketType ($ticketCount Tiket)'),
+                _buildInfoRow(
+                    'Jenis Tiket', '$ticketType ($ticketCount Tiket)'),
+                _buildInfoRow('Metode Pembayaran', paymentMethod),
                 const Divider(color: AppColors.border, height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -383,14 +398,16 @@ class StrukTiketView extends StatelessWidget {
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle_rounded, color: Color(0xFF047857), size: 14),
+                          const Icon(Icons.check_circle_rounded,
+                              color: Color(0xFF047857), size: 14),
                           const SizedBox(width: 4),
                           Text(
                             'LUNAS',
@@ -410,7 +427,8 @@ class StrukTiketView extends StatelessWidget {
                 // QR Code Check-in
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                   decoration: BoxDecoration(
                     color: AppColors.bgCanvas,
                     borderRadius: BorderRadius.circular(14),
@@ -513,7 +531,8 @@ class StrukTiketView extends StatelessWidget {
                 ),
               );
             },
-            icon: const Icon(Icons.download_rounded, color: AppColors.maroon, size: 18),
+            icon: const Icon(Icons.download_rounded,
+                color: AppColors.maroon, size: 18),
             label: Text(
               'SIMPAN E-TIKET / STRUK',
               style: GoogleFonts.plusJakartaSans(
