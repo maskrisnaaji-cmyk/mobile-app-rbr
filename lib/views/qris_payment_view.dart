@@ -5,7 +5,22 @@ import '../widgets/mobile_frame.dart';
 import 'struk_pembayaran_view.dart';
 
 class QrisPaymentView extends StatelessWidget {
-  const QrisPaymentView({super.key});
+  final String title;
+  final String orderNumber;
+  final String badgeText;
+  final String totalAmount;
+  final String buttonLabel;
+  final Widget? nextScreen;
+
+  const QrisPaymentView({
+    super.key,
+    this.title = 'Pesanan Meja',
+    this.orderNumber = '#ORD-9042',
+    this.badgeText = 'Meja 04 • Dine-in',
+    this.totalAmount = 'Rp 35.000',
+    this.buttonLabel = 'CEK STATUS PEMBAYARAN',
+    this.nextScreen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +35,7 @@ class QrisPaymentView extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
-            'Pesanan Meja',
+            title,
             style: GoogleFonts.lora(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -137,7 +152,7 @@ class QrisPaymentView extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Nomor Pesanan: #ORD-9042',
+                      'Nomor Pesanan: $orderNumber',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: AppColors.greyText,
@@ -154,7 +169,7 @@ class QrisPaymentView extends StatelessWidget {
                   border: Border.all(color: AppColors.maroon.withValues(alpha: 0.2)),
                 ),
                 child: Text(
-                  'Meja 04 • Dine-in',
+                  badgeText,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -180,7 +195,7 @@ class QrisPaymentView extends StatelessWidget {
                 ),
               ),
               Text(
-                'Rp 35.000',
+                totalAmount,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -369,7 +384,9 @@ class QrisPaymentView extends StatelessWidget {
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (_) => const StrukPembayaranView()),
+                MaterialPageRoute(
+                  builder: (_) => nextScreen ?? const StrukPembayaranView(),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -385,7 +402,7 @@ class QrisPaymentView extends StatelessWidget {
                 const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'CEK STATUS PEMBAYARAN',
+                  buttonLabel,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,

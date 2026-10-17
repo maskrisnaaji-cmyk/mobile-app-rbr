@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
+import 'qris_payment_view.dart';
+import 'va_payment_view.dart';
 import 'struk_tiket_view.dart';
 
 const Color _paymentEspresso = Color(0xFF2C1810);
@@ -20,11 +22,6 @@ enum _PaymentMethod {
     label: 'Transfer Bank VA',
     description: 'BCA, Mandiri, BNI, BRI (Verifikasi Otomatis)',
     icon: Icons.account_balance_rounded,
-  ),
-  cashier(
-    label: 'Bayar di Kasir (Tunai / EDC)',
-    description: 'Tunjukkan kode booking ke barista / kasir venue',
-    icon: Icons.payments_outlined,
   );
 
   const _PaymentMethod({
@@ -900,25 +897,52 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
       child: ElevatedButton(
         onPressed: () {
           if (_formKey.currentState?.validate() ?? false) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => StrukTiketView(
-                  bookingId: '#TKT-9042',
-                  eventTitle: widget.eventTitle,
-                  category: widget.category,
-                  eventTime: widget.time,
-                  eventLocation: widget.location,
-                  buyerName: _nameController.text.trim(),
-                  buyerEmail: _emailController.text.trim(),
-                  buyerPhone: _phoneController.text.trim(),
-                  ticketType: _selectedTicketType == 0 ? 'Presale' : 'Reguler',
-                  ticketCount: _ticketQuantity,
-                  totalPrice: _formatRupiah(_totalAmount),
-                  paymentMethod: _selectedPaymentMethod.label,
-                ),
-              ),
+            final eTicketView = StrukTiketView(
+              bookingId: '#TKT-9042',
+              eventTitle: widget.eventTitle,
+              category: widget.category,
+              eventTime: widget.time,
+              eventLocation: widget.location,
+              buyerName: _nameController.text.trim(),
+              buyerEmail: _emailController.text.trim(),
+              buyerPhone: _phoneController.text.trim(),
+              ticketType: _selectedTicketType == 0 ? 'Presale' : 'Reguler',
+              ticketCount: _ticketQuantity,
+              totalPrice: _formatRupiah(_totalAmount),
+              paymentMethod: _selectedPaymentMethod.label,
             );
+
+            if (_selectedPaymentMethod == _PaymentMethod.qris) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => QrisPaymentView(
+                    title: 'Instruksi Pembayaran QRIS',
+                    orderNumber: '#TKT-9042',
+                    badgeText:
+                        '$_ticketQuantity x ${_selectedTicketType == 0 ? "Presale" : "Reguler"}',
+                    totalAmount: _formatRupiah(_totalAmount),
+                    buttonLabel: 'Sudah Bayar / Cek Status',
+                    nextScreen: eTicketView,
+                  ),
+                ),
+              );
+            } else if (_selectedPaymentMethod == _PaymentMethod.bankTransfer) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => VaPaymentView(
+                    title: 'Instruksi Pembayaran VA',
+                    orderNumber: '#TKT-9042',
+                    badgeText:
+                        '$_ticketQuantity x ${_selectedTicketType == 0 ? "Presale" : "Reguler"}',
+                    totalAmount: _formatRupiah(_totalAmount),
+                    buttonLabel: 'Sudah Bayar / Cek Status',
+                    nextScreen: eTicketView,
+                  ),
+                ),
+              );
+            }
           }
         },
         style: ElevatedButton.styleFrom(

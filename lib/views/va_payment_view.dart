@@ -6,9 +6,26 @@ import '../widgets/mobile_frame.dart';
 import 'struk_pembayaran_view.dart';
 
 class VaPaymentView extends StatelessWidget {
-  const VaPaymentView({super.key});
+  final String title;
+  final String orderNumber;
+  final String badgeText;
+  final String totalAmount;
+  final String vaNumber;
+  final String bankName;
+  final String buttonLabel;
+  final Widget? nextScreen;
 
-  static const String _vaNumber = '8830 9042 1817 000';
+  const VaPaymentView({
+    super.key,
+    this.title = 'Pesanan Meja',
+    this.orderNumber = '#ORD-9042',
+    this.badgeText = 'Meja 04',
+    this.totalAmount = 'Rp 35.000',
+    this.vaNumber = '8830 9042 1817 000',
+    this.bankName = 'BCA Virtual Account',
+    this.buttonLabel = 'CEK STATUS PEMBAYARAN',
+    this.nextScreen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +40,7 @@ class VaPaymentView extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
-            'Pesanan Meja',
+            title,
             style: GoogleFonts.lora(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -144,7 +161,7 @@ class VaPaymentView extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Nomor Pesanan: #ORD-9042',
+                    'Nomor Pesanan: $orderNumber',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       color: AppColors.greyText,
@@ -160,7 +177,7 @@ class VaPaymentView extends StatelessWidget {
                   border: Border.all(color: AppColors.maroon.withValues(alpha: 0.2)),
                 ),
                 child: Text(
-                  'Meja 04',
+                  badgeText,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -186,7 +203,7 @@ class VaPaymentView extends StatelessWidget {
                 ),
               ),
               Text(
-                'Rp 35.000',
+                totalAmount,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -235,7 +252,7 @@ class VaPaymentView extends StatelessWidget {
                     const Icon(Icons.account_balance, color: Color(0xFF00388A), size: 14),
                     const SizedBox(width: 6),
                     Text(
-                      'BCA Virtual Account',
+                      bankName,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -287,7 +304,7 @@ class VaPaymentView extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    _vaNumber,
+                    vaNumber,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
@@ -298,7 +315,7 @@ class VaPaymentView extends StatelessWidget {
                 ),
                 InkWell(
                   onTap: () {
-                    Clipboard.setData(const ClipboardData(text: '883090421817000'));
+                    Clipboard.setData(ClipboardData(text: vaNumber.replaceAll(' ', '')));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Nomor Virtual Account disalin ke papan klip!',
@@ -394,11 +411,11 @@ class VaPaymentView extends StatelessWidget {
                 _buildAccordionItem(
                   title: 'Petunjuk Transfer m-BCA',
                   initiallyExpanded: true,
-                  steps: const [
+                  steps: [
                     'Buka aplikasi BCA mobile dan masukkan Kode Akses.',
                     'Pilih menu m-Transfer lalu pilih BCA Virtual Account.',
-                    'Masukkan nomor Virtual Account: 8830 9042 1817 000.',
-                    'Pastikan rincian Rumah Budaya Ratna dan nominal Rp 35.000 sudah sesuai.',
+                    'Masukkan nomor Virtual Account: $vaNumber.',
+                    'Pastikan rincian Rumah Budaya Ratna dan nominal $totalAmount sudah sesuai.',
                     'Masukkan PIN m-BCA untuk menyelesaikan pembayaran.',
                   ],
                 ),
@@ -406,11 +423,11 @@ class VaPaymentView extends StatelessWidget {
                 _buildAccordionItem(
                   title: 'Petunjuk Transfer KlikBCA',
                   initiallyExpanded: false,
-                  steps: const [
+                  steps: [
                     'Login ke KlikBCA Individual (www.klikbca.com).',
                     'Pilih menu Transfer Dana lalu Transfer ke BCA Virtual Account.',
-                    'Masukkan nomor Virtual Account: 8830 9042 1817 000.',
-                    'Validasi tagihan atas nama Rumah Budaya Ratna sejumlah Rp 35.000.',
+                    'Masukkan nomor Virtual Account: $vaNumber.',
+                    'Validasi tagihan atas nama Rumah Budaya Ratna sejumlah $totalAmount.',
                     'Ketik respon KeyBCA Appli 1 dan klik Kirim.',
                   ],
                 ),
@@ -418,11 +435,11 @@ class VaPaymentView extends StatelessWidget {
                 _buildAccordionItem(
                   title: 'Petunjuk Transfer ATM BCA',
                   initiallyExpanded: false,
-                  steps: const [
+                  steps: [
                     'Masukkan Kartu ATM BCA dan PIN Anda.',
                     'Pilih Transaksi Lainnya > Transfer > Ke Rek BCA Virtual Account.',
-                    'Masukkan nomor Virtual Account: 8830 9042 1817 000 lalu tekan Benar.',
-                    'Periksa nama Rumah Budaya Ratna dan jumlah bayar Rp 35.000.',
+                    'Masukkan nomor Virtual Account: $vaNumber lalu tekan Benar.',
+                    'Periksa nama Rumah Budaya Ratna dan jumlah bayar $totalAmount.',
                     'Tekan Ya untuk konfirmasi dan simpan struk pembayaran Anda.',
                   ],
                 ),
@@ -513,7 +530,9 @@ class VaPaymentView extends StatelessWidget {
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (_) => const StrukPembayaranView()),
+                MaterialPageRoute(
+                  builder: (_) => nextScreen ?? const StrukPembayaranView(),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -529,7 +548,7 @@ class VaPaymentView extends StatelessWidget {
                 const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'CEK STATUS PEMBAYARAN',
+                  buttonLabel,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
