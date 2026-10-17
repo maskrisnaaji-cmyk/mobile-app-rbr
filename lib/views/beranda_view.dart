@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
 import 'tentang_view.dart';
@@ -84,7 +84,7 @@ class BerandaView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Banner Hero Utama (Dengan Gradient & Shadow Lebih Mewah)
+          // Banner Hero Utama
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -228,9 +228,12 @@ class BerandaView extends StatelessWidget {
                 'Agenda Mendatang',
                 style: GoogleFonts.lora(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textMain),
               ),
-              Text(
-                'Kalender >',
-                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.maroon, fontWeight: FontWeight.bold),
+              GestureDetector(
+                onTap: () => onNavigateTab?.call(3),
+                child: Text(
+                  'Kalender >',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.maroon, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
@@ -270,7 +273,7 @@ class BerandaView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('19.00 WIB • Pendopo Utama', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.textMuted)),
+                      Text('19.00 WIB - Pendopo Utama', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.textMuted)),
                       const SizedBox(height: 2),
                       Text(
                         'Malam Akustik & Puisi Nusantara',
@@ -305,7 +308,7 @@ class BerandaView extends StatelessWidget {
               border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
             child: Text(
-              '"Membaca adalah merawat ingatan, berbudaya adalah merawat martabat."',
+              'Membaca adalah merawat ingatan, berbudaya adalah merawat martabat.',
               textAlign: TextAlign.center,
               style: GoogleFonts.lora(
                 fontSize: 11,

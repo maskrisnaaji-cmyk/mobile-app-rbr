@@ -1,13 +1,111 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
 import 'booking_checkout_view.dart';
 
-class AgendaView extends StatelessWidget {
+class AgendaView extends StatefulWidget {
   const AgendaView({super.key});
 
   @override
+  State<AgendaView> createState() => _AgendaViewState();
+}
+
+class _AgendaViewState extends State<AgendaView> {
+  int selectedDate = 12;
+
+  // Data event per tanggal
+  List<Map<String, dynamic>> _getEventsForDate(int date) {
+    switch (date) {
+      case 8:
+        return [
+          {
+            'category': 'Diskusi',
+            'time': '08 Sep - 13:00 WIB',
+            'seats': 'Sisa 8 Kursi',
+            'location': 'Ruang Komunal Lt. 1',
+            'title': 'Obrolan Budaya: Kearifan Lokal Jawa',
+            'price': 'Rp 15.000',
+            'imageColor': Colors.teal.shade700,
+          },
+        ];
+      case 9:
+        return [
+          {
+            'category': 'Pameran',
+            'time': '09 Sep - 10:00 WIB',
+            'seats': 'Sisa 20 Kursi',
+            'location': 'Galeri Utama',
+            'title': 'Pameran Batik Kontemporer Nusantara',
+            'price': 'Rp 20.000',
+            'imageColor': Colors.indigo.shade700,
+          },
+        ];
+      case 10:
+        return [
+          {
+            'category': 'Lokakarya',
+            'time': '10 Sep - 15:30 WIB',
+            'seats': 'Sisa 4 Kursi',
+            'location': 'Ruang Komunal Lt. 2',
+            'title': 'Napak Tanah Jilid II Book Club & Pot Luck',
+            'price': 'Rp 25.000',
+            'imageColor': Colors.brown.shade700,
+          },
+          {
+            'category': 'Wicara Seni',
+            'time': '10 Sep - 19:00 WIB',
+            'seats': 'Sisa 12 Kursi',
+            'location': 'Panggung Utama Pendopo',
+            'title': 'Penampilan Seni Teater Pak Rungkad Belum Ketemu',
+            'price': 'Rp 35.000',
+            'imageColor': Colors.black87,
+          },
+        ];
+      case 11:
+        return [
+          {
+            'category': 'Workshop',
+            'time': '11 Sep - 09:00 WIB',
+            'seats': 'Sisa 6 Kursi',
+            'location': 'Studio Kreatif',
+            'title': 'Workshop Keramik: Membentuk Tanah Liat',
+            'price': 'Rp 45.000',
+            'imageColor': Colors.orange.shade800,
+          },
+        ];
+      case 12:
+        return [
+          {
+            'category': 'Pertunjukan',
+            'time': '12 Sep - 19:00 WIB',
+            'seats': 'Sisa 18 Kursi',
+            'location': 'Pendopo Utama',
+            'title': 'Malam Akustik & Puisi Nusantara',
+            'price': 'Rp 30.000',
+            'imageColor': Colors.deepPurple.shade800,
+          },
+        ];
+      case 13:
+        return [
+          {
+            'category': 'Komunitas',
+            'time': '13 Sep - 10:00 WIB',
+            'seats': 'Sisa 25 Kursi',
+            'location': 'Taman Budaya',
+            'title': 'Sabtu Budaya: Gotong Royong Seni',
+            'price': 'Gratis',
+            'imageColor': Colors.green.shade800,
+          },
+        ];
+      default:
+        return [];
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final events = _getEventsForDate(selectedDate);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
@@ -43,45 +141,56 @@ class AgendaView extends StatelessWidget {
           Text('AGENDA ACARA & WORKSHOP', style: GoogleFonts.lora(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain)),
           const SizedBox(height: 12),
 
-          // Horizontal Date Selector Strip
+          // Horizontal Date Selector Strip - Interaktif
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildDateItem('SEN', '08', isSelected: false),
-              _buildDateItem('SEL', '09', isSelected: false),
-              _buildDateItem('RAB', '10', isSelected: true),
-              _buildDateItem('KAM', '11', isSelected: false),
-              _buildDateItem('JUM', '12', isSelected: false),
-              _buildDateItem('SAB', '13', isSelected: false),
+              _buildDateItem('SEN', 8),
+              _buildDateItem('SEL', 9),
+              _buildDateItem('RAB', 10),
+              _buildDateItem('KAM', 11),
+              _buildDateItem('JUM', 12),
+              _buildDateItem('SAB', 13),
             ],
           ),
           const SizedBox(height: 16),
 
-          // Event Card 1
-          _buildEventCard(
-            context,
-            category: 'Lokakarya',
-            time: '10 Sep • 15:30 WIB',
-            seats: 'Sisa 4 Kursi',
-            location: 'Ruang Komunal Lt. 2',
-            title: 'Napak Tanah Jilid II Book Club & Pot Luck',
-            price: 'Rp 25.000',
-            imageColor: Colors.brown.shade700,
-          ),
-          const SizedBox(height: 16),
-
-          // Event Card 2
-          _buildEventCard(
-            context,
-            category: 'Wicara Seni',
-            time: '10 Sep • 19:00 WIB',
-            seats: 'Sisa 12 Kursi',
-            location: 'Panggung Utama Pendopo',
-            title: 'Penampilan Seni Teater Pak Rungkad Belum Ketemu',
-            price: 'Rp 35.000',
-            imageColor: Colors.black87,
-          ),
-          const SizedBox(height: 16),
+          // Daftar Event Dinamis
+          if (events.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Column(
+                  children: [
+                    Icon(Icons.event_busy, size: 48, color: AppColors.textMuted.withValues(alpha: 0.5)),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Tidak ada acara pada tanggal ini.',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...events.asMap().entries.map((entry) {
+              final e = entry.value;
+              return Column(
+                children: [
+                  _buildEventCard(
+                    context,
+                    category: e['category'] as String,
+                    time: e['time'] as String,
+                    seats: e['seats'] as String,
+                    location: e['location'] as String,
+                    title: e['title'] as String,
+                    price: e['price'] as String,
+                    imageColor: e['imageColor'] as Color,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              );
+            }),
 
           // Bottom CTA Banner
           Container(
@@ -112,19 +221,52 @@ class AgendaView extends StatelessWidget {
     );
   }
 
-  Widget _buildDateItem(String day, String date, {required bool isSelected}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.maroon : Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isSelected ? AppColors.maroon : AppColors.border),
-      ),
-      child: Column(
-        children: [
-          Text(day, style: GoogleFonts.plusJakartaSans(fontSize: 9, color: isSelected ? Colors.white70 : AppColors.textMuted)),
-          Text(date, style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : AppColors.textMain)),
-        ],
+  Widget _buildDateItem(String day, int date) {
+    final isSelected = selectedDate == date;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedDate = date;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF6B1D2F) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isSelected ? const Color(0xFF6B1D2F) : AppColors.border),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF6B1D2F).withValues(alpha: 0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : [],
+        ),
+        child: Column(
+          children: [
+            Text(
+              day,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 9,
+                color: isSelected ? Colors.white70 : AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              date.toString().padLeft(2, '0'),
+              style: GoogleFonts.lora(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : AppColors.textMain,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

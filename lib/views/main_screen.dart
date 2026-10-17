@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
 import 'agenda_view.dart';
@@ -19,12 +19,12 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   late int _selectedIndex;
 
-  final List<Widget> _views = const [
-    BerandaView(),
-    KedaiKopiView(),
-    PustakaView(),
-    AgendaView(),
-    ProfilView(),
+  List<Widget> get _views => [
+    BerandaView(onNavigateTab: _onSelectTab),
+   const KedaiKopiView(),
+  const PustakaView(),
+  const AgendaView(),
+  const ProfilView(),
   ];
 
   @override
