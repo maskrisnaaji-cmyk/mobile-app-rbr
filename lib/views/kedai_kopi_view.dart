@@ -258,6 +258,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                       MenuItemCard(
                         name: 'Kopi Susu Creamy',
                         price: 18000,
+                        image: 'assets/images/kopi_susu.jpeg',
                         imageColor: Colors.orange,
                         count: _itemCounts['Kopi Susu Creamy'] ?? 0,
                         onAdd: () => _incrementItem('Kopi Susu Creamy'),
@@ -266,6 +267,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                       MenuItemCard(
                         name: 'Americano Signature',
                         price: 17000,
+                        image: 'assets/images/americano.jpeg',
                         imageColor: Colors.brown[700]!,
                         count: _itemCounts['Americano Signature'] ?? 0,
                         onAdd: () => _incrementItem('Americano Signature'),
@@ -274,6 +276,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                       MenuItemCard(
                         name: 'Kopi Tubruk Budaya',
                         price: 18000,
+                        image: 'assets/images/kopi_tubruk.jpeg',
                         imageColor: Colors.grey[850]!,
                         count: _itemCounts['Kopi Tubruk Budaya'] ?? 0,
                         onAdd: () => _incrementItem('Kopi Tubruk Budaya'),

@@ -98,9 +98,15 @@ class _LoginViewState extends State<LoginView> {
                             Image.asset(
                               'assets/images/rbr_frontt.jpeg',
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Image.network(
-                                'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=600',
-                                fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: AppColors.maroonDark,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.photo_outlined,
+                                    color: Colors.white38,
+                                    size: 36,
+                                  ),
+                                ),
                               ),
                             ),
                             Container(
@@ -316,14 +322,22 @@ class _LoginViewState extends State<LoginView> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Image.network(
-                            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png',
+                          Image.asset(
+                            'assets/images/google_logo.png',
                             width: 18,
                             height: 18,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.g_mobiledata,
-                              color: Color(0xFF4285F4),
-                              size: 22,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.g_mobiledata,
+                                color: Color(0xFF4285F4),
+                                size: 20,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),

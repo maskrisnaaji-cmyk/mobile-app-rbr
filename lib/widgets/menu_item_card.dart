@@ -6,6 +6,7 @@ class MenuItemCard extends StatelessWidget {
   final String name;
   final int price;
   final Color imageColor;
+  final String? image;
   final int count;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
@@ -15,6 +16,7 @@ class MenuItemCard extends StatelessWidget {
     required this.name,
     required this.price,
     required this.imageColor,
+    this.image,
     required this.count,
     required this.onAdd,
     required this.onRemove,
@@ -36,12 +38,42 @@ class MenuItemCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: imageColor,
-              borderRadius: BorderRadius.circular(12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: 60,
+              height: 60,
+              child: image != null && image!.isNotEmpty
+                  ? Image.asset(
+                      image!,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 60,
+                        height: 60,
+                        color: imageColor,
+                        child: const Center(
+                          child: Icon(
+                            Icons.coffee_rounded,
+                            color: Colors.white70,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      width: 60,
+                      height: 60,
+                      color: imageColor,
+                      child: const Center(
+                        child: Icon(
+                          Icons.coffee_rounded,
+                          color: Colors.white70,
+                          size: 24,
+                        ),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 14),
