@@ -3,6 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
 import 'login_view.dart';
 import 'main_screen.dart';
+import 'peminjaman_buku_screen.dart';
+import 'koleksi_favorit_screen.dart';
+import 'ulasan_diskusi_screen.dart';
+import 'pengaturan_akun_screen.dart';
+import 'pusat_bantuan_screen.dart';
 
 class ProfilView extends StatefulWidget {
   final bool showBottomNav;
@@ -200,20 +205,6 @@ class _ProfilViewState extends State<ProfilView> {
     );
   }
 
-  void _showMenuFeedback(String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Membuka $title...',
-          style: GoogleFonts.plusJakartaSans(fontSize: 12),
-        ),
-        duration: const Duration(seconds: 2),
-        backgroundColor: AppColors.maroon,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +285,12 @@ class _ProfilViewState extends State<ProfilView> {
                 color: AppColors.textMain,
                 size: 22,
               ),
-              onPressed: () => _showMenuFeedback('Pengaturan Aplikasi'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PengaturanAkunScreen()),
+                );
+              },
               tooltip: 'Pengaturan',
             ),
             const SizedBox(width: 2),
@@ -619,7 +615,12 @@ class _ProfilViewState extends State<ProfilView> {
           badgeText: '2 Aktif',
           badgeBg: const Color(0xFFDCFCE7),
           badgeColor: const Color(0xFF15803D),
-          onTap: () => _showMenuFeedback('Peminjaman Buku Aktif'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PeminjamanBukuScreen()),
+            );
+          },
         ),
         const SizedBox(height: 10),
 
@@ -628,7 +629,12 @@ class _ProfilViewState extends State<ProfilView> {
           icon: Icons.bookmark_outline_rounded,
           title: 'Koleksi Favorit',
           subtitle: '14 karya sastra, manuskrip, & arsip tersimpan',
-          onTap: () => _showMenuFeedback('Koleksi Favorit'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const KoleksiFavoritScreen()),
+            );
+          },
         ),
         const SizedBox(height: 10),
 
@@ -637,7 +643,12 @@ class _ProfilViewState extends State<ProfilView> {
           icon: Icons.rate_review_outlined,
           title: 'Ulasan & Diskusi Saya',
           subtitle: '8 telaah budaya & tanggapan kuratorial naskah',
-          onTap: () => _showMenuFeedback('Ulasan & Diskusi'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const UlasanDiskusiScreen()),
+            );
+          },
         ),
       ],
     );
@@ -666,7 +677,12 @@ class _ProfilViewState extends State<ProfilView> {
           icon: Icons.lock_outline_rounded,
           title: 'Pengaturan Akun',
           subtitle: 'Keamanan kata sandi, privasi, & notifikasi',
-          onTap: () => _showMenuFeedback('Pengaturan Akun'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PengaturanAkunScreen()),
+            );
+          },
         ),
         const SizedBox(height: 10),
 
@@ -675,7 +691,12 @@ class _ProfilViewState extends State<ProfilView> {
           icon: Icons.help_outline_rounded,
           title: 'Pusat Bantuan & Panduan',
           subtitle: 'Tata tertib salon pustaka, preservasi & kontak kurator',
-          onTap: () => _showMenuFeedback('Pusat Bantuan & Panduan'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PusatBantuanScreen()),
+            );
+          },
         ),
         const SizedBox(height: 10),
 
