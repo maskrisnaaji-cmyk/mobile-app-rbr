@@ -5,9 +5,13 @@ import '../theme/colors.dart';
 
 class BookDetailView extends StatefulWidget {
   final Book book;
+  final String? coverImage;
 
-  BookDetailView({super.key, Book? book})
-      : book = book ?? Book.dummyBooks.first;
+  BookDetailView({
+    super.key,
+    Book? book,
+    this.coverImage,
+  }) : book = book ?? Book.dummyBooks.first;
 
   @override
   State<BookDetailView> createState() => _BookDetailViewState();
@@ -18,6 +22,20 @@ class _BookDetailViewState extends State<BookDetailView> {
   bool _isBookmarked = false;
 
   Book get book => widget.book;
+
+  String get coverImagePath {
+    if (widget.coverImage != null && widget.coverImage!.trim().isNotEmpty) {
+      return widget.coverImage!.trim();
+    }
+    if (book.coverImage.trim().isNotEmpty) {
+      return book.coverImage.trim();
+    }
+    final slug = book.title
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    return 'assets/images/$slug.jpg';
+  }
 
   bool get isAvailable =>
       book.status.toLowerCase().contains('tersedia');
@@ -583,7 +601,13 @@ class _BookDetailViewState extends State<BookDetailView> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: _buildBookCoverArt(),
+                child: Image.asset(
+                  coverImagePath,
+                  width: 170,
+                  height: 245,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => _buildBookCoverArt(),
+                ),
               ),
             ),
           ),
@@ -1358,12 +1382,19 @@ class _BookDetailViewState extends State<BookDetailView> {
     final sColor = available ? const Color(0xFF2E7D32) : const Color(0xFFB45309);
     final sBg = available ? const Color(0xFFE8F5E9) : const Color(0xFFFEF3C7);
 
+    final relatedImage = item.coverImage.trim().isNotEmpty
+        ? item.coverImage.trim()
+        : 'assets/images/${item.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_').replaceAll(RegExp(r'^_+|_+$'), '')}.jpg';
+
     return InkWell(
       onTap: () {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => BookDetailView(book: item),
+            builder: (context) => BookDetailView(
+              book: item,
+              coverImage: relatedImage,
+            ),
           ),
         );
       },
@@ -1388,8 +1419,14 @@ class _BookDetailViewState extends State<BookDetailView> {
             // Cover Thumbnail dengan Badge Status
             Expanded(
               child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Container(
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                    child: Image.asset(
+                      relatedImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
                     width: double.infinity,
                     decoration: const BoxDecoration(
                       color: AppColors.maroonDark,
@@ -1423,6 +1460,8 @@ class _BookDetailViewState extends State<BookDetailView> {
                       ),
                     ),
                   ),
+                ),
+                ),
 
                   // Badge Status
                   Positioned(

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
 import 'tentang_view.dart';
@@ -87,13 +87,7 @@ class BerandaView extends StatelessWidget {
           // Banner Hero Utama
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF521513), Color(0xFF80221E)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -103,64 +97,103 @@ class BerandaView extends StatelessWidget {
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'CAGAR BUDAYA & LITERASI',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: Colors.white,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/images/rbr_frontt.jpg',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF521513), Color(0xFF80221E)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Rumah Budaya Ratna',
-                  style: GoogleFonts.lora(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Ruang temu seni, pemikiran, dan rasa di tengah kehangatan tradisi Jawa.',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    height: 1.4,
-                    color: Colors.white.withValues(alpha: 0.88),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                ElevatedButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const TentangView()),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold,
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.45),
+                            const Color(0xFF3B0D0C).withValues(alpha: 0.85),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                  child: Text(
-                    'Pelajari Selengkapnya',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'CAGAR BUDAYA & LITERASI',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.8,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Rumah Budaya Ratna',
+                          style: GoogleFonts.lora(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Ruang temu seni, pemikiran, dan rasa di tengah kehangatan tradisi Jawa.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            height: 1.4,
+                            color: Colors.white.withValues(alpha: 0.88),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ElevatedButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const TentangView()),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Pelajari Selengkapnya',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -210,11 +243,11 @@ class BerandaView extends StatelessWidget {
             physics: const BouncingScrollPhysics(),
             child: Row(
               children: [
-                _buildBookCard('Dokumen Jibril', 'Eko Triono', 'Rak 2A', const Color(0xFF1F2421)),
+                _buildBookCard('Dokumen Jibril', 'Eko Triono', 'Rak 2A', const Color(0xFF1F2421), image: 'assets/images/dokumen_jibril.jpg'),
                 const SizedBox(width: 12),
-                _buildBookCard('Seni Batik Jawa', 'Nian S. L.', 'Rak 1B', const Color(0xFF3B5249)),
+                _buildBookCard('Anjing-Anjing Menyerbu Lek Zul', 'C.R. Tanujaya', 'Rak 3B', const Color(0xFF1E3A5F), image: 'assets/images/anjing_anjing_menyerbu_lek_zul.jpg'),
                 const SizedBox(width: 12),
-                _buildBookCard('Laki-Laki Peri', 'Eka Kurniawan', 'Rak 2C', const Color(0xFF513B41)),
+                _buildBookCard('Laki-Laki Peri', 'Eka Kurniawan', 'Rak 2C', const Color(0xFF513B41), image: 'assets/images/laki_laki_yang_kawin_dengan_peri.jpg'),
               ],
             ),
           ),
@@ -354,7 +387,19 @@ class BerandaView extends StatelessWidget {
     );
   }
 
-  Widget _buildBookCard(String title, String author, String shelf, Color coverColor) {
+  String _getBookCoverImage(String title, [String? explicitImage]) {
+    if (explicitImage != null && explicitImage.trim().isNotEmpty) {
+      return explicitImage.trim();
+    }
+    final slug = title
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    return 'assets/images/$slug.jpg';
+  }
+
+  Widget _buildBookCard(String title, String author, String shelf, Color coverColor, {String? image}) {
+    final imagePath = _getBookCoverImage(title, image);
     return Container(
       width: 125,
       decoration: BoxDecoration(
@@ -372,40 +417,47 @@ class BerandaView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
+          SizedBox(
             height: 135,
             width: double.infinity,
-            decoration: BoxDecoration(
-              color: coverColor,
+            child: ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-            ),
-            padding: const EdgeInsets.all(8),
-            child: Stack(
-              children: [
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(shelf, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.lora(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white.withValues(alpha: 0.9),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    imagePath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: coverColor,
+                      padding: const EdgeInsets.all(8),
+                      child: Center(
+                        child: Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.lora(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(shelf, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Padding(

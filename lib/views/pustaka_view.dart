@@ -162,7 +162,19 @@ class PustakaView extends StatelessWidget {
     return const Color(0xFF2E384D);
   }
 
+  String _getBookCoverImage(Book book) {
+    if (book.coverImage.trim().isNotEmpty) {
+      return book.coverImage.trim();
+    }
+    final slug = book.title
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    return 'assets/images/$slug.jpg';
+  }
+
   Widget _buildBookGridCard(BuildContext context, Book book) {
+    final coverImage = _getBookCoverImage(book);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -185,37 +197,47 @@ class PustakaView extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BookDetailView(book: book),
+                    builder: (context) => BookDetailView(
+                      book: book,
+                      coverImage: coverImage,
+                    ),
                   ),
                 );
               },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _getCoverColor(book.title),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
                 child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.auto_stories, color: Color(0xFFEAD8AD), size: 28),
-                            const SizedBox(height: 6),
-                            Text(
-                              book.title,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.lora(
-                                color: Colors.white,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                              ),
+                    Image.asset(
+                      coverImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        decoration: BoxDecoration(
+                          color: _getCoverColor(book.title),
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(10.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.auto_stories, color: Color(0xFFEAD8AD), size: 28),
+                                const SizedBox(height: 6),
+                                Text(
+                                  book.title,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.lora(
+                                    color: Colors.white,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -264,7 +286,10 @@ class PustakaView extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => BookDetailView(book: book),
+                          builder: (context) => BookDetailView(
+                            book: book,
+                            coverImage: coverImage,
+                          ),
                         ),
                       );
                     },
