@@ -113,7 +113,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
-            'Detail Lokakarya / Checkout',
+            'Booking Tiket / Checkout',
             style: GoogleFonts.lora(
               fontSize: 17,
               fontWeight: FontWeight.bold,
@@ -323,12 +323,26 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           // Pilihan 2: Reguler Ticket
           _buildTicketTypeCard(
             index: 1,
-            title: 'Tiket Reguler (On The Spot)',
+            title: 'Tiket Reguler',
             badge: 'TERSEDIA',
             badgeColor: AppColors.maroon,
             badgeBgColor: AppColors.maroon.withValues(alpha: 0.08),
             price: _formatRupiah(_regulerPrice),
             description: 'Akses lokakarya dan sertifikat kehadiran digital.',
+          ),
+          const SizedBox(height: 10),
+
+          // Pilihan 3: OTS Ticket (hanya dapat dibeli di venue)
+          _buildTicketTypeCard(
+            index: 2,
+            title: 'Tiket OTS (On The Spot)',
+            badge: 'HANYA DI VENUE',
+            badgeColor: AppColors.textMuted,
+            badgeBgColor: AppColors.border,
+            price: 'Rp 45.000',
+            description:
+                'Hanya dapat dibeli langsung di lokasi acara (tidak dapat dibeli melalui aplikasi).',
+            enabled: false,
           ),
         ],
       ),
@@ -343,94 +357,102 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     required Color badgeBgColor,
     required String price,
     required String description,
+    bool enabled = true,
   }) {
     final isSelected = _selectedTicketType == index;
-    return InkWell(
-      onTap: () => setState(() => _selectedTicketType = index),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.maroon.withValues(alpha: 0.03)
-              : AppColors.bgCanvas,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppColors.maroon : AppColors.border,
-            width: isSelected ? 1.6 : 1.0,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      isSelected
-                          ? Icons.radio_button_checked_rounded
-                          : Icons.radio_button_off_rounded,
-                      color:
-                          isSelected ? AppColors.maroon : AppColors.textMuted,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      title,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textMain,
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: badgeBgColor,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    badge,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: badgeColor,
-                    ),
-                  ),
-                ),
-              ],
+    return Opacity(
+      opacity: enabled ? 1 : 0.55,
+      child: InkWell(
+        onTap:
+            enabled ? () => setState(() => _selectedTicketType = index) : null,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.maroon.withValues(alpha: 0.03)
+                : AppColors.bgCanvas,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppColors.maroon : AppColors.border,
+              width: isSelected ? 1.6 : 1.0,
             ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.only(left: 26.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    description,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      color: AppColors.textMuted,
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        isSelected
+                            ? Icons.radio_button_checked_rounded
+                            : Icons.radio_button_off_rounded,
+                        color: !enabled
+                            ? AppColors.textMuted
+                            : isSelected
+                                ? AppColors.maroon
+                                : AppColors.textMuted,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        title,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textMain,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$price / orang',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.maroon,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: badgeBgColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      badge,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: badgeColor,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.only(left: 26.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      description,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$price / orang',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.maroon,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

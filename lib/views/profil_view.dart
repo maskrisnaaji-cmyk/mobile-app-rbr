@@ -707,42 +707,46 @@ class _ProfilViewState extends State<ProfilView> {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFFFECACA)),
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            leading: Container(
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: AppColors.maroon.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              leading: Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: AppColors.maroon.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.logout_rounded,
+                  color: AppColors.maroon,
+                  size: 20,
+                ),
               ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: AppColors.maroon,
+              title: Text(
+                'Keluar dari Akun',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.maroon,
+                ),
+              ),
+              subtitle: Text(
+                'Hapus sesi aktif dari perangkat ini',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  color: const Color(0xFF991B1B),
+                ),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
                 size: 20,
-              ),
-            ),
-            title: Text(
-              'Keluar dari Akun',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 13.5,
-                fontWeight: FontWeight.bold,
                 color: AppColors.maroon,
               ),
+              onTap: _showLogoutDialog,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
-            subtitle: Text(
-              'Hapus sesi aktif dari perangkat ini',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                color: const Color(0xFF991B1B),
-              ),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right,
-              size: 20,
-              color: AppColors.maroon,
-            ),
-            onTap: _showLogoutDialog,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
       ],
@@ -771,66 +775,70 @@ class _ProfilViewState extends State<ProfilView> {
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(9),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFAF7F2),
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFEBE6DC)),
-          ),
-          child: Icon(
-            icon,
-            color: AppColors.maroon,
-            size: 20,
-          ),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkText,
-                ),
-              ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          leading: Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFAF7F2),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFEBE6DC)),
             ),
-            if (badgeText != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: badgeBg ?? const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            child: Icon(
+              icon,
+              color: AppColors.maroon,
+              size: 20,
+            ),
+          ),
+          title: Row(
+            children: [
+              Expanded(
                 child: Text(
-                  badgeText,
+                  title,
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 9.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.bold,
-                    color: badgeColor ?? const Color(0xFF2E7D32),
+                    color: AppColors.darkText,
                   ),
                 ),
               ),
+              if (badgeText != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: badgeBg ?? const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.bold,
+                      color: badgeColor ?? const Color(0xFF2E7D32),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
-        ),
-        subtitle: Text(
-          subtitle,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            color: AppColors.greyText,
           ),
+          subtitle: Text(
+            subtitle,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: AppColors.greyText,
+            ),
+          ),
+          trailing: const Icon(
+            Icons.chevron_right,
+            size: 20,
+            color: Color(0xFFA8A29E),
+          ),
+          onTap: onTap,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        trailing: const Icon(
-          Icons.chevron_right,
-          size: 20,
-          color: Color(0xFFA8A29E),
-        ),
-        onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }
