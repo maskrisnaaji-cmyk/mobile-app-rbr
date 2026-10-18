@@ -96,7 +96,7 @@ class _LoginViewState extends State<LoginView> {
                           fit: StackFit.expand,
                           children: [
                             Image.asset(
-                              'assets/images/rbr_frontt.jpeg',
+                              'assets/images/rbr_frontt.jpg',
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) => Container(
                                 color: AppColors.maroonDark,
