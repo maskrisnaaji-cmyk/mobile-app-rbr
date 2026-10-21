@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/colors.dart';
 import 'main_screen.dart';
 import 'register_view.dart';
@@ -16,12 +21,114 @@ class _LoginViewState extends State<LoginView> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  /// URL endpoint autentikasi backend
+  /// Menggunakan 10.0.2.2 untuk Android Emulator, dan localhost untuk Web/Desktop/iOS
+  String get _loginUrl {
+    if (kIsWeb) {
+      return 'http://localhost:5000/api/auth/login';
+    } else {
+      try {
+        if (Platform.isAndroid) {
+          return 'http://10.0.2.2:5000/api/auth/login';
+        }
+      } catch (_) {}
+      return 'http://localhost:5000/api/auth/login';
+    }
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Fungsi login tersambung ke backend Express.js & MySQL
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    try {
+      final response = await http.post(
+        Uri.parse(_loginUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Simpan token JWT dan data user ke SharedPreferences
+        final token = data['token'] as String?;
+        final user = data['user'];
+
+        if (token != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('token', token);
+          if (user != null) {
+            await prefs.setString('user', jsonEncode(user));
+          }
+        }
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Login berhasil!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Arahkan ke halaman beranda/dashboard utama
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      } else {
+        // Tampilkan pesan error jika login gagal
+        if (!mounted) return;
+        final errorMsg = data['message'] ?? 'Email atau kata sandi tidak valid.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal terhubung ke server backend ($_loginUrl). Pastikan server aktif.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -121,29 +228,6 @@ class _LoginViewState extends State<LoginView> {
                                 ),
                               ),
                             ),
-                            Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  '',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.lora(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    fontStyle: FontStyle.italic,
-                                    letterSpacing: 0.4,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black.withValues(alpha: 0.8),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 1),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -168,6 +252,7 @@ class _LoginViewState extends State<LoginView> {
                           const SizedBox(height: 6),
                           TextFormField(
                             controller: _emailController,
+                            enabled: !_isLoading,
                             style: GoogleFonts.plusJakartaSans(fontSize: 12),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
@@ -176,7 +261,7 @@ class _LoginViewState extends State<LoginView> {
                               return null;
                             },
                             decoration: InputDecoration(
-                              hintText: 'Contoh: ratna@budaya.org atau 0812...',
+                              hintText: 'Contoh: user@rbr.com',
                               hintStyle: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.textMuted),
                               prefixIcon: const Icon(Icons.email_outlined, size: 18, color: AppColors.textMuted),
                               filled: true,
@@ -204,6 +289,7 @@ class _LoginViewState extends State<LoginView> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
+                            enabled: !_isLoading,
                             style: GoogleFonts.plusJakartaSans(fontSize: 12),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
@@ -256,32 +342,54 @@ class _LoginViewState extends State<LoginView> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () {
-                                if (_formKey.currentState!.validate()) {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const MainScreen()),
-                                  );
-                                }
-                              },
+                              onPressed: _isLoading ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.maroon,
                                 foregroundColor: Colors.white,
+                                disabledBackgroundColor: AppColors.maroon.withValues(alpha: 0.6),
+                                disabledForegroundColor: Colors.white70,
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 elevation: 2,
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'MASUK',
-                                    style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.arrow_forward, size: 16),
-                                ],
-                              ),
+                              child: _isLoading
+                                  ? const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        SizedBox(width: 10),
+                                        Text(
+                                          'MEMPROSES...',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'MASUK',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.arrow_forward, size: 16),
+                                      ],
+                                    ),
                             ),
                           ),
                         ],
