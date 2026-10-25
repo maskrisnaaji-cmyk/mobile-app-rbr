@@ -68,7 +68,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
   final Map<String, int> _itemCounts = {
     'Kopi Susu Creamy': 0,
     'Americano Signature': 0,
-    'Kopi Tubruk Budaya': 1,
+    'Kopi Tubruk Budaya': 0,
   };
 
   final Map<String, int> _itemPrices = {
@@ -413,83 +413,94 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
               ],
             ),
 
-            // Floating Bottom Bar untuk BAYAR
-            if (_totalItems > 0)
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const PesananMejaView(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: AppColors.maroon,
+            // Floating Bottom Bar untuk BAYAR (Hanya muncul jika user telah menambah pesanan)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: AnimatedSlide(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOutCubic,
+                offset: _totalItems > 0 ? Offset.zero : const Offset(0, 1.5),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 250),
+                  opacity: _totalItems > 0 ? 1.0 : 0.0,
+                  child: IgnorePointer(
+                    ignoring: _totalItems == 0,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.maroon.withValues(alpha: 0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '$_totalItems Item • Meja 04',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _formatRupiah(_totalPrice),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PesananMejaView(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.maroon,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.maroon.withValues(alpha: 0.35),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
                               ),
                             ],
                           ),
-                          Row(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'BAYAR',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '$_totalItems Item • Meja 04',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _formatRupiah(_totalPrice),
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 20),
+                              Row(
+                                children: [
+                                  Text(
+                                    'BAYAR',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 20),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
