@@ -4,13 +4,61 @@ import '../models/book_model.dart';
 import '../theme/colors.dart';
 import 'book_detail_view.dart';
 
-class PustakaView extends StatelessWidget {
+class PustakaView extends StatefulWidget {
   const PustakaView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final books = Book.dummyBooks;
+  State<PustakaView> createState() => _PustakaViewState();
+}
 
+class _PustakaViewState extends State<PustakaView> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  late List<Book> _allBooks;
+  late List<Book> _filteredBooks;
+
+  String _selectedCategory = 'Semua';
+  final List<String> _categories = [
+    'Semua',
+    'Sastra',
+    'Sejarah',
+    'Seni & Budaya',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _allBooks = Book.dummyBooks;
+    _filteredBooks = List.from(_allBooks);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _filterBooks(String queryText) {
+    final query = queryText.toLowerCase().trim();
+    _filteredBooks = _allBooks.where((book) {
+      final titleMatches = book.title.toLowerCase().contains(query);
+      final authorMatches = book.author.toLowerCase().contains(query);
+      final categoryMatches = book.category.toLowerCase().contains(query);
+
+      // Kombinasikan juga dengan filter chip kategori yang aktif (Semua, Sastra, Sejarah, dll.)
+      final isCategorySelected = _selectedCategory == 'Semua' ||
+          book.category == _selectedCategory ||
+          book.category.toLowerCase().contains(_selectedCategory.toLowerCase()) ||
+          (_selectedCategory == 'Seni & Budaya' && book.category.toLowerCase().contains('budaya'));
+
+      return (titleMatches || authorMatches || categoryMatches) && isCategorySelected;
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
@@ -44,28 +92,91 @@ class PustakaView extends StatelessWidget {
               ),
               Row(
                 children: [
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: AppColors.textMain)),
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none, color: AppColors.textMain)),
+                  IconButton(
+                    onPressed: () {
+                      _searchFocusNode.requestFocus();
+                    },
+                    icon: const Icon(Icons.search, color: AppColors.textMain),
+                  ),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.notifications_none, color: AppColors.textMain),
+                  ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 8),
 
-          Text('Katalog Pustaka', style: GoogleFonts.lora(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textMain)),
-          Text('Koleksi naskah, sastra, & sejarah Nusantara', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.textMuted)),
+          Text(
+            'Katalog Pustaka',
+            style: GoogleFonts.lora(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textMain,
+            ),
+          ),
+          Text(
+            'Koleksi naskah, sastra, & sejarah Nusantara',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10,
+              color: AppColors.textMuted,
+            ),
+          ),
           const SizedBox(height: 12),
 
           // Search Field
           TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            onChanged: (value) {
+              setState(() {
+                String query = value.toLowerCase();
+                _filteredBooks = _allBooks.where((book) {
+                  final titleMatches = book.title.toLowerCase().contains(query);
+                  final authorMatches = book.author.toLowerCase().contains(query);
+                  final categoryMatches = book.category.toLowerCase().contains(query);
+
+                  // Kombinasikan juga dengan filter chip kategori yang aktif (Semua, Sastra, Sejarah, dll.)
+                  final isCategorySelected = _selectedCategory == 'Semua' ||
+                      book.category == _selectedCategory ||
+                      book.category.toLowerCase().contains(_selectedCategory.toLowerCase()) ||
+                      (_selectedCategory == 'Seni & Budaya' && book.category.toLowerCase().contains('budaya'));
+
+                  return (titleMatches || authorMatches || categoryMatches) && isCategorySelected;
+                }).toList();
+              });
+            },
             decoration: InputDecoration(
               hintText: 'Cari judul buku, penulis, atau topik...',
               hintStyle: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.textMuted),
               prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18, color: AppColors.textMuted),
+                      splashRadius: 18,
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _filterBooks('');
+                        });
+                      },
+                    )
+                  : null,
               filled: true,
               fillColor: Colors.white,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.maroon, width: 1.5),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -74,32 +185,107 @@ class PustakaView extends StatelessWidget {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: [
-                _buildFilterChip('Semua', isSelected: true),
-                _buildFilterChip('Sastra'),
-                _buildFilterChip('Sejarah'),
-                _buildFilterChip('Seni & Budaya'),
-              ],
+              children: _categories.map((category) {
+                final isSelected = _selectedCategory == category;
+                return _buildFilterChip(
+                  category,
+                  isSelected: isSelected,
+                  onTap: () {
+                    setState(() {
+                      _selectedCategory = category;
+                      _filterBooks(_searchController.text);
+                    });
+                  },
+                );
+              }).toList(),
             ),
           ),
           const SizedBox(height: 16),
 
-          // Grid Buku 2 Kolom Dinamis
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: books.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.65,
+          // Grid Buku 2 Kolom Dinamis / Empty State
+          if (_filteredBooks.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.maroon.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.search_off_rounded,
+                      size: 30,
+                      color: AppColors.maroon,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _searchController.text.isNotEmpty
+                        ? "Buku '${_searchController.text}' tidak ditemukan"
+                        : "Tidak ada buku ditemukan",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.lora(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMain,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _searchController.text.isNotEmpty
+                        ? 'Silakan coba kata kunci lain atau reset pencarian.'
+                        : 'Belum ada koleksi buku pada kategori ini.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  if (_searchController.text.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    TextButton.icon(
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _filterBooks('');
+                        });
+                      },
+                      icon: const Icon(Icons.clear, size: 16, color: AppColors.maroon),
+                      label: Text(
+                        'Hapus Pencarian',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.maroon,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _filteredBooks.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.65,
+              ),
+              itemBuilder: (context, index) {
+                final book = _filteredBooks[index];
+                return _buildBookGridCard(context, book);
+              },
             ),
-            itemBuilder: (context, index) {
-              final book = books[index];
-              return _buildBookGridCard(context, book);
-            },
-          ),
           const SizedBox(height: 20),
 
           // Banner Bantuan Pustakawan
@@ -118,8 +304,21 @@ class PustakaView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('BUTUH BANTUAN PUSTAKAWAN?', style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-                      Text('Tanya referensi naskah atau peminjaman.', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.textMain)),
+                      Text(
+                        'BUTUH BANTUAN PUSTAKAWAN?',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      Text(
+                        'Tanya referensi naskah atau peminjaman.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          color: AppColors.textMain,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -130,7 +329,13 @@ class PustakaView extends StatelessWidget {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: Text('Tanya Pustakawan', style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Tanya Pustakawan',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -140,16 +345,26 @@ class PustakaView extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterChip(String label, {bool isSelected = false}) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.maroon : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isSelected ? AppColors.maroon : AppColors.border),
+  Widget _buildFilterChip(String label, {required bool isSelected, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.maroon : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? AppColors.maroon : AppColors.border),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 10,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : AppColors.textMain,
+          ),
+        ),
       ),
-      child: Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 10, color: isSelected ? Colors.white : AppColors.textMain)),
     );
   }
 
