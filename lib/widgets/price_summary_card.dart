@@ -8,25 +8,31 @@ class PriceSummaryCard extends StatelessWidget {
   final String discount;
   final String totalPrice;
 
+  final String? subtotalLabel;
+
   const PriceSummaryCard({
     super.key,
     required this.subtotal,
     required this.taxFee,
     required this.discount,
     required this.totalPrice,
+    this.subtotalLabel,
   });
 
   Widget _buildPriceRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            color: AppColors.greyText,
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              color: AppColors.greyText,
+            ),
           ),
         ),
+        const SizedBox(width: 8),
         Text(
           value,
           style: GoogleFonts.plusJakartaSans(
@@ -60,7 +66,7 @@ class PriceSummaryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _buildPriceRow('Subtotal (2 Item)', subtotal),
+          _buildPriceRow(subtotalLabel ?? 'Subtotal', subtotal),
           const SizedBox(height: 6),
           _buildPriceRow('Pajak & Biaya Layanan', taxFee),
           const SizedBox(height: 6),

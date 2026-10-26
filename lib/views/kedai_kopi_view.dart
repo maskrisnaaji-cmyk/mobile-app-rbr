@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import '../models/cart_item_model.dart';
 import '../theme/colors.dart';
 import '../widgets/menu_item_card.dart';
 import 'pesanan_meja_view.dart';
@@ -13,6 +14,7 @@ class KedaiMenuItem {
   final int price;
   final String image;
   final Color imageColor;
+  final String note;
 
   const KedaiMenuItem({
     required this.name,
@@ -20,6 +22,7 @@ class KedaiMenuItem {
     required this.price,
     required this.image,
     required this.imageColor,
+    this.note = '',
   });
 }
 
@@ -34,6 +37,57 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
   bool _isLoading = true;
+
+  static final List<KedaiMenuItem> _defaultMenus = [
+    KedaiMenuItem(
+      name: 'Kopi Tubruk Nusantara',
+      category: 'Manual Brew',
+      price: 18000,
+      image: 'assets/images/kopi_tubruk.jpg',
+      imageColor: Colors.brown.shade900,
+      note: 'Single Origin • Tubruk Tradisional',
+    ),
+    KedaiMenuItem(
+      name: 'V60 Manual Brew',
+      category: 'Manual Brew',
+      price: 25000,
+      image: 'assets/images/americano.jpg',
+      imageColor: Colors.brown.shade800,
+      note: 'Light Roast • Fruity Notes',
+    ),
+    KedaiMenuItem(
+      name: 'Kopi Susu Creamy',
+      category: 'Kopi Nusantara',
+      price: 18000,
+      image: 'assets/images/kopi_susu.jpg',
+      imageColor: Colors.brown.shade700,
+      note: 'Less Sugar • Less Ice',
+    ),
+    KedaiMenuItem(
+      name: 'Americano Signature',
+      category: 'Kopi Nusantara',
+      price: 17000,
+      image: 'assets/images/americano.jpg',
+      imageColor: Colors.brown.shade700,
+      note: 'Single Origin • Hot',
+    ),
+    KedaiMenuItem(
+      name: 'Wedang Uwuh Kraton',
+      category: 'Non-Kopi',
+      price: 15000,
+      image: '',
+      imageColor: Colors.teal.shade800,
+      note: 'Rempah Hangat Tradisional',
+    ),
+    KedaiMenuItem(
+      name: 'Pisang Goreng Wijen',
+      category: 'Camilan Nusantara',
+      price: 15000,
+      image: '',
+      imageColor: Colors.orange.shade800,
+      note: 'Garing & Manis Legit',
+    ),
+  ];
 
   List<KedaiMenuItem> _allMenuList = [];
   List<KedaiMenuItem> _filteredMenuList = [];
@@ -53,7 +107,12 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
   @override
   void initState() {
     super.initState();
-    _filteredMenuList = [];
+    _allMenuList = List.from(_defaultMenus);
+    for (var item in _defaultMenus) {
+      _itemPrices[item.name] = item.price;
+      _itemCounts[item.name] = 0;
+    }
+    _applyFilter();
     _fetchMenus();
   }
 
@@ -66,41 +125,49 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        final List<KedaiMenuItem> loaded = [];
-        final Set<String> categories = {'Semua'};
+        if (data.isNotEmpty) {
+          final List<KedaiMenuItem> loaded = [];
+          final Set<String> categories = {'Semua'};
 
-        for (var item in data) {
-          final name = item['name']?.toString() ?? '';
-          final category = item['category']?.toString() ?? 'Kopi Nusantara';
-          final price = int.tryParse(item['price']?.toString() ?? '') ?? 0;
-          final image = item['image']?.toString() ?? '';
+          for (var item in data) {
+            final name = item['name']?.toString() ?? '';
+            final category = item['category']?.toString() ?? 'Kopi Nusantara';
+            final price = int.tryParse(item['price']?.toString() ?? '') ?? 0;
+            var image = item['image']?.toString() ?? '';
+            if (image.startsWith('assets/') && !image.startsWith('assets/images/')) {
+              image = image.replaceFirst('assets/', 'assets/images/');
+            }
+            final note = item['description']?.toString() ?? item['note']?.toString() ?? '';
 
-          categories.add(category);
-          loaded.add(KedaiMenuItem(
-            name: name,
-            category: category,
-            price: price,
-            image: image,
-            imageColor: _colorForCategory(category),
-          ));
+            categories.add(category);
+            loaded.add(KedaiMenuItem(
+              name: name,
+              category: category,
+              price: price,
+              image: image,
+              imageColor: _colorForCategory(category),
+              note: note,
+            ));
 
-          _itemPrices[name] = price;
-          _itemCounts.putIfAbsent(name, () => 0);
+            _itemPrices[name] = price;
+            _itemCounts.putIfAbsent(name, () => 0);
+          }
+
+          if (mounted) {
+            setState(() {
+              _allMenuList = loaded;
+              _categories = categories.toList();
+              _applyFilter();
+              _isLoading = false;
+            });
+            return;
+          }
         }
-
-        if (mounted) {
-          setState(() {
-            _allMenuList = loaded;
-            _categories = categories.toList();
-            _applyFilter();
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) setState(() => _isLoading = false);
       }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -480,10 +547,48 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16),
                         onTap: () {
+                          final List<CartItem> cartItems = [];
+                          for (var menu in _allMenuList) {
+                            final count = _itemCounts[menu.name] ?? 0;
+                            if (count > 0) {
+                              cartItems.add(CartItem(
+                                name: menu.name,
+                                price: menu.price,
+                                quantity: count,
+                                note: menu.note.isNotEmpty
+                                    ? menu.note
+                                    : (menu.category == 'Manual Brew'
+                                        ? 'Single Origin • Panas'
+                                        : 'Pilihan Favorit'),
+                                image: menu.image,
+                                category: menu.category,
+                              ));
+                            }
+                          }
+
+                          // Pastikan jika ada item tambahan di _itemCounts yang tidak tercantum di _allMenuList
+                          _itemCounts.forEach((name, count) {
+                            if (count > 0 && !cartItems.any((item) => item.name == name)) {
+                              cartItems.add(CartItem(
+                                name: name,
+                                price: _itemPrices[name] ?? 0,
+                                quantity: count,
+                                note: 'Menu Pilihan',
+                              ));
+                            }
+                          });
+
+                          if (cartItems.isEmpty) return;
+
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const PesananMejaView(),
+                              builder: (context) => PesananMejaView(
+                                cartItems: cartItems,
+                                tableName: 'Meja No. 04',
+                                orderNumber:
+                                    '#ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7, 12)}',
+                              ),
                             ),
                           );
                         },

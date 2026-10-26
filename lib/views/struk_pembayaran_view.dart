@@ -1,13 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/cart_item_model.dart';
 import '../theme/colors.dart';
 import 'main_screen.dart';
 
 class StrukPembayaranView extends StatelessWidget {
-  const StrukPembayaranView({super.key});
+  final List<CartItem> cartItems;
+  final int? totalPrice;
+  final int? subtotal;
+  final String orderNumber;
+  final String paymentMethod;
+  final String tableName;
+  final String? transactionTime;
+
+  const StrukPembayaranView({
+    super.key,
+    this.cartItems = const [],
+    this.totalPrice,
+    this.subtotal,
+    this.orderNumber = '#ORD-9042',
+    this.paymentMethod = 'QRIS (INSTAN)',
+    this.tableName = 'Meja No. 04 (Dine-In)',
+    this.transactionTime,
+  });
+
+  int get _effectiveTotal {
+    if (totalPrice != null) return totalPrice!;
+    if (cartItems.isNotEmpty) {
+      return cartItems.fold(0, (sum, item) => sum + item.totalPrice);
+    }
+    return 35000;
+  }
+
+  String _formatRupiah(int price) {
+    return 'Rp ${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final effectiveItems = cartItems.isNotEmpty
+        ? cartItems
+        : const [
+            CartItem(name: 'Kopi Susu Creamy', price: 18000, quantity: 1),
+            CartItem(name: 'Americano Signature', price: 17000, quantity: 1),
+          ];
+
     return Scaffold(
       backgroundColor: const Color(0xFF1E1C1A),
       body: Center(
@@ -130,28 +167,29 @@ class StrukPembayaranView extends StatelessWidget {
                                 style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted),
                               ),
                               Text(
-                                '#ORD-9042',
+                                orderNumber,
                                 style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.maroon),
                               ),
                             ],
                           ),
                           const Divider(color: AppColors.border, height: 20),
-                          _buildDetailRow('Waktu Transaksi', '28 SEP 2026 • 18:30 WIB'),
-                          _buildDetailRow('Metode Pembayaran', 'QRIS (INSTAN)'),
-                          _buildDetailRow('Nomor Meja', 'Meja No. 04 (Dine-In)'),
+                          _buildDetailRow('Waktu Transaksi', transactionTime ?? '28 SEP 2026 • 18:30 WIB'),
+                          _buildDetailRow('Metode Pembayaran', paymentMethod),
+                          _buildDetailRow('Nomor Meja', tableName),
                           const Divider(color: AppColors.border, height: 20),
 
                           Text('Rincian Pesanan', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMain)),
                           const SizedBox(height: 8),
-                          _buildItemRow('1x Kopi Susu Creamy', 'Rp 18.000'),
-                          _buildItemRow('1x Americano Signature', 'Rp 17.000'),
+                          ...effectiveItems.map(
+                            (item) => _buildItemRow('${item.quantity}x ${item.name}', _formatRupiah(item.totalPrice)),
+                          ),
                           const Divider(color: AppColors.border, height: 20),
 
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('Total Pembayaran', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMain)),
-                              Text('Rp 35.000', style: GoogleFonts.lora(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.maroon)),
+                              Text(_formatRupiah(_effectiveTotal), style: GoogleFonts.lora(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.maroon)),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -213,7 +251,10 @@ class StrukPembayaranView extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.textMuted)),
+          Expanded(
+            child: Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.textMuted)),
+          ),
+          const SizedBox(width: 8),
           Text(value, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMain)),
         ],
       ),
@@ -226,7 +267,10 @@ class StrukPembayaranView extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(name, style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.textMain)),
+          Expanded(
+            child: Text(name, style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.textMain)),
+          ),
+          const SizedBox(width: 8),
           Text(price, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMain)),
         ],
       ),

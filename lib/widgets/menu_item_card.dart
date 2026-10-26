@@ -26,8 +26,17 @@ class MenuItemCard extends StatelessWidget {
     return 'Rp ${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
   }
 
+  String get _resolvedImage {
+    if (image == null || image!.isEmpty) return '';
+    if (image!.startsWith('assets/') && !image!.startsWith('assets/images/')) {
+      return image!.replaceFirst('assets/', 'assets/images/');
+    }
+    return image!;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final effectiveImage = _resolvedImage;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -43,10 +52,10 @@ class MenuItemCard extends StatelessWidget {
             child: SizedBox(
               width: 60,
               height: 60,
-              child: image != null && image!.isNotEmpty
-                  ? (image!.startsWith('http')
+              child: effectiveImage.isNotEmpty
+                  ? (effectiveImage.startsWith('http')
                       ? Image.network(
-                          image!,
+                          effectiveImage,
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
@@ -60,7 +69,7 @@ class MenuItemCard extends StatelessWidget {
                           ),
                         )
                       : Image.asset(
-                          image!,
+                          effectiveImage,
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
