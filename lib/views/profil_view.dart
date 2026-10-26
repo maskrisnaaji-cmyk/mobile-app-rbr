@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/colors.dart';
 import 'login_view.dart';
 import 'main_screen.dart';
@@ -19,7 +21,67 @@ class ProfilView extends StatefulWidget {
 }
 
 class _ProfilViewState extends State<ProfilView> {
+  String _userName = 'Aris Widiatmoko';
+  String _userEmail = 'aris.widiatmoko@budaya.id';
+  String _userInitials = 'AW';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final name = prefs.getString('userName');
+      final email = prefs.getString('userEmail');
+      final userStr = prefs.getString('user');
+
+      String? foundName = name;
+      String? foundEmail = email;
+
+      if (userStr != null) {
+        try {
+          final userMap = jsonDecode(userStr);
+          if (userMap is Map) {
+            if ((foundName == null || foundName.isEmpty) && userMap['name'] != null) {
+              foundName = userMap['name'].toString();
+            }
+            if ((foundEmail == null || foundEmail.isEmpty) && userMap['email'] != null) {
+              foundEmail = userMap['email'].toString();
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (mounted) {
+        setState(() {
+          if (foundName != null && foundName.trim().isNotEmpty) {
+            _userName = foundName.trim();
+            _userInitials = _getInitials(_userName);
+          }
+          if (foundEmail != null && foundEmail.trim().isNotEmpty) {
+            _userEmail = foundEmail.trim();
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return 'AW';
+    if (parts.length == 1) {
+      return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+    }
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
   void _showEditProfileDialog() {
+    final nameCtrl = TextEditingController(text: _userName);
+    final emailCtrl = TextEditingController(text: _userEmail);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -86,7 +148,7 @@ class _ProfilViewState extends State<ProfilView> {
             ),
             const SizedBox(height: 20),
             TextField(
-              controller: TextEditingController(text: 'Aris Widiatmoko'),
+              controller: nameCtrl,
               decoration: InputDecoration(
                 labelText: 'Nama Lengkap',
                 labelStyle: GoogleFonts.plusJakartaSans(fontSize: 12),
@@ -96,7 +158,7 @@ class _ProfilViewState extends State<ProfilView> {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: TextEditingController(text: 'aris.widiatmoko@budaya.id'),
+              controller: emailCtrl,
               decoration: InputDecoration(
                 labelText: 'Alamat Email',
                 labelStyle: GoogleFonts.plusJakartaSans(fontSize: 12),
@@ -109,8 +171,26 @@ class _ProfilViewState extends State<ProfilView> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  final newName = nameCtrl.text.trim();
+                  final newEmail = emailCtrl.text.trim();
+                  if (newName.isNotEmpty) {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('userName', newName);
+                    if (newEmail.isNotEmpty) {
+                      await prefs.setString('userEmail', newEmail);
+                    }
+                    if (mounted) {
+                      setState(() {
+                        _userName = newName;
+                        if (newEmail.isNotEmpty) _userEmail = newEmail;
+                        _userInitials = _getInitials(newName);
+                      });
+                    }
+                  }
+                  if (!ctx.mounted) return;
                   Navigator.pop(ctx);
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -181,8 +261,12 @@ class _ProfilViewState extends State<ProfilView> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              if (!ctx.mounted) return;
               Navigator.pop(ctx);
+              if (!mounted) return;
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginView()),
@@ -417,7 +501,7 @@ class _ProfilViewState extends State<ProfilView> {
                         radius: 38,
                         backgroundColor: const Color(0xFFFAF7F2),
                         child: Text(
-                          'AW',
+                          _userInitials,
                           style: GoogleFonts.lora(
                             fontSize: 26,
                             fontWeight: FontWeight.bold,
@@ -469,9 +553,10 @@ class _ProfilViewState extends State<ProfilView> {
                 ),
                 const SizedBox(height: 10),
 
-                // Nama Pengguna: Aris Widiatmoko
+                // Nama Pengguna Dinamis
                 Text(
-                  'Aris Widiatmoko',
+                  _userName,
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.lora(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -480,9 +565,10 @@ class _ProfilViewState extends State<ProfilView> {
                 ),
                 const SizedBox(height: 4),
 
-                // Email & ID Anggota
+                // Email Dinamis & ID Anggota
                 Text(
-                  'aris.widiatmoko@budaya.id',
+                  _userEmail,
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: AppColors.greyText,

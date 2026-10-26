@@ -1,11 +1,66 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/colors.dart';
 import 'tentang_view.dart';
 
-class BerandaView extends StatelessWidget {
+class BerandaView extends StatefulWidget {
   final Function(int)? onNavigateTab;
   const BerandaView({super.key, this.onNavigateTab});
+
+  @override
+  State<BerandaView> createState() => _BerandaViewState();
+}
+
+class _BerandaViewState extends State<BerandaView> {
+  String _userName = 'Ratna Anindita';
+  String _userInitials = 'RA';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final name = prefs.getString('userName');
+      if (name != null && name.trim().isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _userName = name.trim();
+            _userInitials = _getInitials(_userName);
+          });
+        }
+        return;
+      }
+
+      final userStr = prefs.getString('user');
+      if (userStr != null) {
+        final userMap = jsonDecode(userStr);
+        if (userMap is Map && userMap['name'] != null) {
+          final parsedName = userMap['name'].toString().trim();
+          if (parsedName.isNotEmpty && mounted) {
+            setState(() {
+              _userName = parsedName;
+              _userInitials = _getInitials(_userName);
+            });
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return 'RA';
+    if (parts.length == 1) {
+      return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+    }
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,30 +98,44 @@ class BerandaView extends StatelessWidget {
               ),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.tagBg,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 10,
-                          backgroundColor: AppColors.maroon,
-                          child: Text('RA', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Ratna Anindita',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textMain,
+                  GestureDetector(
+                    onTap: () {
+                      if (widget.onNavigateTab != null) {
+                        widget.onNavigateTab!(4); // Arahkan ke tab Profil
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.tagBg,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 10,
+                            backgroundColor: AppColors.maroon,
+                            child: Text(
+                              _userInitials,
+                              style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 120),
+                            child: Text(
+                              _userName,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textMain,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -212,10 +281,10 @@ class BerandaView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildQuickAccessItem(Icons.coffee_outlined, 'Pesan Kopi', () => onNavigateTab?.call(1)),
-              _buildQuickAccessItem(Icons.menu_book_outlined, 'Katalog Buku', () => onNavigateTab?.call(2)),
-              _buildQuickAccessItem(Icons.calendar_month_outlined, 'Event', () => onNavigateTab?.call(3)),
-              _buildQuickAccessItem(Icons.person_outline, 'Profil', () => onNavigateTab?.call(4)),
+              _buildQuickAccessItem(Icons.coffee_outlined, 'Pesan Kopi', () => widget.onNavigateTab?.call(1)),
+              _buildQuickAccessItem(Icons.menu_book_outlined, 'Katalog Buku', () => widget.onNavigateTab?.call(2)),
+              _buildQuickAccessItem(Icons.calendar_month_outlined, 'Event', () => widget.onNavigateTab?.call(3)),
+              _buildQuickAccessItem(Icons.person_outline, 'Profil', () => widget.onNavigateTab?.call(4)),
             ],
           ),
           const SizedBox(height: 24),
@@ -229,7 +298,7 @@ class BerandaView extends StatelessWidget {
                 style: GoogleFonts.lora(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textMain),
               ),
               GestureDetector(
-                onTap: () => onNavigateTab?.call(2),
+                onTap: () => widget.onNavigateTab?.call(2),
                 child: Text(
                   'Lihat Semua >',
                   style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.maroon, fontWeight: FontWeight.bold),
@@ -262,7 +331,7 @@ class BerandaView extends StatelessWidget {
                 style: GoogleFonts.lora(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textMain),
               ),
               GestureDetector(
-                onTap: () => onNavigateTab?.call(3),
+                onTap: () => widget.onNavigateTab?.call(3),
                 child: Text(
                   'Kalender >',
                   style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.maroon, fontWeight: FontWeight.bold),
@@ -316,7 +385,7 @@ class BerandaView extends StatelessWidget {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => onNavigateTab?.call(3),
+                  onPressed: () => widget.onNavigateTab?.call(3),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.maroon,
                     foregroundColor: Colors.white,

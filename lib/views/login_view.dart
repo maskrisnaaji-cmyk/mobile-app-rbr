@@ -77,13 +77,19 @@ class _LoginViewState extends State<LoginView> {
         final user = data['user'];
         String? userName;
 
+        final prefs = await SharedPreferences.getInstance();
         if (token != null) {
-          final prefs = await SharedPreferences.getInstance();
           await prefs.setString('token', token);
-          if (user != null) {
-            await prefs.setString('user', jsonEncode(user));
-            if (user is Map && user['name'] != null) {
+        }
+        if (user != null) {
+          await prefs.setString('user', jsonEncode(user));
+          if (user is Map) {
+            if (user['name'] != null) {
               userName = user['name'].toString();
+              await prefs.setString('userName', userName);
+            }
+            if (user['email'] != null) {
+              await prefs.setString('userEmail', user['email'].toString());
             }
           }
         }
