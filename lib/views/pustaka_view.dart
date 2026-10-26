@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 import '../models/book_model.dart';
 import '../theme/colors.dart';
 import 'book_detail_view.dart';
@@ -15,8 +18,9 @@ class _PustakaViewState extends State<PustakaView> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
-  late List<Book> _allBooks;
-  late List<Book> _filteredBooks;
+  List<Book> _allBooks = [];
+  List<Book> _filteredBooks = [];
+  bool _isLoading = true;
 
   String _selectedCategory = 'Semua';
   final List<String> _categories = [
@@ -31,6 +35,50 @@ class _PustakaViewState extends State<PustakaView> {
     super.initState();
     _allBooks = Book.dummyBooks;
     _filteredBooks = List.from(_allBooks);
+    _fetchBooks();
+  }
+
+  Future<void> _fetchBooks() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http
+          .get(Uri.parse(ApiConfig.booksUrl))
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        final List<Book> loaded = data
+            .map((item) => Book.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        if (mounted) {
+          setState(() {
+            if (loaded.isNotEmpty) {
+              _allBooks = loaded;
+            }
+            _isLoading = false;
+            _filterBooks(_searchController.text);
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _filterBooks(_searchController.text);
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _filterBooks(_searchController.text);
+        });
+      }
+    }
   }
 
   @override
@@ -47,7 +95,6 @@ class _PustakaViewState extends State<PustakaView> {
       final authorMatches = book.author.toLowerCase().contains(query);
       final categoryMatches = book.category.toLowerCase().contains(query);
 
-      // Kombinasikan juga dengan filter chip kategori yang aktif (Semua, Sastra, Sejarah, dll.)
       final isCategorySelected = _selectedCategory == 'Semua' ||
           book.category == _selectedCategory ||
           book.category.toLowerCase().contains(_selectedCategory.toLowerCase()) ||
@@ -59,10 +106,14 @@ class _PustakaViewState extends State<PustakaView> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return RefreshIndicator(
+      onRefresh: _fetchBooks,
+      color: AppColors.maroon,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Bar
           Row(
@@ -123,6 +174,14 @@ class _PustakaViewState extends State<PustakaView> {
               color: AppColors.textMuted,
             ),
           ),
+          if (_isLoading) ...[
+            const SizedBox(height: 8),
+            const LinearProgressIndicator(
+              color: AppColors.maroon,
+              backgroundColor: AppColors.border,
+              minHeight: 2,
+            ),
+          ],
           const SizedBox(height: 12),
 
           // Search Field
@@ -342,8 +401,9 @@ class _PustakaViewState extends State<PustakaView> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildFilterChip(String label, {required bool isSelected, required VoidCallback onTap}) {
     return GestureDetector(
@@ -424,37 +484,51 @@ class _PustakaViewState extends State<PustakaView> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.asset(
-                      coverImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        decoration: BoxDecoration(
-                          color: _getCoverColor(book.title),
-                        ),
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(10.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.auto_stories, color: Color(0xFFEAD8AD), size: 28),
-                                const SizedBox(height: 6),
-                                Text(
-                                  book.title,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.lora(
-                                    color: Colors.white,
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.bold,
+                    Builder(
+                      builder: (context) {
+                        Widget fallbackWidget = Container(
+                          decoration: BoxDecoration(
+                            color: _getCoverColor(book.title),
+                          ),
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(10.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.auto_stories, color: Color(0xFFEAD8AD), size: 28),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    book.title,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.lora(
+                                      color: Colors.white,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+
+                        if (coverImage.startsWith('http://') || coverImage.startsWith('https://')) {
+                          return Image.network(
+                            coverImage,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => fallbackWidget,
+                          );
+                        }
+
+                        return Image.asset(
+                          coverImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => fallbackWidget,
+                        );
+                      },
                     ),
                     Positioned(
                       top: 6,

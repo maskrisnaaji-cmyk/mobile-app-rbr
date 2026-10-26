@@ -44,24 +44,35 @@ class MenuItemCard extends StatelessWidget {
               width: 60,
               height: 60,
               child: image != null && image!.isNotEmpty
-                  ? Image.asset(
-                      image!,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        width: 60,
-                        height: 60,
-                        color: imageColor,
-                        child: const Center(
-                          child: Icon(
-                            Icons.coffee_rounded,
-                            color: Colors.white70,
-                            size: 24,
+                  ? (image!.startsWith('http')
+                      ? Image.network(
+                          image!,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 60,
+                            height: 60,
+                            color: imageColor,
+                            child: const Center(
+                              child: Icon(Icons.coffee_rounded, color: Colors.white70, size: 24),
+                            ),
                           ),
-                        ),
-                      ),
-                    )
+                        )
+                      : Image.asset(
+                          image!,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 60,
+                            height: 60,
+                            color: imageColor,
+                            child: const Center(
+                              child: Icon(Icons.coffee_rounded, color: Colors.white70, size: 24),
+                            ),
+                          ),
+                        ))
                   : Container(
                       width: 60,
                       height: 60,

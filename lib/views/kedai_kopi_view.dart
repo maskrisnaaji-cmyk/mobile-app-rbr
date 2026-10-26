@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 import '../theme/colors.dart';
 import '../widgets/menu_item_card.dart';
 import 'pesanan_meja_view.dart';
@@ -30,57 +33,104 @@ class KedaiKopiView extends StatefulWidget {
 class _KedaiKopiViewState extends State<KedaiKopiView> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
+  bool _isLoading = true;
 
-  final List<KedaiMenuItem> _allMenuList = [
-    const KedaiMenuItem(
-      name: 'Kopi Susu Creamy',
-      category: 'Espresso-Based',
-      price: 18000,
-      image: 'assets/images/kopi_susu.jpg',
-      imageColor: Colors.orange,
-    ),
-    KedaiMenuItem(
-      name: 'Americano Signature',
-      category: 'Espresso-Based',
-      price: 17000,
-      image: 'assets/images/americano.jpg',
-      imageColor: Colors.brown[700]!,
-    ),
-    KedaiMenuItem(
-      name: 'Kopi Tubruk Budaya',
-      category: 'Manual Brew',
-      price: 18000,
-      image: 'assets/images/kopi_tubruk.jpg',
-      imageColor: Colors.grey[850]!,
-    ),
-  ];
-
-  late List<KedaiMenuItem> _filteredMenuList;
+  List<KedaiMenuItem> _allMenuList = [];
+  List<KedaiMenuItem> _filteredMenuList = [];
 
   int _selectedCategoryIndex = 0;
-  final List<String> _categories = [
+  List<String> _categories = [
     'Semua',
-    'Espresso-Based',
+    'Kopi Nusantara',
     'Manual Brew',
-    'Non-Coffee',
+    'Non-Kopi',
+    'Camilan Nusantara',
   ];
 
-  final Map<String, int> _itemCounts = {
-    'Kopi Susu Creamy': 0,
-    'Americano Signature': 0,
-    'Kopi Tubruk Budaya': 0,
-  };
-
-  final Map<String, int> _itemPrices = {
-    'Kopi Susu Creamy': 18000,
-    'Americano Signature': 17000,
-    'Kopi Tubruk Budaya': 18000,
-  };
+  final Map<String, int> _itemCounts = {};
+  final Map<String, int> _itemPrices = {};
 
   @override
   void initState() {
     super.initState();
-    _filteredMenuList = List.from(_allMenuList);
+    _filteredMenuList = [];
+    _fetchMenus();
+  }
+
+  Future<void> _fetchMenus() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await http.get(Uri.parse(ApiConfig.menusUrl)).timeout(
+        const Duration(seconds: 8),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final List<KedaiMenuItem> loaded = [];
+        final Set<String> categories = {'Semua'};
+
+        for (var item in data) {
+          final name = item['name']?.toString() ?? '';
+          final category = item['category']?.toString() ?? 'Kopi Nusantara';
+          final price = int.tryParse(item['price']?.toString() ?? '') ?? 0;
+          final image = item['image']?.toString() ?? '';
+
+          categories.add(category);
+          loaded.add(KedaiMenuItem(
+            name: name,
+            category: category,
+            price: price,
+            image: image,
+            imageColor: _colorForCategory(category),
+          ));
+
+          _itemPrices[name] = price;
+          _itemCounts.putIfAbsent(name, () => 0);
+        }
+
+        if (mounted) {
+          setState(() {
+            _allMenuList = loaded;
+            _categories = categories.toList();
+            _applyFilter();
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Color _colorForCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'kopi nusantara':
+      case 'espresso-based':
+        return Colors.brown.shade700;
+      case 'manual brew':
+        return Colors.brown.shade900;
+      case 'non-kopi':
+      case 'non-coffee':
+        return Colors.teal.shade800;
+      case 'camilan nusantara':
+      case 'snack':
+        return Colors.orange.shade800;
+      default:
+        return AppColors.maroon;
+    }
+  }
+
+  void _applyFilter() {
+    final selectedCat = _selectedCategoryIndex < _categories.length ? _categories[_selectedCategoryIndex] : 'Semua';
+    _filteredMenuList = _allMenuList.where((menu) {
+      final nameMatches = menu.name.toLowerCase().contains(_searchQuery);
+      final categoryMatches = menu.category.toLowerCase().contains(_searchQuery);
+      final matchesSearch = _searchQuery.isEmpty || nameMatches || categoryMatches;
+      final matchesCategory = selectedCat == 'Semua' || menu.category == selectedCat;
+      return matchesSearch && matchesCategory;
+    }).toList();
   }
 
   @override
@@ -258,11 +308,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                           if (_searchQuery.isNotEmpty && _selectedCategoryIndex != 0) {
                             _selectedCategoryIndex = 0;
                           }
-                          _filteredMenuList = _allMenuList.where((menu) {
-                            final nameMatches = menu.name.toLowerCase().contains(_searchQuery);
-                            final categoryMatches = menu.category.toLowerCase().contains(_searchQuery);
-                            return nameMatches || categoryMatches;
-                          }).toList();
+                          _applyFilter();
                         });
                       },
                       decoration: InputDecoration(
@@ -283,10 +329,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                                   setState(() {
                                     _searchController.clear();
                                     _searchQuery = "";
-                                    final selectedCat = _categories[_selectedCategoryIndex];
-                                    _filteredMenuList = _allMenuList.where((menu) {
-                                      return selectedCat == 'Semua' || menu.category == selectedCat;
-                                    }).toList();
+                                    _applyFilter();
                                   });
                                 },
                               )
@@ -315,14 +358,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                           onSelected: (bool selected) {
                             setState(() {
                               _selectedCategoryIndex = index;
-                              final selectedCat = _categories[index];
-                              _filteredMenuList = _allMenuList.where((menu) {
-                                final nameMatches = menu.name.toLowerCase().contains(_searchQuery);
-                                final categoryMatches = menu.category.toLowerCase().contains(_searchQuery);
-                                final matchesSearch = _searchQuery.isEmpty || nameMatches || categoryMatches;
-                                final matchesCategory = selectedCat == 'Semua' || menu.category == selectedCat;
-                                return matchesSearch && matchesCategory;
-                              }).toList();
+                              _applyFilter();
                             });
                           },
                           selectedColor: AppColors.maroon,
@@ -349,65 +385,77 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
 
                 // Daftar Menu List
                 Expanded(
-                  child: _filteredMenuList.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.cardBg,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.lightBorder),
-                                  ),
-                                  child: const Icon(
-                                    Icons.search_off_rounded,
-                                    size: 36,
-                                    color: AppColors.greyText,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Menu tidak ditemukan',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.darkText,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  _searchQuery.isNotEmpty
-                                      ? 'Menu dengan kata kunci "$_searchQuery" tidak ditemukan. Coba kata kunci lain.'
-                                      : 'Tidak ada menu pada kategori ini.',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    color: AppColors.greyText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                  child: _isLoading && _allMenuList.isEmpty
+                      ? const Center(
+                          child: CircularProgressIndicator(color: AppColors.maroon),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 90),
-                          itemCount: _filteredMenuList.length,
-                          itemBuilder: (context, index) {
-                            final menu = _filteredMenuList[index];
-                            return MenuItemCard(
-                              name: menu.name,
-                              price: menu.price,
-                              image: menu.image,
-                              imageColor: menu.imageColor,
-                              count: _itemCounts[menu.name] ?? 0,
-                              onAdd: () => _incrementItem(menu.name),
-                              onRemove: () => _decrementItem(menu.name),
-                            );
-                          },
+                      : RefreshIndicator(
+                          onRefresh: _fetchMenus,
+                          color: AppColors.maroon,
+                          child: _filteredMenuList.isEmpty
+                              ? ListView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.cardBg,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: AppColors.lightBorder),
+                                            ),
+                                            child: const Icon(
+                                              Icons.search_off_rounded,
+                                              size: 36,
+                                              color: AppColors.greyText,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'Menu tidak ditemukan',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.darkText,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            _searchQuery.isNotEmpty
+                                                ? 'Menu dengan kata kunci "$_searchQuery" tidak ditemukan. Coba kata kunci lain.'
+                                                : 'Tidak ada menu pada kategori ini.',
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12,
+                                              color: AppColors.greyText,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.builder(
+                                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                                  padding: const EdgeInsets.only(left: 20, right: 20, bottom: 90),
+                                  itemCount: _filteredMenuList.length,
+                                  itemBuilder: (context, index) {
+                                    final menu = _filteredMenuList[index];
+                                    return MenuItemCard(
+                                      name: menu.name,
+                                      price: menu.price,
+                                      image: menu.image,
+                                      imageColor: menu.imageColor,
+                                      count: _itemCounts[menu.name] ?? 0,
+                                      onAdd: () => _incrementItem(menu.name),
+                                      onRemove: () => _decrementItem(menu.name),
+                                    );
+                                  },
+                                ),
                         ),
                 ),
               ],

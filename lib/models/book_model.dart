@@ -31,6 +31,25 @@ class Book {
     required this.reviewCount,
   });
 
+  factory Book.fromJson(Map<String, dynamic> json) {
+    return Book(
+      id: json['id'] != null ? json['id'].toString() : '',
+      title: json['title'] ?? json['tittle'] ?? 'Judul Buku',
+      author: json['author'] ?? 'Penulis',
+      coverImage: json['cover_image'] ?? json['coverImage'] ?? '',
+      status: json['status'] ?? 'Tersedia di Rak',
+      shelfLocation: json['shelfLocation'] ?? json['rack_location'] ?? json['rackLocation'] ?? 'RAK 1A',
+      category: json['category'] ?? 'Umum',
+      year: json['year'] != null ? json['year'].toString() : '2024',
+      pageCount: json['pageCount'] != null ? json['pageCount'].toString() : (json['page_count'] != null ? json['page_count'].toString() : '150'),
+      language: json['language'] ?? 'IDN',
+      condition: json['condition'] ?? 'Baik',
+      synopsis: json['synopsis'] ?? '',
+      rating: json['rating'] != null ? (double.tryParse(json['rating'].toString()) ?? 4.8) : 4.8,
+      reviewCount: json['reviewCount'] != null ? (int.tryParse(json['reviewCount'].toString()) ?? 50) : (json['review_count'] != null ? (int.tryParse(json['review_count'].toString()) ?? 50) : 50),
+    );
+  }
+
   static List<Book> get dummyBooks => [
         Book(
           id: '1',
