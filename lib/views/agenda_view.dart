@@ -20,16 +20,34 @@ class _AgendaViewState extends State<AgendaView> {
   List<Map<String, dynamic>> _allEvents = [];
 
   // Filter Bulan & Tanggal
-  DateTime _currentMonth = DateTime(2026, 9); // Default ke September 2026 (sesuai data acara RBR)
-  int? _selectedDate; // Tanggal yang dipilih (null = tampilkan semua tanggal di bulan tsb)
+  DateTime _currentMonth =
+      DateTime(2026, 9); // Default ke September 2026 (sesuai data acara RBR)
+  int?
+      _selectedDate; // Tanggal yang dipilih (null = tampilkan semua tanggal di bulan tsb)
 
   static const List<String> _monthNames = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember'
   ];
 
   static const List<String> _dayNames = [
-    'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'
+    'SEN',
+    'SEL',
+    'RAB',
+    'KAM',
+    'JUM',
+    'SAB',
+    'MIN'
   ];
 
   @override
@@ -47,8 +65,8 @@ class _AgendaViewState extends State<AgendaView> {
 
     try {
       final response = await http.get(Uri.parse(ApiConfig.eventsUrl)).timeout(
-        const Duration(seconds: 8),
-      );
+            const Duration(seconds: 8),
+          );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -58,7 +76,9 @@ class _AgendaViewState extends State<AgendaView> {
           final rawDate = item['date']?.toString() ?? '';
           final parsedDate = _parseEventDate(rawDate);
 
-          final title = item['title']?.toString() ?? item['tittle']?.toString() ?? 'Acara Budaya';
+          final title = item['title']?.toString() ??
+              item['tittle']?.toString() ??
+              'Acara Budaya';
           final category = item['category']?.toString() ?? 'Budaya';
           final time = item['time']?.toString() ?? '15:00 WIB';
           final location = item['location']?.toString() ?? 'Pendopo Utama RBR';
@@ -67,7 +87,9 @@ class _AgendaViewState extends State<AgendaView> {
           final rawPrice = item['price'];
           final priceInt = int.tryParse(rawPrice?.toString() ?? '') ?? 0;
           final priceStr = priceInt == 0 ? 'Gratis' : _formatRupiah(priceInt);
-          final image = item['image']?.toString() ?? '';
+          final backendImage = item['image']?.toString() ?? '';
+          final image = _eventImageAsset(title, parsedDate, backendImage);
+          final imageFallback = _eventImageFallback(title);
           final status = item['status']?.toString() ?? 'Aktif';
 
           parsedEvents.add({
@@ -80,9 +102,11 @@ class _AgendaViewState extends State<AgendaView> {
             'location': location,
             'quota': quota,
             'sold': sold,
-            'seats': sold >= quota ? 'Tiket Penuh' : 'Sisa ${quota - sold} Kursi',
+            'seats':
+                sold >= quota ? 'Tiket Penuh' : 'Sisa ${quota - sold} Kursi',
             'price': priceStr,
             'image': image,
+            'imageFallback': imageFallback,
             'status': status,
             'imageColor': _colorForCategory(category),
           });
@@ -102,7 +126,8 @@ class _AgendaViewState extends State<AgendaView> {
               if (datesWithEvents.isNotEmpty) {
                 datesWithEvents.sort((a, b) => a.compareTo(b));
                 // Set default month ke event terdekat
-                _currentMonth = DateTime(datesWithEvents.first.year, datesWithEvents.first.month);
+                _currentMonth = DateTime(
+                    datesWithEvents.first.year, datesWithEvents.first.month);
               }
             }
           });
@@ -131,10 +156,22 @@ class _AgendaViewState extends State<AgendaView> {
     // 2. Coba format teks Indonesia: e.g. "Sabtu, 28 September 2026" atau "28 September 2026"
     final clean = dateStr.toLowerCase();
     final monthMap = {
-      'januari': 1, 'februari': 2, 'maret': 3, 'april': 4,
-      'mei': 5, 'juni': 6, 'juli': 7, 'agustus': 8,
-      'september': 9, 'oktober': 10, 'november': 11, 'desember': 12,
-      'sep': 9, 'okt': 10, 'nov': 11, 'des': 12,
+      'januari': 1,
+      'februari': 2,
+      'maret': 3,
+      'april': 4,
+      'mei': 5,
+      'juni': 6,
+      'juli': 7,
+      'agustus': 8,
+      'september': 9,
+      'oktober': 10,
+      'november': 11,
+      'desember': 12,
+      'sep': 9,
+      'okt': 10,
+      'nov': 11,
+      'des': 12,
     };
 
     final reg = RegExp(r'(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})');
@@ -176,6 +213,45 @@ class _AgendaViewState extends State<AgendaView> {
     }
   }
 
+  String _eventImageAsset(
+      String title, DateTime? eventDate, String backendImage) {
+    final normalizedTitle = title.toLowerCase();
+    if (normalizedTitle.contains('napak tanah')) {
+      return 'assets/images/napak_tanah.jpg';
+    }
+    if (normalizedTitle.contains('teater') &&
+        normalizedTitle.contains('rungkad')) {
+      return 'assets/images/teater_rungkad.jpg';
+    }
+    if (eventDate?.year == 2026 && eventDate?.month == 10) {
+      switch (eventDate!.day) {
+        case 8:
+          return 'assets/images/oktober_08_obrolan_budaya.jpg';
+        case 9:
+          return 'assets/images/oktober_09_pameran_batik.jpg';
+        case 11:
+          return 'assets/images/oktober_11_workshop_keramik.jpg';
+        case 12:
+          return 'assets/images/oktober_12_malam_akustik.jpg';
+        case 13:
+          return 'assets/images/oktober_13_sabtu_budaya.jpg';
+      }
+    }
+    return backendImage;
+  }
+
+  String? _eventImageFallback(String title) {
+    final normalizedTitle = title.toLowerCase();
+    if (normalizedTitle.contains('napak tanah')) {
+      return 'assets/images/napak_tanah.png';
+    }
+    if (normalizedTitle.contains('teater') &&
+        normalizedTitle.contains('rungkad')) {
+      return 'assets/images/teather_rungkad.png';
+    }
+    return null;
+  }
+
   // Navigasi Bulan (Bulan Sebelumnya / Selanjutnya)
   void _prevMonth() {
     setState(() {
@@ -198,7 +274,8 @@ class _AgendaViewState extends State<AgendaView> {
       if (dt == null) return false;
 
       // Filter Bulan & Tahun
-      final matchMonth = dt.year == _currentMonth.year && dt.month == _currentMonth.month;
+      final matchMonth =
+          dt.year == _currentMonth.year && dt.month == _currentMonth.month;
       if (!matchMonth) return false;
 
       // Filter Tanggal Spesifik (jika ada yang dipilih)
@@ -214,7 +291,9 @@ class _AgendaViewState extends State<AgendaView> {
     final Set<int> dates = {};
     for (var event in _allEvents) {
       final dt = event['dateTime'] as DateTime?;
-      if (dt != null && dt.year == _currentMonth.year && dt.month == _currentMonth.month) {
+      if (dt != null &&
+          dt.year == _currentMonth.year &&
+          dt.month == _currentMonth.month) {
         dates.add(dt.day);
       }
     }
@@ -226,13 +305,15 @@ class _AgendaViewState extends State<AgendaView> {
   Widget build(BuildContext context) {
     final events = _filteredEvents;
     final activeDates = _datesWithEventsInCurrentMonth;
-    final monthLabel = '${_monthNames[_currentMonth.month - 1]} ${_currentMonth.year}';
+    final monthLabel =
+        '${_monthNames[_currentMonth.month - 1]} ${_currentMonth.year}';
 
     return RefreshIndicator(
       onRefresh: _fetchEvents,
       color: AppColors.maroon,
       child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics()),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,13 +327,18 @@ class _AgendaViewState extends State<AgendaView> {
                     Container(
                       width: 32,
                       height: 32,
-                      decoration: const BoxDecoration(color: AppColors.maroon, shape: BoxShape.circle),
-                      child: const Icon(Icons.event, color: Colors.white, size: 18),
+                      decoration: const BoxDecoration(
+                          color: AppColors.maroon, shape: BoxShape.circle),
+                      child: const Icon(Icons.event,
+                          color: Colors.white, size: 18),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Agenda Budaya',
-                      style: GoogleFonts.lora(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain),
+                      style: GoogleFonts.lora(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textMain),
                     ),
                   ],
                 ),
@@ -261,7 +347,8 @@ class _AgendaViewState extends State<AgendaView> {
                     IconButton(
                       onPressed: _fetchEvents,
                       tooltip: 'Muat ulang data',
-                      icon: const Icon(Icons.refresh_rounded, color: AppColors.textMain),
+                      icon: const Icon(Icons.refresh_rounded,
+                          color: AppColors.textMain),
                     ),
                   ],
                 ),
@@ -310,7 +397,8 @@ class _AgendaViewState extends State<AgendaView> {
                   IconButton(
                     onPressed: _prevMonth,
                     tooltip: 'Bulan sebelumnya',
-                    icon: const Icon(Icons.chevron_left_rounded, color: AppColors.maroon, size: 24),
+                    icon: const Icon(Icons.chevron_left_rounded,
+                        color: AppColors.maroon, size: 24),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -342,7 +430,8 @@ class _AgendaViewState extends State<AgendaView> {
                       );
                     }),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.tagBg,
                         borderRadius: BorderRadius.circular(20),
@@ -351,7 +440,8 @@ class _AgendaViewState extends State<AgendaView> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.calendar_month_outlined, size: 15, color: AppColors.maroon),
+                          const Icon(Icons.calendar_month_outlined,
+                              size: 15, color: AppColors.maroon),
                           const SizedBox(width: 6),
                           Text(
                             monthLabel,
@@ -362,7 +452,8 @@ class _AgendaViewState extends State<AgendaView> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(Icons.arrow_drop_down, size: 18, color: AppColors.textMuted),
+                          const Icon(Icons.arrow_drop_down,
+                              size: 18, color: AppColors.textMuted),
                         ],
                       ),
                     ),
@@ -372,7 +463,8 @@ class _AgendaViewState extends State<AgendaView> {
                   IconButton(
                     onPressed: _nextMonth,
                     tooltip: 'Bulan selanjutnya',
-                    icon: const Icon(Icons.chevron_right_rounded, color: AppColors.maroon, size: 24),
+                    icon: const Icon(Icons.chevron_right_rounded,
+                        color: AppColors.maroon, size: 24),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -398,17 +490,23 @@ class _AgendaViewState extends State<AgendaView> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 9),
                         decoration: BoxDecoration(
-                          color: _selectedDate == null ? const Color(0xFF6B1D2F) : Colors.white,
+                          color: _selectedDate == null
+                              ? const Color(0xFF6B1D2F)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: _selectedDate == null ? const Color(0xFF6B1D2F) : AppColors.border,
+                            color: _selectedDate == null
+                                ? const Color(0xFF6B1D2F)
+                                : AppColors.border,
                           ),
                           boxShadow: _selectedDate == null
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFF6B1D2F).withValues(alpha: 0.25),
+                                    color: const Color(0xFF6B1D2F)
+                                        .withValues(alpha: 0.25),
                                     blurRadius: 6,
                                     offset: const Offset(0, 3),
                                   ),
@@ -423,7 +521,9 @@ class _AgendaViewState extends State<AgendaView> {
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold,
-                                color: _selectedDate == null ? Colors.white70 : AppColors.textMuted,
+                                color: _selectedDate == null
+                                    ? Colors.white70
+                                    : AppColors.textMuted,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -432,7 +532,9 @@ class _AgendaViewState extends State<AgendaView> {
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: _selectedDate == null ? Colors.white : AppColors.textMain,
+                                color: _selectedDate == null
+                                    ? Colors.white
+                                    : AppColors.textMain,
                               ),
                             ),
                           ],
@@ -442,7 +544,8 @@ class _AgendaViewState extends State<AgendaView> {
 
                     // Daftar Tanggal Ascending dari Tanggal Paling Awal (Kiri)
                     ...activeDates.map((dayNum) {
-                      final dt = DateTime(_currentMonth.year, _currentMonth.month, dayNum);
+                      final dt = DateTime(
+                          _currentMonth.year, _currentMonth.month, dayNum);
                       final dayLabel = _dayNames[dt.weekday - 1];
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -468,11 +571,13 @@ class _AgendaViewState extends State<AgendaView> {
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Column(
                     children: [
-                      const Icon(Icons.wifi_off_rounded, size: 48, color: Colors.redAccent),
+                      const Icon(Icons.wifi_off_rounded,
+                          size: 48, color: Colors.redAccent),
                       const SizedBox(height: 12),
                       Text(
                         _errorMessage!,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textMuted),
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12, color: AppColors.textMuted),
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton.icon(
@@ -494,14 +599,17 @@ class _AgendaViewState extends State<AgendaView> {
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Column(
                     children: [
-                      Icon(Icons.event_busy, size: 48, color: AppColors.textMuted.withValues(alpha: 0.5)),
+                      Icon(Icons.event_busy,
+                          size: 48,
+                          color: AppColors.textMuted.withValues(alpha: 0.5)),
                       const SizedBox(height: 12),
                       Text(
                         _selectedDate != null
                             ? 'Tidak ada acara pada tanggal $_selectedDate $monthLabel.'
                             : 'Tidak ada acara yang dijadwalkan pada $monthLabel.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textMuted),
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12, color: AppColors.textMuted),
                       ),
                     ],
                   ),
@@ -522,6 +630,7 @@ class _AgendaViewState extends State<AgendaView> {
                       price: e['price'] as String,
                       imageColor: e['imageColor'] as Color,
                       image: e['image'] as String?,
+                      imageFallback: e['imageFallback'] as String?,
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -534,18 +643,25 @@ class _AgendaViewState extends State<AgendaView> {
               decoration: BoxDecoration(
                 color: AppColors.goldLight,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.handshake_outlined, color: AppColors.gold, size: 28),
+                  const Icon(Icons.handshake_outlined,
+                      color: AppColors.gold, size: 28),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Ingin Mengadakan Lokakarya?', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold)),
-                        Text('Buka kelas seni atau diskusi budaya bersama komunitas Rumah Ratna.', style: GoogleFonts.plusJakartaSans(fontSize: 9, color: AppColors.textMuted)),
+                        Text('Ingin Mengadakan Lokakarya?',
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11, fontWeight: FontWeight.bold)),
+                        Text(
+                            'Buka kelas seni atau diskusi budaya bersama komunitas Rumah Ratna.',
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 9, color: AppColors.textMuted)),
                       ],
                     ),
                   ),
@@ -573,7 +689,8 @@ class _AgendaViewState extends State<AgendaView> {
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF6B1D2F) : Colors.white,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isSelected ? const Color(0xFF6B1D2F) : AppColors.border),
+          border: Border.all(
+              color: isSelected ? const Color(0xFF6B1D2F) : AppColors.border),
           boxShadow: isSelected
               ? [
                   BoxShadow(
@@ -619,6 +736,7 @@ class _AgendaViewState extends State<AgendaView> {
     required String price,
     required Color imageColor,
     String? image,
+    String? imageFallback,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -637,34 +755,45 @@ class _AgendaViewState extends State<AgendaView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 120,
+            height: 170,
             width: double.infinity,
             decoration: BoxDecoration(
               color: imageColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(13)),
             ),
             child: Stack(
               fit: StackFit.expand,
               children: [
                 if (image != null && image.isNotEmpty)
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(13)),
                     child: (image.startsWith('http')
                         ? Image.network(
                             image,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(color: imageColor),
+                            errorBuilder: (_, __, ___) =>
+                                Container(color: imageColor),
                           )
                         : Image.asset(
                             image.startsWith('/') ? image.substring(1) : image,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(color: imageColor),
+                            errorBuilder: (_, __, ___) => imageFallback == null
+                                ? Container(color: imageColor)
+                                : Image.asset(
+                                    imageFallback,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        Container(color: imageColor),
+                                  ),
                           )),
                   ),
                 // Gradient overlay
                 Container(
                   decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(13)),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -679,11 +808,17 @@ class _AgendaViewState extends State<AgendaView> {
                   top: 10,
                   left: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6)),
                     child: Text(
                       category,
-                      style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.maroon),
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.maroon),
                     ),
                   ),
                 ),
@@ -692,9 +827,14 @@ class _AgendaViewState extends State<AgendaView> {
                   left: 10,
                   child: Row(
                     children: [
-                      const Icon(Icons.access_time, size: 12, color: Colors.white),
+                      const Icon(Icons.access_time,
+                          size: 12, color: Colors.white),
                       const SizedBox(width: 4),
-                      Text(time, style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w500)),
+                      Text(time,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),
@@ -702,14 +842,20 @@ class _AgendaViewState extends State<AgendaView> {
                   bottom: 10,
                   right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: seats.contains('Penuh') ? Colors.red.shade900 : Colors.black54,
+                      color: seats.contains('Penuh')
+                          ? Colors.red.shade900
+                          : Colors.black54,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       seats,
-                      style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -723,12 +869,14 @@ class _AgendaViewState extends State<AgendaView> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 13, color: AppColors.maroon),
+                    const Icon(Icons.location_on_outlined,
+                        size: 13, color: AppColors.maroon),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         location,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: AppColors.textMuted),
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9.5, color: AppColors.textMuted),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -738,7 +886,10 @@ class _AgendaViewState extends State<AgendaView> {
                 const SizedBox(height: 6),
                 Text(
                   title,
-                  style: GoogleFonts.lora(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppColors.textMain),
+                  style: GoogleFonts.lora(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMain),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -747,10 +898,15 @@ class _AgendaViewState extends State<AgendaView> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Biaya Partisipasi', style: GoogleFonts.plusJakartaSans(fontSize: 8.5, color: AppColors.textMuted)),
+                        Text('Biaya Partisipasi',
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 8.5, color: AppColors.textMuted)),
                         Text(
                           price,
-                          style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.maroon),
+                          style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.maroon),
                         ),
                       ],
                     ),
@@ -765,6 +921,8 @@ class _AgendaViewState extends State<AgendaView> {
                               time: time,
                               location: location,
                               basePrice: price,
+                              eventImage: image,
+                              eventImageFallback: imageFallback,
                             ),
                           ),
                         );
@@ -773,9 +931,12 @@ class _AgendaViewState extends State<AgendaView> {
                         backgroundColor: AppColors.maroon,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: Text('PESAN TIKET', style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                      child: Text('PESAN TIKET',
+                          style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10.5, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),

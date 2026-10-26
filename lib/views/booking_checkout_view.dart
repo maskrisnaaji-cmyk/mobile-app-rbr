@@ -44,6 +44,8 @@ class BookingCheckoutView extends StatefulWidget {
   final String location;
   final String basePath;
   final String basePrice;
+  final String? eventImage;
+  final String? eventImageFallback;
 
   const BookingCheckoutView({
     super.key,
@@ -53,6 +55,8 @@ class BookingCheckoutView extends StatefulWidget {
     this.location = 'Ruang Komunal Lt. 2, Rumah Budaya Ratna',
     this.basePath = '',
     this.basePrice = 'Rp 25.000',
+    this.eventImage,
+    this.eventImageFallback,
   });
 
   @override
@@ -174,7 +178,6 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
   // --- Widget: Informasi Event ---
   Widget _buildEventInfoCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -190,84 +193,124 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.tagBg,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  widget.category,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.maroon,
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  const Icon(Icons.star_rounded,
-                      color: Color(0xFFF59E0B), size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Pilihan Komunitas',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
+          _buildEventBanner(),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.tagBg,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        widget.category,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.maroon,
+                        ),
+                      ),
                     ),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded,
+                            color: Color(0xFFF59E0B), size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Pilihan Komunitas',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.eventTitle,
+                  style: GoogleFonts.lora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textMain,
                   ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.eventTitle,
-            style: GoogleFonts.lora(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textMain,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time_rounded,
+                        size: 13, color: AppColors.maroon),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.time,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textMain,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_outlined,
+                        size: 14, color: AppColors.maroon),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        widget.location,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.access_time_rounded,
-                  size: 13, color: AppColors.maroon),
-              const SizedBox(width: 6),
-              Text(
-                widget.time,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textMain,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              const Icon(Icons.location_on_outlined,
-                  size: 14, color: AppColors.maroon),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  widget.location,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEventBanner() {
+    final image = widget.eventImage;
+    if (image == null || image.isEmpty) return const SizedBox.shrink();
+
+    Widget fallback() {
+      final fallbackImage = widget.eventImageFallback;
+      if (fallbackImage == null || fallbackImage.isEmpty) {
+        return Container(color: _paymentTerracotta);
+      }
+      return Image.asset(
+        fallbackImage,
+        width: double.infinity,
+        height: 170,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(color: _paymentTerracotta),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      child: Image.asset(
+        image,
+        width: double.infinity,
+        height: 170,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback(),
       ),
     );
   }
