@@ -75,7 +75,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
       name: 'Wedang Uwuh Kraton',
       category: 'Non-Kopi',
       price: 15000,
-      image: '',
+      image: 'assets/images/wedang_uwuh.jpg',
       imageColor: Colors.teal.shade800,
       note: 'Rempah Hangat Tradisional',
     ),
@@ -83,7 +83,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
       name: 'Pisang Goreng Wijen',
       category: 'Camilan Nusantara',
       price: 15000,
-      image: '',
+      image: 'assets/images/pisang_goreng_keju.jpg',
       imageColor: Colors.orange.shade800,
       note: 'Garing & Manis Legit',
     ),
@@ -134,7 +134,14 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
             final category = item['category']?.toString() ?? 'Kopi Nusantara';
             final price = int.tryParse(item['price']?.toString() ?? '') ?? 0;
             var image = item['image']?.toString() ?? '';
-            if (image.startsWith('assets/') && !image.startsWith('assets/images/')) {
+            if (image.isEmpty) {
+              final n = name.toLowerCase();
+              if (n.contains('pisang')) {
+                image = 'assets/images/pisang_goreng_keju.jpg';
+              } else if (n.contains('wedang') || n.contains('uwuh')) {
+                image = 'assets/images/wedang_uwuh.jpg';
+              }
+            } else if (image.startsWith('assets/') && !image.startsWith('assets/images/')) {
               image = image.replaceFirst('assets/', 'assets/images/');
             }
             final note = item['description']?.toString() ?? item['note']?.toString() ?? '';
