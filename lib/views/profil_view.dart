@@ -11,6 +11,7 @@ import 'ulasan_diskusi_screen.dart';
 import 'pengaturan_akun_screen.dart';
 import 'pusat_bantuan_screen.dart';
 import 'riwayat_pesanan_screen.dart';
+import 'chatbot_view.dart';
 
 class ProfilView extends StatefulWidget {
   final bool showBottomNav;
@@ -751,6 +752,20 @@ class _ProfilViewState extends State<ProfilView> {
             );
           },
         ),
+        const SizedBox(height: 10),
+
+        // Kartu menu 5: "Tanya Kurator AI"
+        _buildMenuCardHighlighted(
+          icon: Icons.auto_awesome_rounded,
+          title: 'Tanya Kurator AI',
+          subtitle: 'Obrolan budaya dengan Ratna AI — kurator digital RBR',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatbotView()),
+            );
+          },
+        ),
       ],
     );
   }
@@ -851,6 +866,102 @@ class _ProfilViewState extends State<ProfilView> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Varian menu card dengan aksen gradien AI (untuk "Tanya Kurator AI")
+  Widget _buildMenuCardHighlighted({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6B1D2F), Color(0xFF8B2543)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6B1D2F).withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          splashColor: Colors.white.withValues(alpha: 0.1),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            title,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 7),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'AI',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, size: 20, color: Colors.white54),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

@@ -22,4 +22,5 @@ class ApiConfig {
   static String get booksUrl => '$baseUrl/books';
   static String get registerUrl => '$baseUrl/auth/register';
   static String get loginUrl => '$baseUrl/auth/login';
+  static String get aiChatUrl => '$baseUrl/ai/chat';
 }
