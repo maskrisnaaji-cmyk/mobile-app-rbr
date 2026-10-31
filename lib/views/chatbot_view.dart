@@ -69,13 +69,12 @@ class _ChatbotViewState extends State<ChatbotView>
       CurvedAnimation(parent: _typingAnimController, curve: Curves.easeInOut),
     );
 
-    // Pesan sambutan awal dari Ratna AI
+    // Pesan sambutan awal dari Arunika Dwipantara
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _addAiMessage(
         text:
-            'Sugeng rawuh! 🙏 Saya Ratna AI, Kurator budaya digital Rumah Budaya Ratna.\n\n'
-            'Saya siap membantu Anda menjelajahi dunia seni, sastra Nusantara, agenda budaya, '
-            'koleksi pustaka, dan kuliner heritage kami.\n\n'
+            'Sugeng rawuh! 🙏 Saya Arunika Dwipantara, Kurator Budaya Digital Rumah Budaya Ratna. '
+            'Saya siap membantu Anda menjelajahi dunia seni, sejarah, koleksi pustaka, dan agenda budaya kami. '
             'Silakan ajukan pertanyaan Anda!',
         category: 'informasi_umum_rbr',
         relatedInfo: '',
@@ -231,7 +230,7 @@ class _ChatbotViewState extends State<ChatbotView>
       ),
       title: Row(
         children: [
-          // Avatar Ratna AI
+          // Avatar Arunika Dwipantara
           Container(
             width: 36,
             height: 36,
@@ -252,7 +251,7 @@ class _ChatbotViewState extends State<ChatbotView>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Ratna AI',
+                'Arunika Dwipantara',
                 style: GoogleFonts.lora(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -260,7 +259,7 @@ class _ChatbotViewState extends State<ChatbotView>
                 ),
               ),
               Text(
-                'Kurator Budaya Digital',
+                'Kurator Budaya Nusantara',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 10,
                   color: Colors.white.withValues(alpha: 0.75),
@@ -423,7 +422,7 @@ class _ChatbotViewState extends State<ChatbotView>
           ),
           const SizedBox(height: 16),
           Text(
-            'Ratna AI',
+            'Arunika Dwipantara',
             style: GoogleFonts.lora(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -432,7 +431,7 @@ class _ChatbotViewState extends State<ChatbotView>
           ),
           const SizedBox(height: 6),
           Text(
-            'Kurator Budaya Digital Rumah Budaya Ratna',
+            'Kurator Budaya Nusantara — Rumah Budaya Ratna',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
@@ -810,7 +809,7 @@ class _ChatbotViewState extends State<ChatbotView>
           ),
           const SizedBox(width: 10),
           Text(
-            'Ratna AI sedang berpikir…',
+            'Arunika sedang berpikir…',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontStyle: FontStyle.italic,
