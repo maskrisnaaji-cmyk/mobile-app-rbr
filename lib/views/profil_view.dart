@@ -10,6 +10,7 @@ import 'koleksi_favorit_screen.dart';
 import 'ulasan_diskusi_screen.dart';
 import 'pengaturan_akun_screen.dart';
 import 'pusat_bantuan_screen.dart';
+import 'riwayat_pesanan_screen.dart';
 
 class ProfilView extends StatefulWidget {
   final bool showBottomNav;
@@ -733,6 +734,20 @@ class _ProfilViewState extends State<ProfilView> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const UlasanDiskusiScreen()),
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+
+        // Kartu menu 4: "Riwayat Pesanan & Tiket"
+        _buildMenuCard(
+          icon: Icons.receipt_long_rounded,
+          title: 'Riwayat Pesanan & Tiket',
+          subtitle: 'Transaksi kedai kopi & tiket agenda budaya',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RiwayatPesananScreen()),
             );
           },
         ),
