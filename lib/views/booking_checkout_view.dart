@@ -305,13 +305,21 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      child: Image.asset(
-        image,
-        width: double.infinity,
-        height: 170,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => fallback(),
-      ),
+      child: image.startsWith('http')
+          ? Image.network(
+              image,
+              width: double.infinity,
+              height: 170,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => fallback(),
+            )
+          : Image.asset(
+              image.startsWith('/') ? image.substring(1) : image,
+              width: double.infinity,
+              height: 170,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => fallback(),
+            ),
     );
   }
 

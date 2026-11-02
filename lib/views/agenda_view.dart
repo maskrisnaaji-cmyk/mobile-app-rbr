@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import '../models/event_model.dart';
 import '../theme/colors.dart';
 import 'booking_checkout_view.dart';
 
@@ -73,42 +74,24 @@ class _AgendaViewState extends State<AgendaView> {
         final List<Map<String, dynamic>> parsedEvents = [];
 
         for (var item in data) {
-          final rawDate = item['date']?.toString() ?? '';
-          final parsedDate = _parseEventDate(rawDate);
-
-          final title = item['title']?.toString() ??
-              item['tittle']?.toString() ??
-              'Acara Budaya';
-          final category = item['category']?.toString() ?? 'Budaya';
-          final time = item['time']?.toString() ?? '15:00 WIB';
-          final location = item['location']?.toString() ?? 'Pendopo Utama RBR';
-          final quota = int.tryParse(item['quota']?.toString() ?? '') ?? 50;
-          final sold = int.tryParse(item['sold']?.toString() ?? '') ?? 0;
-          final rawPrice = item['price'];
-          final priceInt = int.tryParse(rawPrice?.toString() ?? '') ?? 0;
-          final priceStr = priceInt == 0 ? 'Gratis' : _formatRupiah(priceInt);
-          final backendImage = item['image']?.toString() ?? '';
-          final image = _eventImageAsset(title, parsedDate, backendImage);
-          final imageFallback = _eventImageFallback(title);
-          final status = item['status']?.toString() ?? 'Aktif';
+          final event = EventModel.fromJson(item as Map<String, dynamic>);
 
           parsedEvents.add({
-            'id': item['id'],
-            'title': title,
-            'category': category,
-            'dateStr': rawDate,
-            'dateTime': parsedDate,
-            'time': time,
-            'location': location,
-            'quota': quota,
-            'sold': sold,
-            'seats':
-                sold >= quota ? 'Tiket Penuh' : 'Sisa ${quota - sold} Kursi',
-            'price': priceStr,
-            'image': image,
-            'imageFallback': imageFallback,
-            'status': status,
-            'imageColor': _colorForCategory(category),
+            'id': event.id,
+            'title': event.title,
+            'category': event.category,
+            'dateStr': event.date,
+            'dateTime': event.dateTime,
+            'time': event.time,
+            'location': event.location,
+            'quota': event.quota,
+            'sold': event.sold,
+            'seats': event.seats,
+            'price': event.formattedPrice,
+            'image': event.image,
+            'imageFallback': event.imageFallback,
+            'status': event.status,
+            'imageColor': _colorForCategory(event.category),
           });
         }
 
@@ -145,54 +128,6 @@ class _AgendaViewState extends State<AgendaView> {
     }
   }
 
-  /// Parser tanggal fleksibel (mendukung format '2026-09-28' atau teks 'Sabtu, 28 September 2026')
-  DateTime? _parseEventDate(String dateStr) {
-    if (dateStr.trim().isEmpty) return null;
-
-    // 1. Coba format standar ISO (YYYY-MM-DD)
-    final iso = DateTime.tryParse(dateStr);
-    if (iso != null) return iso;
-
-    // 2. Coba format teks Indonesia: e.g. "Sabtu, 28 September 2026" atau "28 September 2026"
-    final clean = dateStr.toLowerCase();
-    final monthMap = {
-      'januari': 1,
-      'februari': 2,
-      'maret': 3,
-      'april': 4,
-      'mei': 5,
-      'juni': 6,
-      'juli': 7,
-      'agustus': 8,
-      'september': 9,
-      'oktober': 10,
-      'november': 11,
-      'desember': 12,
-      'sep': 9,
-      'okt': 10,
-      'nov': 11,
-      'des': 12,
-    };
-
-    final reg = RegExp(r'(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})');
-    final match = reg.firstMatch(clean);
-    if (match != null) {
-      final day = int.tryParse(match.group(1)!);
-      final monthName = match.group(2)!;
-      final year = int.tryParse(match.group(3)!);
-      final month = monthMap[monthName];
-      if (day != null && month != null && year != null) {
-        return DateTime(year, month, day);
-      }
-    }
-
-    return null;
-  }
-
-  String _formatRupiah(int price) {
-    return 'Rp ${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
-  }
-
   Color _colorForCategory(String category) {
     switch (category.toLowerCase()) {
       case 'lokakarya':
@@ -211,45 +146,6 @@ class _AgendaViewState extends State<AgendaView> {
       default:
         return AppColors.maroon;
     }
-  }
-
-  String _eventImageAsset(
-      String title, DateTime? eventDate, String backendImage) {
-    final normalizedTitle = title.toLowerCase();
-    if (normalizedTitle.contains('napak tanah')) {
-      return 'assets/images/napak_tanah.jpg';
-    }
-    if (normalizedTitle.contains('teater') &&
-        normalizedTitle.contains('rungkad')) {
-      return 'assets/images/teater_rungkad.jpg';
-    }
-    if (eventDate?.year == 2026 && eventDate?.month == 10) {
-      switch (eventDate!.day) {
-        case 8:
-          return 'assets/images/oktober_08_obrolan_budaya.jpg';
-        case 9:
-          return 'assets/images/oktober_09_pameran_batik.jpg';
-        case 11:
-          return 'assets/images/oktober_11_workshop_keramik.jpg';
-        case 12:
-          return 'assets/images/oktober_12_malam_akustik.jpg';
-        case 13:
-          return 'assets/images/oktober_13_sabtu_budaya.jpg';
-      }
-    }
-    return backendImage;
-  }
-
-  String? _eventImageFallback(String title) {
-    final normalizedTitle = title.toLowerCase();
-    if (normalizedTitle.contains('napak tanah')) {
-      return 'assets/images/napak_tanah.png';
-    }
-    if (normalizedTitle.contains('teater') &&
-        normalizedTitle.contains('rungkad')) {
-      return 'assets/images/teather_rungkad.png';
-    }
-    return null;
   }
 
   // Navigasi Bulan (Bulan Sebelumnya / Selanjutnya)

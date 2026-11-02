@@ -4,11 +4,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/cart_item_model.dart';
+import '../models/menu_model.dart';
 import '../theme/colors.dart';
 import '../widgets/menu_item_card.dart';
 import 'pesanan_meja_view.dart';
 
 class KedaiMenuItem {
+  final dynamic id;
   final String name;
   final String category;
   final int price;
@@ -17,6 +19,7 @@ class KedaiMenuItem {
   final String note;
 
   const KedaiMenuItem({
+    this.id,
     required this.name,
     required this.category,
     required this.price,
@@ -24,6 +27,18 @@ class KedaiMenuItem {
     required this.imageColor,
     this.note = '',
   });
+
+  factory KedaiMenuItem.fromMenuModel(MenuModel model, Color color) {
+    return KedaiMenuItem(
+      id: model.id,
+      name: model.name,
+      category: model.category,
+      price: model.price,
+      image: model.image,
+      imageColor: color,
+      note: model.description,
+    );
+  }
 }
 
 class KedaiKopiView extends StatefulWidget {
@@ -130,34 +145,15 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
           final Set<String> categories = {'Semua'};
 
           for (var item in data) {
-            final name = item['name']?.toString() ?? '';
-            final category = item['category']?.toString() ?? 'Kopi Nusantara';
-            final price = int.tryParse(item['price']?.toString() ?? '') ?? 0;
-            var image = item['image']?.toString() ?? '';
-            if (image.isEmpty) {
-              final n = name.toLowerCase();
-              if (n.contains('pisang')) {
-                image = 'assets/images/pisang_goreng_keju.jpg';
-              } else if (n.contains('wedang') || n.contains('uwuh')) {
-                image = 'assets/images/wedang_uwuh.jpg';
-              }
-            } else if (image.startsWith('assets/') && !image.startsWith('assets/images/')) {
-              image = image.replaceFirst('assets/', 'assets/images/');
-            }
-            final note = item['description']?.toString() ?? item['note']?.toString() ?? '';
-
-            categories.add(category);
-            loaded.add(KedaiMenuItem(
-              name: name,
-              category: category,
-              price: price,
-              image: image,
-              imageColor: _colorForCategory(category),
-              note: note,
+            final menuModel = MenuModel.fromJson(item as Map<String, dynamic>);
+            categories.add(menuModel.category);
+            loaded.add(KedaiMenuItem.fromMenuModel(
+              menuModel,
+              _colorForCategory(menuModel.category),
             ));
 
-            _itemPrices[name] = price;
-            _itemCounts.putIfAbsent(name, () => 0);
+            _itemPrices[menuModel.name] = menuModel.price;
+            _itemCounts.putIfAbsent(menuModel.name, () => 0);
           }
 
           if (mounted) {
