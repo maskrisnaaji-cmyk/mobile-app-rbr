@@ -105,6 +105,7 @@ class _AgendaViewState extends State<AgendaView> {
               final datesWithEvents = _allEvents
                   .where((e) => e['dateTime'] != null)
                   .map((e) => e['dateTime'] as DateTime)
+                  .where((dt) => dt.year >= 2020 && dt.year <= 2100)
                   .toList();
               if (datesWithEvents.isNotEmpty) {
                 datesWithEvents.sort((a, b) => a.compareTo(b));
@@ -669,8 +670,14 @@ class _AgendaViewState extends State<AgendaView> {
                         ? Image.network(
                             image,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                Container(color: imageColor),
+                            errorBuilder: (_, __, ___) => imageFallback == null
+                                ? Container(color: imageColor)
+                                : Image.asset(
+                                    imageFallback,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        Container(color: imageColor),
+                                  ),
                           )
                         : Image.asset(
                             image.startsWith('/') ? image.substring(1) : image,

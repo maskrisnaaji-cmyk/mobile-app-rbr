@@ -601,13 +601,21 @@ class _BookDetailViewState extends State<BookDetailView> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  coverImagePath,
-                  width: 170,
-                  height: 245,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => _buildBookCoverArt(),
-                ),
+                child: coverImagePath.startsWith('http')
+                    ? Image.network(
+                        coverImagePath,
+                        width: 170,
+                        height: 245,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => _buildBookCoverArt(),
+                      )
+                    : Image.asset(
+                        coverImagePath,
+                        width: 170,
+                        height: 245,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => _buildBookCoverArt(),
+                      ),
               ),
             ),
           ),

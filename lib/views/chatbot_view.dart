@@ -967,7 +967,7 @@ class _ChatbotViewState extends State<ChatbotView>
                   fontSize: 11.5, color: AppColors.greyText),
             ),
             const SizedBox(height: 14),
-            ..._suggestions.map((s) => ListTile(
+            ..._suggestions.map((s) => Material(color: Colors.transparent, child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.auto_awesome_outlined,
                       color: AppColors.maroon, size: 18),
@@ -979,7 +979,7 @@ class _ChatbotViewState extends State<ChatbotView>
                     _inputController.text = s;
                     _sendMessage();
                   },
-                )),
+                ))),
           ],
         ),
       ),

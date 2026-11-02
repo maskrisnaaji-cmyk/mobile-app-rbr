@@ -338,13 +338,15 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   }
 
   Widget _buildNotificationPreferencesCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
-      ),
-      child: Column(
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.lightBorder),
+        ),
+        child: Column(
         children: [
           SwitchListTile(
             title: Text(
@@ -403,17 +405,20 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPrivacyCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
-      ),
-      child: SwitchListTile(
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.lightBorder),
+        ),
+        child: SwitchListTile(
         title: Text(
           'Tampilkan Nama di Forum Ulasan Publik',
           style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold),
@@ -426,6 +431,7 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
         value: _publicReviewProfile,
         onChanged: (val) => setState(() => _publicReviewProfile = val),
       ),
-    );
-  }
+    ),
+  );
+}
 }

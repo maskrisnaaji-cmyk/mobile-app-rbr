@@ -83,30 +83,38 @@ class EventModel {
   }
 
   /// Parser tanggal fleksibel (ISO YYYY-MM-DD atau format bahasa Indonesia)
-  static DateTime? parseDate(String dateStr) {
-    if (dateStr.trim().isEmpty) return null;
+  /// Parser tanggal aman menggunakan DateTime.parse() dengan penanganan error dan fallback
+  static DateTime? parseDate(dynamic rawDate) {
+    if (rawDate == null) return null;
+    final dateStr = rawDate.toString().trim();
+    if (dateStr.isEmpty) return null;
 
-    final iso = DateTime.tryParse(dateStr);
-    if (iso != null) return iso;
+    // 1. Coba DateTime.parse() standar ISO YYYY-MM-DD
+    try {
+      final parsed = DateTime.parse(dateStr);
+      // Cegah bug tahun 1899 atau tahun tidak wajar
+      if (parsed.year >= 2000 && parsed.year <= 2100) {
+        return parsed;
+      }
+    } catch (_) {}
 
+    // 2. Coba DateTime.tryParse()
+    try {
+      final iso = DateTime.tryParse(dateStr);
+      if (iso != null && iso.year >= 2000 && iso.year <= 2100) {
+        return iso;
+      }
+    } catch (_) {}
+
+    // 3. Fallback teks Indonesia (contoh: "Sabtu, 28 September 2026")
     final clean = dateStr.toLowerCase();
     final monthMap = {
-      'januari': 1,
-      'februari': 2,
-      'maret': 3,
-      'april': 4,
-      'mei': 5,
-      'juni': 6,
-      'juli': 7,
-      'agustus': 8,
-      'september': 9,
-      'oktober': 10,
-      'november': 11,
-      'desember': 12,
-      'sep': 9,
-      'okt': 10,
-      'nov': 11,
-      'des': 12,
+      'januari': 1, 'februari': 2, 'maret': 3, 'april': 4,
+      'mei': 5, 'juni': 6, 'juli': 7, 'agustus': 8,
+      'september': 9, 'oktober': 10, 'november': 11, 'desember': 12,
+      'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
+      'jun': 6, 'jul': 7, 'agu': 8, 'agust': 8,
+      'sep': 9, 'okt': 10, 'nov': 11, 'des': 12,
     };
 
     final reg = RegExp(r'(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})');
@@ -117,7 +125,9 @@ class EventModel {
       final year = int.tryParse(match.group(3)!);
       final month = monthMap[monthName];
       if (day != null && month != null && year != null) {
-        return DateTime(year, month, day);
+        if (year >= 2000 && year <= 2100) {
+          return DateTime(year, month, day);
+        }
       }
     }
 
@@ -227,14 +237,14 @@ class EventModel {
     final title = json['title']?.toString() ??
         json['tittle']?.toString() ??
         'Acara Budaya';
-    final category = json['category']?.toString() ?? 'Budaya';
+    final category = (json['category'] != null && json['category'].toString().trim().isNotEmpty) ? json['category'].toString().trim() : (json['kategori']?.toString().trim() ?? 'Budaya');
     final rawDate = json['date']?.toString() ?? '';
     final parsedDate = parseDate(rawDate);
     final time = json['time']?.toString() ?? '15:00 WIB';
     final location = json['location']?.toString() ?? 'Pendopo Utama RBR';
 
     // Memetakan field price secara akurat (tidak otomatis tertulis "Gratis" jika > 0)
-    final priceInt = parsePrice(json['price']);
+    final priceInt = parsePrice(json['price'] ?? json['harga']);
     final priceDbl = priceInt.toDouble();
     final formatted = formatRupiah(priceInt);
 

@@ -100,10 +100,10 @@ class MenuModel {
 
   factory MenuModel.fromJson(Map<String, dynamic> json) {
     final name = json['name']?.toString() ?? '';
-    final category = json['category']?.toString() ?? 'Kopi Nusantara';
+    final category = (json['category'] != null && json['category'].toString().trim().isNotEmpty) ? json['category'].toString().trim() : (json['kategori']?.toString().trim() ?? 'Kopi Nusantara');
 
     // Memetakan key 'price' dari backend dan dikonversi ke int & double
-    final rawPrice = json['price'];
+    final rawPrice = json['price'] ?? json['harga'];
     final priceInt = parsePrice(rawPrice);
     final priceDbl = parsePriceToDouble(rawPrice);
 

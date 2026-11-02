@@ -515,6 +515,10 @@ class _PustakaViewState extends State<PustakaView> {
                           ),
                         );
 
+                        if (coverImage.trim().isEmpty) {
+                          return fallbackWidget;
+                        }
+
                         if (coverImage.startsWith('http://') || coverImage.startsWith('https://')) {
                           return Image.network(
                             coverImage,
