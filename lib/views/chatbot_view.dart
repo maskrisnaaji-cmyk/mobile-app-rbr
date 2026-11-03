@@ -247,25 +247,29 @@ class _ChatbotViewState extends State<ChatbotView>
             ),
           ),
           const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Arunika Dwipantara',
-                style: GoogleFonts.lora(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Arunika Dwipantara',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.lora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              Text(
-                'Kurator Budaya Nusantara',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  color: Colors.white.withValues(alpha: 0.75),
+                Text(
+                  'Kurator Budaya Nusantara',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    color: Colors.white.withValues(alpha: 0.75),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
