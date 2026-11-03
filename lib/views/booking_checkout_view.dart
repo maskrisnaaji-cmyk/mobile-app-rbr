@@ -5,6 +5,7 @@ import '../widgets/mobile_frame.dart';
 import 'qris_payment_view.dart';
 import 'va_payment_view.dart';
 import 'struk_tiket_view.dart';
+import '../services/payment_service.dart';
 
 const Color _paymentEspresso = Color(0xFF2C1810);
 const Color _paymentTerracotta = Color(0xFF8B2B1B);
@@ -46,6 +47,7 @@ class BookingCheckoutView extends StatefulWidget {
   final String basePrice;
   final String? eventImage;
   final String? eventImageFallback;
+  final int? eventId;
 
   const BookingCheckoutView({
     super.key,
@@ -57,6 +59,7 @@ class BookingCheckoutView extends StatefulWidget {
     this.basePrice = 'Rp 25.000',
     this.eventImage,
     this.eventImageFallback,
+    this.eventId,
   });
 
   @override
@@ -968,49 +971,95 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     return SizedBox(
       height: 52,
       child: ElevatedButton(
-        onPressed: () {
+        onPressed: () async {
           if (_formKey.currentState?.validate() ?? false) {
+            final buyerName = _nameController.text.trim();
+            final buyerEmail = _emailController.text.trim();
+            final buyerPhone = _phoneController.text.trim();
+            final orderId = 'RBR-TKT-${DateTime.now().millisecondsSinceEpoch}';
+
             final eTicketView = StrukTiketView(
-              bookingId: '#TKT-9042',
+              bookingId: orderId,
               eventTitle: widget.eventTitle,
               category: widget.category,
               eventTime: widget.time,
               eventLocation: widget.location,
-              buyerName: _nameController.text.trim(),
-              buyerEmail: _emailController.text.trim(),
-              buyerPhone: _phoneController.text.trim(),
+              buyerName: buyerName,
+              buyerEmail: buyerEmail,
+              buyerPhone: buyerPhone,
               ticketType: _selectedTicketType == 0 ? 'Presale' : 'Reguler',
               ticketCount: _ticketQuantity,
               totalPrice: _formatRupiah(_totalAmount),
               paymentMethod: _selectedPaymentMethod.label,
             );
 
-            if (_selectedPaymentMethod == _PaymentMethod.qris) {
+            // Tampilkan loading indikator
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const Center(
+                child: CircularProgressIndicator(color: AppColors.maroon),
+              ),
+            );
+
+            final isQris = _selectedPaymentMethod == _PaymentMethod.qris;
+            final chargeResult = await PaymentService.createCharge(
+              orderId: orderId,
+              grossAmount: _totalAmount,
+              customerName: buyerName,
+              customerEmail: buyerEmail,
+              customerPhone: buyerPhone,
+              paymentType: isQris ? 'qris' : 'bank_transfer',
+              bank: 'bca',
+              orderType: 'ticket',
+              eventId: widget.eventId,
+              items: [
+                {
+                  'id': widget.eventId?.toString() ?? 'TKT',
+                  'name': 'Tiket: ${widget.eventTitle}',
+                  'price': _totalAmount ~/ _ticketQuantity,
+                  'quantity': _ticketQuantity,
+                }
+              ],
+            );
+
+            if (!mounted) return;
+            Navigator.pop(context); // Tutup loading dialog
+
+            final finalOrderId = chargeResult?['order_id'] ?? orderId;
+
+            if (isQris) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => QrisPaymentView(
                     title: 'Instruksi Pembayaran QRIS',
-                    orderNumber: '#TKT-9042',
+                    orderNumber: finalOrderId,
                     badgeText:
                         '$_ticketQuantity x ${_selectedTicketType == 0 ? "Presale" : "Reguler"}',
                     totalAmount: _formatRupiah(_totalAmount),
-                    buttonLabel: 'Sudah Bayar / Cek Status',
+                    rawAmount: _totalAmount,
+                    qrUrl: chargeResult?['qr_url'],
+                    qrString: chargeResult?['qr_string'],
+                    buttonLabel: 'CEK STATUS PEMBAYARAN',
                     nextScreen: eTicketView,
                   ),
                 ),
               );
-            } else if (_selectedPaymentMethod == _PaymentMethod.bankTransfer) {
+            } else {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => VaPaymentView(
                     title: 'Instruksi Pembayaran VA',
-                    orderNumber: '#TKT-9042',
+                    orderNumber: finalOrderId,
                     badgeText:
                         '$_ticketQuantity x ${_selectedTicketType == 0 ? "Presale" : "Reguler"}',
                     totalAmount: _formatRupiah(_totalAmount),
-                    buttonLabel: 'Sudah Bayar / Cek Status',
+                    rawAmount: _totalAmount,
+                    vaNumber: chargeResult?['va_number'] ?? '5213 1845 9403 1716',
+                    bankName: '${(chargeResult?['bank'] ?? 'BCA').toUpperCase()} Virtual Account',
+                    buttonLabel: 'CEK STATUS PEMBAYARAN',
                     nextScreen: eTicketView,
                   ),
                 ),

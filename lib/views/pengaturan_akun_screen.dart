@@ -338,14 +338,15 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   }
 
   Widget _buildNotificationPreferencesCard() {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.lightBorder),
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.lightBorder),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
         child: Column(
         children: [
           SwitchListTile(
@@ -410,14 +411,15 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
 }
 
   Widget _buildPrivacyCard() {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.lightBorder),
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.lightBorder),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
         child: SwitchListTile(
         title: Text(
           'Tampilkan Nama di Forum Ulasan Publik',

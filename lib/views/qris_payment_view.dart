@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
+import '../services/payment_service.dart';
 import 'struk_pembayaran_view.dart';
 
-class QrisPaymentView extends StatelessWidget {
+class QrisPaymentView extends StatefulWidget {
   final String title;
   final String orderNumber;
   final String badgeText;
   final String totalAmount;
+  final int? rawAmount;
+  final String? qrUrl;
+  final String? qrString;
   final String buttonLabel;
   final Widget? nextScreen;
 
@@ -18,9 +22,85 @@ class QrisPaymentView extends StatelessWidget {
     this.orderNumber = '#ORD-9042',
     this.badgeText = 'Meja 04 • Dine-in',
     this.totalAmount = 'Rp 35.000',
+    this.rawAmount,
+    this.qrUrl,
+    this.qrString,
     this.buttonLabel = 'CEK STATUS PEMBAYARAN',
     this.nextScreen,
   });
+
+  @override
+  State<QrisPaymentView> createState() => _QrisPaymentViewState();
+}
+
+class _QrisPaymentViewState extends State<QrisPaymentView> {
+  bool _isChecking = false;
+
+  Future<void> _checkStatus() async {
+    setState(() => _isChecking = true);
+    final statusData = await PaymentService.checkPaymentStatus(widget.orderNumber);
+    if (!mounted) return;
+    setState(() => _isChecking = false);
+
+    final txStatus = (statusData?['transaction_status'] ?? '').toString().toLowerCase();
+    final isPaid = statusData?['is_paid'] == true || txStatus == 'settlement' || txStatus == 'paid';
+
+    if (isPaid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF2E7D32),
+          content: Text('🎉 Pembayaran QRIS Berhasil Terverifikasi!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => widget.nextScreen ?? const StrukPembayaranView(),
+          ),
+        );
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Status: ${txStatus.isEmpty ? "Menunggu Pembayaran" : txStatus}. Silakan scan kode QR di atas.'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _simulateSettlement() async {
+    setState(() => _isChecking = true);
+    final success = await PaymentService.simulateSettlement(
+      orderId: widget.orderNumber,
+      grossAmount: widget.rawAmount ?? 35000,
+      paymentType: 'qris',
+    );
+    if (!mounted) return;
+    setState(() => _isChecking = false);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF2E7D32),
+          content: Text('✅ Simulasi Berhasil: Pembayaran QRIS LUNAS!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => widget.nextScreen ?? const StrukPembayaranView(),
+          ),
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +115,7 @@ class QrisPaymentView extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
-            title,
+            widget.title,
             style: GoogleFonts.lora(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -86,7 +166,7 @@ class QrisPaymentView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF3C7), // Warm amber tint
+        color: const Color(0xFFFEF3C7),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFFDE68A)),
       ),
@@ -152,7 +232,7 @@ class QrisPaymentView extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Nomor Pesanan: $orderNumber',
+                      'Nomor Pesanan: ${widget.orderNumber}',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: AppColors.greyText,
@@ -169,7 +249,7 @@ class QrisPaymentView extends StatelessWidget {
                   border: Border.all(color: AppColors.maroon.withValues(alpha: 0.2)),
                 ),
                 child: Text(
-                  badgeText,
+                  widget.badgeText,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -195,7 +275,7 @@ class QrisPaymentView extends StatelessWidget {
                 ),
               ),
               Text(
-                totalAmount,
+                widget.totalAmount,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -231,7 +311,6 @@ class QrisPaymentView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Badge QRIS
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -257,7 +336,6 @@ class QrisPaymentView extends StatelessWidget {
                   color: AppColors.greyText,
                 ),
               ),
-              // Badge GPN
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -277,7 +355,7 @@ class QrisPaymentView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // QR Code Graphic Container
+          // QR Code Container
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -295,9 +373,19 @@ class QrisPaymentView extends StatelessWidget {
             child: SizedBox(
               width: 210,
               height: 210,
-              child: CustomPaint(
-                painter: _QrisPainter(),
-              ),
+              child: (widget.qrUrl != null && widget.qrUrl!.isNotEmpty)
+                  ? Image.network(
+                      widget.qrUrl!,
+                      width: 210,
+                      height: 210,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => CustomPaint(
+                        painter: _QrisPainter(),
+                      ),
+                    )
+                  : CustomPaint(
+                      painter: _QrisPainter(),
+                    ),
             ),
           ),
           const SizedBox(height: 14),
@@ -355,7 +443,7 @@ class QrisPaymentView extends StatelessWidget {
 
   Widget _buildWalletBadge(String name, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
@@ -381,37 +469,36 @@ class QrisPaymentView extends StatelessWidget {
         SizedBox(
           height: 52,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => nextScreen ?? const StrukPembayaranView(),
-                ),
-              );
-            },
+            onPressed: _isChecking ? null : _checkStatus,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B1D2F), // Merah Marun
+              backgroundColor: const Color(0xFF6B1D2F),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
               elevation: 2,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  buttonLabel,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
+            child: _isChecking
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.buttonLabel,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -452,7 +539,7 @@ class QrisPaymentView extends StatelessWidget {
         TextButton(
           onPressed: () => Navigator.pop(context),
           style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 8),
           ),
           child: Text(
             'Ubah Metode Pembayaran',
@@ -460,6 +547,22 @@ class QrisPaymentView extends StatelessWidget {
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: AppColors.greyText,
+            ),
+          ),
+        ),
+
+        // Quick simulation helper for local sandbox test
+        Center(
+          child: TextButton(
+            onPressed: _isChecking ? null : _simulateSettlement,
+            child: Text(
+              '⚡ Simulasi Lunas (Demo Sandbox)',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.greyText.withValues(alpha: 0.8),
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
         ),
@@ -477,7 +580,6 @@ class _QrisPainter extends CustomPainter {
 
     final cell = size.width / 25;
 
-    // Fungsi helper untuk menggambar modul titik QR
     void drawDot(int col, int row) {
       canvas.drawRect(
         Rect.fromLTWH(col * cell, row * cell, cell - 0.5, cell - 0.5),
@@ -485,9 +587,7 @@ class _QrisPainter extends CustomPainter {
       );
     }
 
-    // Fungsi helper untuk menggambar Finder Pattern (sudut 7x7)
     void drawFinderPattern(double startX, double startY) {
-      // Kotak luar 7x7
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(startX, startY, cell * 7, cell * 7),
@@ -495,12 +595,10 @@ class _QrisPainter extends CustomPainter {
         ),
         paintDark,
       );
-      // Kotak putih 5x5
       canvas.drawRect(
         Rect.fromLTWH(startX + cell, startY + cell, cell * 5, cell * 5),
         paintLight,
       );
-      // Kotak dalam 3x3
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(startX + cell * 2, startY + cell * 2, cell * 3, cell * 3),
@@ -510,106 +608,48 @@ class _QrisPainter extends CustomPainter {
       );
     }
 
-    // Gambar 3 Finder Pattern
-    drawFinderPattern(0, 0); // Kiri Atas
-    drawFinderPattern(size.width - cell * 7, 0); // Kanan Atas
-    drawFinderPattern(0, size.height - cell * 7); // Kiri Bawah
+    drawFinderPattern(0, 0);
+    drawFinderPattern(size.width - cell * 7, 0);
+    drawFinderPattern(0, size.height - cell * 7);
 
-    // Alignment pattern (Kanan Bawah)
     final alignX = size.width - cell * 8;
     final alignY = size.height - cell * 8;
-    canvas.drawRect(Rect.fromLTWH(alignX, alignY, cell * 5, cell * 5), paintDark);
-    canvas.drawRect(Rect.fromLTWH(alignX + cell, alignY + cell, cell * 3, cell * 3), paintLight);
-    canvas.drawRect(Rect.fromLTWH(alignX + cell * 2, alignY + cell * 2, cell, cell), paintDark);
-
-    // Data modul pola realistis
-    const matrix = [
-      "0000000010101010000000000",
-      "0000000011010101000000000",
-      "0000000001100110000000000",
-      "0000000010111001000000000",
-      "0000000001001101000000000",
-      "0000000011100010000000000",
-      "0000000000110111000000000",
-      "0000000010001001000000000",
-      "1011010111010101101101011",
-      "0100101000101100010010100",
-      "1110110111010010111011011",
-      "0011001000111001001100100",
-      "1001101101000110100110110",
-      "0110010011101001011001001",
-      "1101011000010110110101100",
-      "0010100111101001001010011",
-      "1011010100011110101101010",
-      "0000000011000101000000000",
-      "0000000000111010000000000",
-      "0000000010100101000000000",
-      "0000000001011010000000000",
-      "0000000011100111000000000",
-      "0000000000011000000000000",
-      "0000000010101011000000000",
-      "0000000001010100000000000",
-    ];
-
-    for (int r = 0; r < matrix.length; r++) {
-      final line = matrix[r];
-      for (int c = 0; c < line.length; c++) {
-        // Lewati area finder pattern agar tidak tertimpa
-        if ((r < 8 && c < 8) || (r < 8 && c >= 17) || (r >= 17 && c < 8)) {
-          continue;
-        }
-        // Lewati area tengah untuk logo
-        if (r >= 10 && r <= 14 && c >= 10 && c <= 14) {
-          continue;
-        }
-        if (line[c] == '1') {
-          drawDot(c, r);
-        }
-      }
-    }
-
-    // Logo Center Badge RBR
-    final centerRect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height / 2),
-      width: cell * 5.5,
-      height: cell * 5.5,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(centerRect, const Radius.circular(6)),
-      Paint()..color = Colors.white,
-    );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset(size.width / 2, size.height / 2),
-          width: cell * 4.5,
-          height: cell * 4.5,
-        ),
-        const Radius.circular(4),
+        Rect.fromLTWH(alignX, alignY, cell * 5, cell * 5),
+        const Radius.circular(3),
       ),
-      Paint()..color = const Color(0xFF6B1D2F),
+      paintDark,
     );
+    canvas.drawRect(
+      Rect.fromLTWH(alignX + cell, alignY + cell, cell * 3, cell * 3),
+      paintLight,
+    );
+    drawDot((alignX / cell + 2).round(), (alignY / cell + 2).round());
 
-    // Teks RBR di logo tengah
-    final textSpan = TextSpan(
-      text: 'RBR',
-      style: GoogleFonts.plusJakartaSans(
-        color: const Color(0xFFC59B27),
-        fontSize: cell * 1.7,
-        fontWeight: FontWeight.w900,
-      ),
-    );
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        (size.width - textPainter.width) / 2,
-        (size.height - textPainter.height) / 2,
-      ),
-    );
+    for (int col = 8; col <= 16; col++) {
+      if (col % 2 == 0) drawDot(col, 6);
+    }
+    for (int row = 8; row <= 16; row++) {
+      if (row % 2 == 0) drawDot(6, row);
+    }
+
+    final dummyDots = [
+      [8, 1], [10, 2], [12, 1], [14, 3], [16, 2],
+      [1, 8], [3, 10], [2, 13], [4, 15], [0, 16],
+      [8, 8], [9, 10], [11, 8], [13, 9], [15, 11],
+      [8, 13], [10, 14], [12, 16], [14, 13], [16, 15],
+      [18, 8], [20, 9], [22, 8], [24, 11],
+      [18, 14], [20, 15], [22, 13], [24, 16],
+      [8, 18], [9, 20], [11, 22], [13, 24],
+      [14, 18], [15, 21], [16, 23],
+      [18, 18], [20, 20], [22, 22], [24, 24],
+      [19, 21], [21, 23], [23, 19],
+    ];
+
+    for (final dot in dummyDots) {
+      drawDot(dot[0], dot[1]);
+    }
   }
 
   @override
