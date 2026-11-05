@@ -303,10 +303,43 @@ class _KatalogViewState extends State<KatalogView> {
                                       child: Stack(
                                         fit: StackFit.expand,
                                         children: [
-                                          Image.asset(
-                                            coverImage,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) => Container(
+                                          (coverImage.startsWith('http://') || coverImage.startsWith('https://'))
+                                              ? Image.network(
+                                                  coverImage,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) => Container(
+                                                    decoration: BoxDecoration(
+                                                      color: _getCoverColor(selectedBook.title),
+                                                    ),
+                                                    child: Center(
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.all(10.0),
+                                                        child: Column(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          children: [
+                                                            const Icon(Icons.auto_stories, color: Color(0xFFEAD8AD), size: 28),
+                                                            const SizedBox(height: 6),
+                                                            Text(
+                                                              selectedBook.title,
+                                                              textAlign: TextAlign.center,
+                                                              maxLines: 2,
+                                                              overflow: TextOverflow.ellipsis,
+                                                              style: GoogleFonts.lora(
+                                                                color: Colors.white,
+                                                                fontSize: 10.5,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                              : Image.asset(
+                                                  coverImage,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) => Container(
                                               decoration: BoxDecoration(
                                                 color: _getCoverColor(selectedBook.title),
                                               ),

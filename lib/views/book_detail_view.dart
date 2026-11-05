@@ -1431,10 +1431,49 @@ class _BookDetailViewState extends State<BookDetailView> {
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                    child: Image.asset(
-                      relatedImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
+                    child: (relatedImage.startsWith('http://') || relatedImage.startsWith('https://'))
+                        ? Image.network(
+                            relatedImage,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: double.infinity,
+                              decoration: const BoxDecoration(
+                                color: AppColors.maroonDark,
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+                              ),
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.menu_book_outlined,
+                                        size: 26,
+                                        color: Colors.white70,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        item.title,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.lora(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Image.asset(
+                            relatedImage,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
                     width: double.infinity,
                     decoration: const BoxDecoration(
                       color: AppColors.maroonDark,

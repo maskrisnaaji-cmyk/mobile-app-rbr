@@ -31,22 +31,83 @@ class Book {
     required this.reviewCount,
   });
 
+  String get image => coverImage;
+  String get imageUrl => coverImage;
+
+  /// Helper untuk memastikan URL/path cover buku terpetakan dengan benar (Vercel Blob / Cloud URL / Local Asset)
+  static String resolveCoverImageUrl(dynamic rawImage, {String title = ''}) {
+    String img = rawImage?.toString().trim() ?? '';
+
+    // URL Cloud (Vercel Blob / HTTPS / HTTP)
+    if (img.startsWith('http://') || img.startsWith('https://')) {
+      return img;
+    }
+
+    // Fallback otomatis jika kosong berdasarkan judul buku
+    if (img.isEmpty) {
+      final t = title.toLowerCase();
+      if (t.contains('jibril')) return 'assets/images/dokumen_jibril.jpg';
+      if (t.contains('anjing') || t.contains('lek')) {
+        return 'assets/images/anjing_anjing_menyerbu_lek_zul.jpg';
+      }
+      if (t.contains('peri')) {
+        return 'assets/images/laki_laki_yang_kawin_dengan_peri.jpg';
+      }
+      if (t.contains('lipstik') || t.contains('tejo')) {
+        return 'assets/images/lipstik_di_tas_doni.jpg';
+      }
+      return '';
+    }
+
+    var clean = img;
+    if (clean.startsWith('/')) {
+      clean = clean.substring(1);
+    }
+    if (clean.startsWith('assets/') && !clean.startsWith('assets/images/')) {
+      clean = clean.replaceFirst('assets/', 'assets/images/');
+    } else if (!clean.startsWith('assets/images/')) {
+      clean = 'assets/images/$clean';
+    }
+    return clean;
+  }
+
   factory Book.fromJson(Map<String, dynamic> json) {
+    final title = json['title'] ?? json['tittle'] ?? 'Judul Buku';
+    final rawCover = json['cover_image'] ??
+        json['coverImage'] ??
+        json['image'] ??
+        json['imageUrl'] ??
+        json['image_url'];
+    final cover = resolveCoverImageUrl(rawCover, title: title);
+
     return Book(
       id: json['id'] != null ? json['id'].toString() : '',
-      title: json['title'] ?? json['tittle'] ?? 'Judul Buku',
+      title: title,
       author: json['author'] ?? 'Penulis',
-      coverImage: json['cover_image'] ?? json['coverImage'] ?? '',
+      coverImage: cover,
       status: json['status'] ?? 'Tersedia di Rak',
-      shelfLocation: json['shelfLocation'] ?? json['rack_location'] ?? json['rackLocation'] ?? 'RAK 1A',
+      shelfLocation: json['shelfLocation'] ??
+          json['rack_location'] ??
+          json['rackLocation'] ??
+          'RAK 1A',
       category: json['category'] ?? 'Umum',
       year: json['year'] != null ? json['year'].toString() : '2024',
-      pageCount: json['pageCount'] != null ? json['pageCount'].toString() : (json['page_count'] != null ? json['page_count'].toString() : '150'),
+      pageCount: json['pageCount'] != null
+          ? json['pageCount'].toString()
+          : (json['page_count'] != null
+              ? json['page_count'].toString()
+              : '150'),
       language: json['language'] ?? 'IDN',
       condition: json['condition'] ?? 'Baik',
       synopsis: json['synopsis'] ?? '',
-      rating: json['rating'] != null ? (double.tryParse(json['rating'].toString()) ?? 4.8) : 4.8,
-      reviewCount: json['reviewCount'] != null ? (int.tryParse(json['reviewCount'].toString()) ?? 50) : (json['review_count'] != null ? (int.tryParse(json['review_count'].toString()) ?? 50) : 50),
+      rating: json['rating'] != null
+          ? (double.tryParse(json['rating'].toString()) ?? 4.8)
+          : 4.8,
+      reviewCount: json['reviewCount'] != null
+          ? (int.tryParse(json['reviewCount'].toString()) ?? 50)
+          : (json['review_count'] != null
+              ? (int.tryParse(json['review_count'].toString()) ?? 50)
+              : 50),
     );
   }
 
