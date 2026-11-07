@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/user_avatar_widget.dart';
 import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
 
@@ -27,6 +28,12 @@ class PusatBantuanScreen extends StatelessWidget {
             ),
           ),
           centerTitle: false,
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 14),
+              child: Center(child: UserAvatarWidget(radius: 13)),
+            ),
+          ],
         ),
         body: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),

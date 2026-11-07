@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/user_session.dart';
 import '../theme/colors.dart';
 import 'tentang_view.dart';
 
@@ -14,52 +13,25 @@ class BerandaView extends StatefulWidget {
 }
 
 class _BerandaViewState extends State<BerandaView> {
-  String _userName = 'Ratna Anindita';
-  String _userInitials = 'RA';
+  String get _userName => UserSession.instance.name;
+  String get _userInitials => UserSession.instance.initials;
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    UserSession.instance.addListener(_onSessionChanged);
   }
 
-  Future<void> _loadUserData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final name = prefs.getString('userName');
-      if (name != null && name.trim().isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _userName = name.trim();
-            _userInitials = _getInitials(_userName);
-          });
-        }
-        return;
-      }
-
-      final userStr = prefs.getString('user');
-      if (userStr != null) {
-        final userMap = jsonDecode(userStr);
-        if (userMap is Map && userMap['name'] != null) {
-          final parsedName = userMap['name'].toString().trim();
-          if (parsedName.isNotEmpty && mounted) {
-            setState(() {
-              _userName = parsedName;
-              _userInitials = _getInitials(_userName);
-            });
-          }
-        }
-      }
-    } catch (_) {}
+  @override
+  void dispose() {
+    UserSession.instance.removeListener(_onSessionChanged);
+    super.dispose();
   }
 
-  String _getInitials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return 'RA';
-    if (parts.length == 1) {
-      return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+  void _onSessionChanged() {
+    if (mounted) {
+      setState(() {});
     }
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
   @override

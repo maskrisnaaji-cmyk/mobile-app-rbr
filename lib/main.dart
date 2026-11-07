@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/user_session.dart';
 import 'views/login_view.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint('[dotenv] Load notice: $e');
+  }
+  await UserSession.instance.init();
   runApp(const MyApp());
 }
 

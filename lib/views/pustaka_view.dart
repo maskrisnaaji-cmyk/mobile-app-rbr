@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/book_model.dart';
 import '../theme/colors.dart';
+import '../widgets/user_avatar_widget.dart';
 import 'book_detail_view.dart';
 
 class PustakaView extends StatefulWidget {
@@ -153,6 +154,8 @@ class _PustakaViewState extends State<PustakaView> {
                     onPressed: () {},
                     icon: const Icon(Icons.notifications_none, color: AppColors.textMain),
                   ),
+                  const SizedBox(width: 4),
+                  const UserAvatarWidget(radius: 13),
                 ],
               ),
             ],

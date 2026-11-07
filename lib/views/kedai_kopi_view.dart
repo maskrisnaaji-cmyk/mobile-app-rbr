@@ -7,6 +7,7 @@ import '../models/cart_item_model.dart';
 import '../models/menu_model.dart';
 import '../theme/colors.dart';
 import '../widgets/menu_item_card.dart';
+import '../widgets/user_avatar_widget.dart';
 import 'pesanan_meja_view.dart';
 
 class _CoffeeTable {
@@ -485,6 +486,8 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                                 color: AppColors.darkText),
                             onPressed: () {},
                           ),
+                          const SizedBox(width: 4),
+                          const UserAvatarWidget(radius: 13),
                         ],
                       ),
                     ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/user_avatar_widget.dart';
 import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
 import 'struk_pembayaran_view.dart';
@@ -130,6 +131,12 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
             ),
           ),
           centerTitle: false,
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 14),
+              child: Center(child: UserAvatarWidget(radius: 13)),
+            ),
+          ],
           bottom: TabBar(
             controller: _tabController,
             labelColor: AppColors.maroon,

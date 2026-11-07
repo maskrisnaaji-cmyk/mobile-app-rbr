@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/user_session.dart';
+import '../widgets/user_avatar_widget.dart';
 import '../theme/colors.dart';
 import 'login_view.dart';
 import 'main_screen.dart';
@@ -23,61 +23,31 @@ class ProfilView extends StatefulWidget {
 }
 
 class _ProfilViewState extends State<ProfilView> {
-  String _userName = 'Aris Widiatmoko';
-  String _userEmail = 'aris.widiatmoko@budaya.id';
-  String _userInitials = 'AW';
+  String get _userName => UserSession.instance.name;
+  String get _userEmail => UserSession.instance.email;
+  String get _userInitials => UserSession.instance.initials;
 
   @override
   void initState() {
     super.initState();
+    UserSession.instance.addListener(_onSessionChanged);
     _loadUserProfile();
   }
 
-  Future<void> _loadUserProfile() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final name = prefs.getString('userName');
-      final email = prefs.getString('userEmail');
-      final userStr = prefs.getString('user');
-
-      String? foundName = name;
-      String? foundEmail = email;
-
-      if (userStr != null) {
-        try {
-          final userMap = jsonDecode(userStr);
-          if (userMap is Map) {
-            if ((foundName == null || foundName.isEmpty) && userMap['name'] != null) {
-              foundName = userMap['name'].toString();
-            }
-            if ((foundEmail == null || foundEmail.isEmpty) && userMap['email'] != null) {
-              foundEmail = userMap['email'].toString();
-            }
-          }
-        } catch (_) {}
-      }
-
-      if (mounted) {
-        setState(() {
-          if (foundName != null && foundName.trim().isNotEmpty) {
-            _userName = foundName.trim();
-            _userInitials = _getInitials(_userName);
-          }
-          if (foundEmail != null && foundEmail.trim().isNotEmpty) {
-            _userEmail = foundEmail.trim();
-          }
-        });
-      }
-    } catch (_) {}
+  @override
+  void dispose() {
+    UserSession.instance.removeListener(_onSessionChanged);
+    super.dispose();
   }
 
-  String _getInitials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return 'AW';
-    if (parts.length == 1) {
-      return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+  void _onSessionChanged() {
+    if (mounted) {
+      setState(() {});
     }
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
+  Future<void> _loadUserProfile() async {
+    await UserSession.instance.init();
   }
 
   void _showEditProfileDialog() {
@@ -177,18 +147,10 @@ class _ProfilViewState extends State<ProfilView> {
                   final newName = nameCtrl.text.trim();
                   final newEmail = emailCtrl.text.trim();
                   if (newName.isNotEmpty) {
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setString('userName', newName);
-                    if (newEmail.isNotEmpty) {
-                      await prefs.setString('userEmail', newEmail);
-                    }
-                    if (mounted) {
-                      setState(() {
-                        _userName = newName;
-                        if (newEmail.isNotEmpty) _userEmail = newEmail;
-                        _userInitials = _getInitials(newName);
-                      });
-                    }
+                    await UserSession.instance.updateUser(
+                      name: newName,
+                      email: newEmail.isNotEmpty ? newEmail : null,
+                    );
                   }
                   if (!ctx.mounted) return;
                   Navigator.pop(ctx);
@@ -264,8 +226,7 @@ class _ProfilViewState extends State<ProfilView> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
+              await UserSession.instance.clearSession();
               if (!ctx.mounted) return;
               Navigator.pop(ctx);
               if (!mounted) return;
@@ -379,28 +340,10 @@ class _ProfilViewState extends State<ProfilView> {
               },
               tooltip: 'Pengaturan',
             ),
-            const SizedBox(width: 2),
-            GestureDetector(
+            const SizedBox(width: 4),
+            UserAvatarWidget(
+              radius: 14,
               onTap: _showEditProfileDialog,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.maroon, width: 1.5),
-                ),
-                child: CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppColors.maroon.withValues(alpha: 0.12),
-                  child: Text(
-                    'AW',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.maroon,
-                    ),
-                  ),
-                ),
-              ),
             ),
           ],
         ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/user_session.dart';
+import '../widgets/user_avatar_widget.dart';
 import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
 
@@ -77,6 +79,14 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
             ),
           ),
           centerTitle: false,
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Center(
+                child: UserAvatarWidget(radius: 14),
+              ),
+            ),
+          ],
         ),
         body: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -137,60 +147,66 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   }
 
   Widget _buildAccountBadgeCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.maroon.withValues(alpha: 0.12),
-            child: Text(
-              'AW',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppColors.maroon,
+    return ListenableBuilder(
+      listenable: UserSession.instance,
+      builder: (context, _) {
+        final session = UserSession.instance;
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.lightBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Aris Widiatmoko',
-                  style: GoogleFonts.lora(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  'aris.widiatmoko@budaya.id • Anggota Terverifikasi',
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.maroon.withValues(alpha: 0.12),
+                child: Text(
+                  session.initials,
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    color: AppColors.greyText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.maroon,
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.name,
+                      style: GoogleFonts.lora(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      '${session.email} • Anggota Terverifikasi',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: AppColors.greyText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

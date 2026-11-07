@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/event_model.dart';
 import '../theme/colors.dart';
+import '../widgets/user_avatar_widget.dart';
 import 'booking_checkout_view.dart';
 
 class AgendaView extends StatefulWidget {
@@ -247,6 +248,8 @@ class _AgendaViewState extends State<AgendaView> {
                       icon: const Icon(Icons.refresh_rounded,
                           color: AppColors.textMain),
                     ),
+                    const SizedBox(width: 4),
+                    const UserAvatarWidget(radius: 13),
                   ],
                 ),
               ],

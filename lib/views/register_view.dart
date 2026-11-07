@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/user_session.dart';
 import '../theme/colors.dart';
 import 'main_screen.dart';
 
@@ -93,20 +93,17 @@ class _RegisterViewState extends State<RegisterView> {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // Simpan token JWT dan data user ke SharedPreferences
+        // Simpan token JWT dan data user ke SharedPreferences & UserSession
         final token = data['token'] as String?;
         final user = data['user'];
 
-        final prefs = await SharedPreferences.getInstance();
-        if (token != null) {
-          await prefs.setString('token', token);
-        }
-        if (user != null) {
-          await prefs.setString('user', jsonEncode(user));
-        }
-        // Simpan nama dan email user untuk sinkronisasi beranda & profil
-        await prefs.setString('userName', name);
-        await prefs.setString('userEmail', email);
+        // Sinkronisasi otomatis ke state management UserSession
+        await UserSession.instance.setUser(
+          name: name,
+          email: email,
+          token: token,
+          rawUser: user is Map<String, dynamic> ? user : null,
+        );
 
         if (!mounted) return;
 

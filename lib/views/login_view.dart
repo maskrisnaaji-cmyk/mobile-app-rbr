@@ -3,12 +3,30 @@ import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import '../config/api_config.dart';
+import '../services/user_session.dart';
 import '../theme/colors.dart';
 import 'main_screen.dart';
 import 'register_view.dart';
+import 'forgot_password_view.dart';
+
+extension GoogleSignInCompat on GoogleSignIn {
+  /// Metode signIn() untuk platform Web dan kompatibilitas
+  Future<GoogleSignInAccount?> signIn() async {
+    if (supportsAuthenticate()) {
+      return await authenticate();
+    }
+    final future = attemptLightweightAuthentication();
+    if (future != null) {
+      return await future;
+    }
+    return null;
+  }
+}
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -23,6 +41,38 @@ class _LoginViewState extends State<LoginView> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
+  bool _isLoggingIn = false;
+  static bool _isGoogleSignInInitialized = false;
+  static Future<void>? _googleSignInInitFuture;
+
+  Future<void> _initGoogleSignIn() async {
+    if (_isGoogleSignInInitialized) return;
+    if (_googleSignInInitFuture != null) {
+      return _googleSignInInitFuture;
+    }
+    _googleSignInInitFuture = () async {
+      try {
+        String? clientId;
+        try {
+          if (dotenv.isInitialized) {
+            clientId = dotenv.env['GOOGLE_CLIENT_ID'];
+          }
+        } catch (_) {}
+        clientId ??= ApiConfig.googleClientId;
+
+        await GoogleSignIn.instance.initialize(
+          clientId: clientId,
+          // serverClientId tidak didukung di platform Web (Flutter Web / FedCM)
+          serverClientId: kIsWeb ? null : clientId,
+        );
+        _isGoogleSignInInitialized = true;
+      } catch (e) {
+        debugPrint('[GoogleSignIn] Init notice: $e');
+      }
+    }();
+    return _googleSignInInitFuture;
+  }
 
   /// URL endpoint autentikasi backend
   /// Menggunakan 10.0.2.2 untuk Android Emulator, dan localhost untuk Web/Desktop/iOS
@@ -40,6 +90,12 @@ class _LoginViewState extends State<LoginView> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _initGoogleSignIn();
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -48,6 +104,7 @@ class _LoginViewState extends State<LoginView> {
 
   /// Fungsi login tersambung ke backend Express.js & MySQL
   Future<void> _handleLogin() async {
+    if (_isLoading || _isGoogleLoading || _isLoggingIn) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -72,27 +129,27 @@ class _LoginViewState extends State<LoginView> {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        // Simpan token JWT dan data user ke SharedPreferences
+        // Simpan token JWT dan data user ke SharedPreferences & UserSession
         final token = data['token'] as String?;
         final user = data['user'];
         String? userName;
+        String? userEmail;
 
-        final prefs = await SharedPreferences.getInstance();
-        if (token != null) {
-          await prefs.setString('token', token);
+        if (user is Map) {
+          userName = user['name']?.toString() ?? user['username']?.toString();
+          userEmail = user['email']?.toString();
         }
-        if (user != null) {
-          await prefs.setString('user', jsonEncode(user));
-          if (user is Map) {
-            if (user['name'] != null) {
-              userName = user['name'].toString();
-              await prefs.setString('userName', userName);
-            }
-            if (user['email'] != null) {
-              await prefs.setString('userEmail', user['email'].toString());
-            }
-          }
-        }
+
+        userName ??= email.contains('@') ? email.split('@')[0] : email;
+        userEmail ??= email;
+
+        // Sinkronisasi otomatis ke state management UserSession
+        await UserSession.instance.setUser(
+          name: userName,
+          email: userEmail,
+          token: token,
+          rawUser: user is Map<String, dynamic> ? user : null,
+        );
 
         if (!mounted) return;
 
@@ -127,6 +184,119 @@ class _LoginViewState extends State<LoginView> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  /// Menangani alur Google Sign-In menggunakan paket google_sign_in
+  /// Menampilkan dialog native akun Google, memanggil backend POST /api/auth/google-login,
+  /// serta menyimpan sesi pengguna dan memperbarui inisial avatar dinamis.
+  Future<void> _handleGoogleSignIn() async {
+    // Cegah pemanggilan ganda / simultan untuk menghindari error FedCM
+    if (_isLoggingIn || _isGoogleLoading || _isLoading) return;
+    _isLoggingIn = true;
+    setState(() {
+      _isGoogleLoading = true;
+    });
+
+    try {
+      await _initGoogleSignIn();
+      GoogleSignInAccount? googleUser;
+      try {
+        if (kIsWeb) {
+          googleUser = await GoogleSignIn.instance.signIn();
+        } else {
+          googleUser = await GoogleSignIn.instance.authenticate();
+        }
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          // Pengguna membatalkan pemilihan akun di dialog Google
+          if (mounted) {
+            setState(() {
+              _isGoogleLoading = false;
+            });
+          }
+          return;
+        }
+        rethrow;
+      }
+
+      if (googleUser != null) {
+        await _processGoogleBackendLogin(
+          email: googleUser.email,
+          name: googleUser.displayName,
+          photoUrl: googleUser.photoUrl,
+          googleId: googleUser.id,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Kendala saat masuk dengan Google: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      _isLoggingIn = false;
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Mengirim payload Google ke endpoint POST /api/auth/google-login
+  Future<void> _processGoogleBackendLogin({
+    required String email,
+    String? name,
+    String? photoUrl,
+    String? googleId,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConfig.googleLoginUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'name': name,
+        'photoUrl': photoUrl,
+        'googleId': googleId,
+      }),
+    );
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data['success'] == true) {
+      final token = data['token'] as String?;
+      final user = data['user'];
+      final String resolvedName = (user is Map && user['name'] != null && user['name'].toString().trim().isNotEmpty)
+          ? user['name'].toString().trim()
+          : (name ?? email.split('@')[0]);
+      final String resolvedEmail = (user is Map && user['email'] != null && user['email'].toString().trim().isNotEmpty)
+          ? user['email'].toString().trim()
+          : email;
+
+      // Simpan ke sesi global UserSession (sinkron otomatis ke inisial avatar di seluruh layar)
+      await UserSession.instance.setUser(
+        name: resolvedName,
+        email: resolvedEmail,
+        token: token,
+        rawUser: user is Map<String, dynamic> ? user : null,
+      );
+
+      if (!mounted) return;
+      await _showSuccessDialog(userName: resolvedName);
+    } else {
+      if (!mounted) return;
+      final errorMsg = data['message'] ?? 'Gagal masuk dengan akun Google.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -473,7 +643,14 @@ class _LoginViewState extends State<LoginView> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ForgotPasswordView(),
+                                  ),
+                                );
+                              },
                               style: TextButton.styleFrom(
                                 padding: EdgeInsets.zero,
                                 minimumSize: Size.zero,
@@ -495,7 +672,7 @@ class _LoginViewState extends State<LoginView> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : _handleLogin,
+                              onPressed: (_isLoading || _isGoogleLoading || _isLoggingIn) ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.maroon,
                                 foregroundColor: Colors.white,
@@ -568,43 +745,50 @@ class _LoginViewState extends State<LoginView> {
 
                     // Masuk dengan Google
                     OutlinedButton(
-                      onPressed: () {
-                        _showSuccessDialog(userName: 'Pengguna Google');
-                      },
+                      onPressed: (_isGoogleLoading || _isLoading || _isLoggingIn) ? null : _handleGoogleSignIn,
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         side: const BorderSide(color: AppColors.border),
                         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/images/google_logo.png',
-                            width: 18,
-                            height: 18,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                shape: BoxShape.circle,
+                      child: _isGoogleLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.maroon,
                               ),
-                              child: const Icon(
-                                Icons.g_mobiledata,
-                                color: Color(0xFF4285F4),
-                                size: 20,
-                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/images/google_logo.png',
+                                  width: 18,
+                                  height: 18,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    width: 18,
+                                    height: 18,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.g_mobiledata,
+                                      color: Color(0xFF4285F4),
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Masuk dengan Google',
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMain),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Masuk dengan Google',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMain),
-                          ),
-                        ],
-                      ),
                     ),
                     const SizedBox(height: 24),
 

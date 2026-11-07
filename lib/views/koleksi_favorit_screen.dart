@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/user_avatar_widget.dart';
 import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
 
@@ -110,6 +111,10 @@ class _KoleksiFavoritScreenState extends State<KoleksiFavoritScreen> {
             IconButton(
               icon: const Icon(Icons.search_rounded, color: AppColors.textMain, size: 21),
               onPressed: () {},
+            ),
+            const Padding(
+              padding: EdgeInsets.only(right: 14),
+              child: Center(child: UserAvatarWidget(radius: 13)),
             ),
           ],
         ),
