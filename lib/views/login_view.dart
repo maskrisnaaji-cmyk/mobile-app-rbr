@@ -15,12 +15,63 @@ import 'main_screen.dart';
 import 'register_view.dart';
 import 'forgot_password_view.dart';
 
+class _GoogleIdentityAccount implements GoogleIdentity {
+  const _GoogleIdentityAccount({
+    required this.id,
+    required this.email,
+    this.displayName,
+    this.photoUrl,
+  });
+
+  @override
+  final String id;
+
+  @override
+  final String email;
+
+  @override
+  final String? displayName;
+
+  @override
+  final String? photoUrl;
+}
+
 extension GoogleSignInCompat on GoogleSignIn {
-  /// Metode signIn() untuk platform Web dan kompatibilitas
-  Future<GoogleSignInAccount?> signIn() async {
+  /// Metode signIn() eksplisit untuk platform Web dan Mobile
+  Future<GoogleIdentity?> signIn() async {
     if (supportsAuthenticate()) {
       return await authenticate();
     }
+
+    // Alur Web: panggil GIS authorizeScopes secara eksplisit pada event tap
+    if (kIsWeb) {
+      try {
+        final authz = await authorizationClient.authorizeScopes([
+          'email',
+          'profile',
+          'openid',
+        ]);
+        final token = authz.accessToken;
+        if (token.isNotEmpty) {
+          final res = await http.get(
+            Uri.parse('https://www.googleapis.com/oauth2/v3/userinfo'),
+            headers: {'Authorization': 'Bearer $token'},
+          );
+          if (res.statusCode == 200) {
+            final data = jsonDecode(res.body) as Map<String, dynamic>;
+            return _GoogleIdentityAccount(
+              id: data['sub']?.toString() ?? '',
+              email: data['email']?.toString() ?? '',
+              displayName: data['name']?.toString(),
+              photoUrl: data['picture']?.toString(),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('[GoogleSignIn] Web authorizeScopes notice: $e');
+      }
+    }
+
     final future = attemptLightweightAuthentication();
     if (future != null) {
       return await future;
@@ -69,6 +120,8 @@ class _LoginViewState extends State<LoginView> {
         );
         _isGoogleSignInInitialized = true;
       } catch (e) {
+        // Tandai sudah diinisialisasi agar tidak terjadi duplikasi pemanggilan
+        _isGoogleSignInInitialized = true;
         debugPrint('[GoogleSignIn] Init notice: $e');
       }
     }();
@@ -206,13 +259,10 @@ class _LoginViewState extends State<LoginView> {
 
     try {
       await _initGoogleSignIn();
-      GoogleSignInAccount? googleUser;
+      GoogleIdentity? googleUser;
       try {
-        if (kIsWeb) {
-          googleUser = await GoogleSignIn.instance.signIn();
-        } else {
-          googleUser = await GoogleSignIn.instance.authenticate();
-        }
+        // Panggil GoogleSignIn signIn() secara eksplisit lewat event tap tombol
+        googleUser = await GoogleSignIn.instance.signIn();
       } on GoogleSignInException catch (e) {
         if (e.code == GoogleSignInExceptionCode.canceled) {
           // Pengguna membatalkan pemilihan akun di dialog Google
