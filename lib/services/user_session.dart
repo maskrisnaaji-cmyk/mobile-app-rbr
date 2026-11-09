@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Central Session & State Management for logged-in user in Rumah Budaya Ratna
@@ -10,6 +11,12 @@ class UserSession extends ChangeNotifier {
   UserSession._internal() {
     init();
   }
+
+  // flutter_secure_storage untuk enkripsi token di device
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  static const _tokenKey = 'secure_token';
 
   String _name = 'Ratna Anindita';
   String _email = 'ratna.anindita@budaya.id';
@@ -55,13 +62,22 @@ class UserSession extends ChangeNotifier {
     return result.isNotEmpty ? result : fallback;
   }
 
-  /// Load session data asynchronously from SharedPreferences
+  /// Load session data asynchronously from SharedPreferences and FlutterSecureStorage
   Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedName = prefs.getString('userName');
       final savedEmail = prefs.getString('userEmail');
-      final savedToken = prefs.getString('token');
+      
+      // Ambil token dari FlutterSecureStorage; fallback ke SharedPreferences jika migrasi
+      String? savedToken;
+      try {
+        savedToken = await _secureStorage.read(key: _tokenKey);
+      } catch (e) {
+        debugPrint('[UserSession] SecureStorage read notice: $e');
+      }
+      savedToken ??= prefs.getString('token');
+
       final userStr = prefs.getString('user');
 
       String? resolvedName = savedName;
@@ -122,7 +138,12 @@ class UserSession extends ChangeNotifier {
         await prefs.setString('userEmail', _email);
       }
       if (token != null) {
-        await prefs.setString('token', token);
+        try {
+          await _secureStorage.write(key: _tokenKey, value: token);
+        } catch (e) {
+          debugPrint('[UserSession] SecureStorage write notice: $e');
+        }
+        await prefs.remove('token'); // Hapus dari plain storage demi keamanan
       }
       if (rawUser != null) {
         await prefs.setString('user', jsonEncode(rawUser));
@@ -178,6 +199,11 @@ class UserSession extends ChangeNotifier {
     notifyListeners();
 
     try {
+      try {
+        await _secureStorage.delete(key: _tokenKey);
+      } catch (e) {
+        debugPrint('[UserSession] SecureStorage delete notice: $e');
+      }
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
     } catch (_) {}

@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import '../services/api_logger.dart';
 import '../services/user_session.dart';
 import '../theme/colors.dart';
 import 'main_screen.dart';
@@ -115,16 +116,21 @@ class _LoginViewState extends State<LoginView> {
     final password = _passwordController.text;
 
     try {
+      final uri = Uri.parse(_loginUrl);
+      final bodyStr = jsonEncode({
+        'email': email,
+        'password': password,
+      });
+      ApiLogger.logRequest('POST', uri, headers: {'Content-Type': 'application/json'}, body: bodyStr);
+
       final response = await http.post(
-        Uri.parse(_loginUrl),
+        uri,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: bodyStr,
       );
+      ApiLogger.logResponse(response.statusCode, uri, body: response.body);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
 
@@ -254,16 +260,21 @@ class _LoginViewState extends State<LoginView> {
     String? photoUrl,
     String? googleId,
   }) async {
+    final uri = Uri.parse(ApiConfig.googleLoginUrl);
+    final bodyStr = jsonEncode({
+      'email': email,
+      'name': name,
+      'photoUrl': photoUrl,
+      'googleId': googleId,
+    });
+    ApiLogger.logRequest('POST', uri, headers: {'Content-Type': 'application/json'}, body: bodyStr);
+
     final response = await http.post(
-      Uri.parse(ApiConfig.googleLoginUrl),
+      uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'name': name,
-        'photoUrl': photoUrl,
-        'googleId': googleId,
-      }),
+      body: bodyStr,
     );
+    ApiLogger.logResponse(response.statusCode, uri, body: response.body);
 
     final Map<String, dynamic> data = jsonDecode(response.body);
 

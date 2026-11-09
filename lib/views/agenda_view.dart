@@ -6,6 +6,7 @@ import '../config/api_config.dart';
 import '../models/event_model.dart';
 import '../theme/colors.dart';
 import '../widgets/user_avatar_widget.dart';
+import '../widgets/api_error_widget.dart';
 import 'booking_checkout_view.dart';
 
 class AgendaView extends StatefulWidget {
@@ -466,32 +467,9 @@ class _AgendaViewState extends State<AgendaView> {
                 ),
               )
             else if (_errorMessage != null)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.wifi_off_rounded,
-                          size: 48, color: Colors.redAccent),
-                      const SizedBox(height: 12),
-                      Text(
-                        _errorMessage!,
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12, color: AppColors.textMuted),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: _fetchEvents,
-                        icon: const Icon(Icons.refresh, size: 16),
-                        label: const Text('Coba Lagi'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.maroon,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              ApiErrorWidget(
+                message: _errorMessage,
+                onRetry: _fetchEvents,
               )
             else if (events.isEmpty)
               Center(

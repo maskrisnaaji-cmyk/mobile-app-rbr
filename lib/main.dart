@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/user_session.dart';
@@ -5,6 +7,24 @@ import 'views/login_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ── Global Error Handling (Mencegah Force Close) ────────────
+  FlutterError.onError = (FlutterErrorDetails details) {
+    debugPrint('[Flutter Error] ${details.exceptionAsString()}');
+    if (kDebugMode) {
+      FlutterError.presentError(details);
+    }
+  };
+
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    debugPrint('[Platform Error] $error');
+    if (kDebugMode) {
+      debugPrint('[Platform Stack] $stack');
+    }
+    return true; // Menandakan error telah ditangani agar app tidak crash
+  };
+  // ────────────────────────────────────────────────────────────
+
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
