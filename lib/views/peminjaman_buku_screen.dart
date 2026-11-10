@@ -1,11 +1,210 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
+import '../services/user_session.dart';
 import '../widgets/user_avatar_widget.dart';
 import '../theme/colors.dart';
 import '../widgets/mobile_frame.dart';
 
-class PeminjamanBukuScreen extends StatelessWidget {
+class _LoanItem {
+  final String? id;
+  final String bookCode;
+  final String title;
+  final String author;
+  final String rackLocation;
+  final DateTime borrowDate;
+  final DateTime dueDate;
+  final String status;
+  final String extensionStatus;
+
+  const _LoanItem({
+    this.id,
+    required this.bookCode,
+    required this.title,
+    required this.author,
+    required this.rackLocation,
+    required this.borrowDate,
+    required this.dueDate,
+    this.status = 'active',
+    this.extensionStatus = 'none',
+  });
+
+  factory _LoanItem.fromJson(Map<String, dynamic> json) {
+    return _LoanItem(
+      id: json['id']?.toString(),
+      bookCode: json['book_code']?.toString() ?? '-',
+      title: json['title']?.toString() ?? 'Buku tanpa judul',
+      author: json['author']?.toString() ?? 'Penulis tidak diketahui',
+      rackLocation: json['rack_location']?.toString() ?? 'Belum ditentukan',
+      borrowDate: DateTime.parse(json['borrow_date'].toString()),
+      dueDate: DateTime.parse(json['due_date'].toString()),
+      status: json['status']?.toString() ?? 'active',
+      extensionStatus: json['extension_status']?.toString() ?? 'none',
+    );
+  }
+
+  String get statusLabel {
+    switch (status) {
+      case 'overdue':
+        return 'TERLAMBAT';
+      case 'returned':
+        return 'DIKEMBALIKAN';
+      default:
+        return 'AKTIF';
+    }
+  }
+
+  bool get isOverdue =>
+      status == 'overdue' ||
+      (status == 'active' && dueDate.isBefore(DateTime.now()));
+
+  String get daysLabel {
+    if (status == 'returned') return 'Selesai';
+    final days = dueDate.difference(DateTime.now()).inDays;
+    if (days < 0) return 'Lewat ${days.abs()} Hari';
+    if (days == 0) return 'Jatuh tempo hari ini';
+    return 'Sisa $days Hari';
+  }
+
+  String get borrowDateLabel => _formatDate(borrowDate);
+  String get dueDateLabel => _formatDate(dueDate);
+
+  static String _formatDate(DateTime date) {
+    const months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+}
+
+class PeminjamanBukuScreen extends StatefulWidget {
   const PeminjamanBukuScreen({super.key});
+
+  @override
+  State<PeminjamanBukuScreen> createState() => _PeminjamanBukuScreenState();
+}
+
+class _PeminjamanBukuScreenState extends State<PeminjamanBukuScreen> {
+  List<_LoanItem> _loans = const [];
+  bool _isLoading = true;
+  bool _usingDemoData = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLoans();
+  }
+
+  Future<void> _fetchLoans() async {
+    setState(() => _isLoading = true);
+    try {
+      final token = UserSession.instance.token;
+      if (token == null) throw Exception('Sesi login tidak ditemukan');
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/loans/my'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) {
+        throw Exception('Gagal mengambil peminjaman');
+      }
+      final data = jsonDecode(response.body);
+      if (data is! List) throw Exception('Format data peminjaman tidak valid');
+      if (!mounted) return;
+      setState(() {
+        _loans = data
+            .map((item) => _LoanItem.fromJson(item as Map<String, dynamic>))
+            .toList();
+        _usingDemoData = false;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loans = _demoLoans;
+        _usingDemoData = true;
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<_LoanItem> get _demoLoans => [
+        _LoanItem(
+          bookCode: 'PUST-LT-019',
+          title: 'LemahTulis',
+          author: 'Budi Maryono • Arsip Sastra Jawa Timur',
+          rackLocation: 'RAK 2B',
+          borrowDate: DateTime(2026, 10, 12),
+          dueDate: DateTime(2026, 10, 26),
+        ),
+        _LoanItem(
+          bookCode: 'PUST-MLG-042',
+          title: 'Alun-Alun Malang',
+          author: 'Dukut Imam Widodo • Babad Sejarah Urban',
+          rackLocation: 'RAK 1A',
+          borrowDate: DateTime(2026, 10, 14),
+          dueDate: DateTime(2026, 10, 28),
+        ),
+      ];
+
+  Future<void> _requestExtension(_LoanItem loan) async {
+    if (_usingDemoData || loan.id == null) {
+      _showMessage(
+          'Data peminjaman belum tersinkron ke server admin. Muat ulang setelah backend aktif.');
+      return;
+    }
+    if (loan.extensionStatus == 'pending') {
+      _showMessage('Request perpanjangan sedang menunggu konfirmasi admin.');
+      return;
+    }
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}/loans/extension'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${UserSession.instance.token}',
+            },
+            body: jsonEncode(
+                {'loanId': int.tryParse(loan.id!), 'extensionDays': 7}),
+          )
+          .timeout(const Duration(seconds: 8));
+      final body = jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception(body['message'] ?? 'Request perpanjangan gagal');
+      }
+      _showMessage('Request perpanjangan dikirim. Menunggu konfirmasi admin.');
+      await _fetchLoans();
+    } catch (error) {
+      _showMessage(error.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content:
+            Text(message, style: GoogleFonts.plusJakartaSans(fontSize: 12)),
+        backgroundColor: AppColors.maroon,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +215,8 @@ class PeminjamanBukuScreen extends StatelessWidget {
           backgroundColor: AppColors.bgCanvas,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
+            icon:
+                const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -30,7 +230,8 @@ class PeminjamanBukuScreen extends StatelessWidget {
           centerTitle: false,
           actions: [
             IconButton(
-              icon: const Icon(Icons.info_outline_rounded, color: AppColors.textMain, size: 20),
+              icon: const Icon(Icons.info_outline_rounded,
+                  color: AppColors.textMain, size: 20),
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -40,7 +241,8 @@ class PeminjamanBukuScreen extends StatelessWidget {
                     ),
                     backgroundColor: AppColors.maroon,
                     behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 );
               },
@@ -66,7 +268,7 @@ class PeminjamanBukuScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'BUKU SEDANG DIPINJAM (2)',
+                    'BUKU SEDANG DIPINJAM (${_loans.length})',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -75,13 +277,16 @@ class PeminjamanBukuScreen extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFFDCFCE7),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      'STATUS: AKTIF',
+                      _loans.any((loan) => loan.status == 'overdue')
+                          ? 'STATUS: TERLAMBAT'
+                          : 'STATUS: AKTIF',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
@@ -93,34 +298,23 @@ class PeminjamanBukuScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // Item Buku 1: LemahTulis
-              _buildBookLoanCard(
-                context: context,
-                title: 'LemahTulis',
-                author: 'Budi Maryono • Arsip Sastra Jawa Timur',
-                category: 'Naskah Sejarah & Sastra Lokal',
-                borrowDate: '12 Okt 2026',
-                dueDate: '26 Okt 2026',
-                daysLeft: 'Sisa 9 Hari',
-                codeRak: 'PUST-LT-019 • RAK 2B',
-                coverIcon: Icons.menu_book_rounded,
-                isUrgent: false,
-              ),
-              const SizedBox(height: 12),
-
-              // Item Buku 2: Alun-Alun Malang
-              _buildBookLoanCard(
-                context: context,
-                title: 'Alun-Alun Malang',
-                author: 'Dukut Imam Widodo • Babad Sejarah Urban',
-                category: 'Arsip Sejarah & Lanskap Kota',
-                borrowDate: '14 Okt 2026',
-                dueDate: '28 Okt 2026',
-                daysLeft: 'Sisa 11 Hari',
-                codeRak: 'PUST-MLG-042 • RAK 1A',
-                coverIcon: Icons.auto_stories_rounded,
-                isUrgent: false,
-              ),
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_loans.isEmpty)
+                _buildEmptyLoanState()
+              else
+                ..._loans.map(
+                  (loan) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildBookLoanCard(
+                      context: context,
+                      loan: loan,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 20),
 
               // Panduan dan Aturan Pengembalian
@@ -157,7 +351,8 @@ class PeminjamanBukuScreen extends StatelessWidget {
               color: AppColors.maroon.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.library_books_rounded, color: AppColors.maroon, size: 22),
+            child: const Icon(Icons.library_books_rounded,
+                color: AppColors.maroon, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -174,7 +369,7 @@ class PeminjamanBukuScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '2 dari 2 Kuota Buku Terpakai',
+                  '${_loans.length} dari 2 Kuota Buku Terpakai',
                   style: GoogleFonts.lora(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -199,16 +394,12 @@ class PeminjamanBukuScreen extends StatelessWidget {
 
   Widget _buildBookLoanCard({
     required BuildContext context,
-    required String title,
-    required String author,
-    required String category,
-    required String borrowDate,
-    required String dueDate,
-    required String daysLeft,
-    required String codeRak,
-    required IconData coverIcon,
-    required bool isUrgent,
+    required _LoanItem loan,
   }) {
+    final isReturned = loan.status == 'returned';
+    final isUrgent =
+        loan.isOverdue || loan.dueDate.difference(DateTime.now()).inDays <= 3;
+    const category = 'Koleksi Pustaka';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -235,10 +426,12 @@ class PeminjamanBukuScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.maroon.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.maroon.withValues(alpha: 0.2)),
+                  border: Border.all(
+                      color: AppColors.maroon.withValues(alpha: 0.2)),
                 ),
-                child: Center(
-                  child: Icon(coverIcon, color: AppColors.maroon, size: 26),
+                child: const Center(
+                  child: Icon(Icons.menu_book_rounded,
+                      color: AppColors.maroon, size: 26),
                 ),
               ),
               const SizedBox(width: 12),
@@ -247,7 +440,8 @@ class PeminjamanBukuScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppColors.tagBg,
                         borderRadius: BorderRadius.circular(4),
@@ -263,7 +457,20 @@ class PeminjamanBukuScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      title,
+                      loan.statusLabel,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: loan.status == 'returned'
+                            ? const Color(0xFF15803D)
+                            : loan.isOverdue
+                                ? const Color(0xFFDC2626)
+                                : AppColors.maroon,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      loan.title,
                       style: GoogleFonts.lora(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -272,7 +479,7 @@ class PeminjamanBukuScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      author,
+                      loan.author,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: AppColors.greyText,
@@ -304,7 +511,7 @@ class PeminjamanBukuScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    borrowDate,
+                    loan.borrowDateLabel,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -326,7 +533,7 @@ class PeminjamanBukuScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    dueDate,
+                    loan.dueDateLabel,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -338,18 +545,24 @@ class PeminjamanBukuScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isUrgent ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+                  color: isUrgent
+                      ? const Color(0xFFFEF2F2)
+                      : const Color(0xFFF0FDF4),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isUrgent ? const Color(0xFFFECACA) : const Color(0xFFBBF7D0),
+                    color: isUrgent
+                        ? const Color(0xFFFECACA)
+                        : const Color(0xFFBBF7D0),
                   ),
                 ),
                 child: Text(
-                  daysLeft,
+                  loan.daysLabel,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: isUrgent ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                    color: isUrgent
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFF16A34A),
                   ),
                 ),
               ),
@@ -358,11 +571,13 @@ class PeminjamanBukuScreen extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.place_outlined, size: 14, color: AppColors.greyText),
+              const Icon(Icons.place_outlined,
+                  size: 14, color: AppColors.greyText),
               const SizedBox(width: 4),
               Text(
-                codeRak,
-                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.greyText),
+                '${loan.bookCode} • ${loan.rackLocation}',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11, color: AppColors.greyText),
               ),
             ],
           ),
@@ -373,59 +588,43 @@ class PeminjamanBukuScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Permintaan perpanjangan buku "$title" berhasil diajukan (+7 hari)!',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 12),
-                        ),
-                        backgroundColor: AppColors.maroon,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    );
-                  },
+                  onPressed: isReturned ? null : () => _requestExtension(loan),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.maroon, width: 1.2),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 9),
                   ),
                   child: Text(
-                    'Perpanjang (1x)',
+                    loan.extensionStatus == 'pending'
+                        ? 'Menunggu Admin'
+                        : loan.extensionStatus == 'approved'
+                            ? 'Sudah Diperpanjang'
+                            : 'Ajukan Perpanjangan',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.maroon,
+                      color: isReturned ? AppColors.greyText : AppColors.maroon,
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Menampilkan tata letak rak fisik untuk "$title"',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 12),
-                      ),
-                      backgroundColor: AppColors.darkText,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  );
-                },
+                onPressed: () => _showRackLocation(loan),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.maroon,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 ),
                 child: Text(
                   'Lokasi Rak',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -470,6 +669,51 @@ class PeminjamanBukuScreen extends StatelessWidget {
               height: 1.5,
               color: AppColors.greyText,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyLoanState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.lightBorder),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.menu_book_outlined,
+              color: AppColors.greyText, size: 36),
+          const SizedBox(height: 8),
+          Text(
+            'Belum ada buku yang sedang dipinjam.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 12, color: AppColors.greyText),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRackLocation(_LoanItem loan) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Lokasi Buku',
+            style: GoogleFonts.lora(fontWeight: FontWeight.bold)),
+        content: Text(
+          '${loan.title}\n\nKode: ${loan.bookCode}\nLokasi: ${loan.rackLocation}\n\nSilakan ambil atau kembalikan buku melalui Meja Sirkulasi Pustaka Lt. 1.',
+          style: GoogleFonts.plusJakartaSans(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Tutup'),
           ),
         ],
       ),

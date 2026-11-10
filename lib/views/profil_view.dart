@@ -695,8 +695,8 @@ class _ProfilViewState extends State<ProfilView> {
         _buildMenuCard(
           icon: Icons.menu_book_rounded,
           title: 'Peminjaman Buku',
-          subtitle: 'Daftar buku fisik & e-faksimili dalam masa pinjam',
-          badgeText: '2 Aktif',
+          subtitle: 'Status peminjaman, lokasi rak & request perpanjangan',
+          badgeText: 'Lihat Status',
           badgeBg: const Color(0xFFDCFCE7),
           badgeColor: const Color(0xFF15803D),
           onTap: () {
