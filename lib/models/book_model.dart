@@ -13,6 +13,7 @@ class Book {
   final String synopsis;
   final double rating;
   final int reviewCount;
+  final String? digitalUrl;
 
   Book({
     required this.id,
@@ -29,6 +30,7 @@ class Book {
     required this.synopsis,
     required this.rating,
     required this.reviewCount,
+    this.digitalUrl,
   });
 
   String get image => coverImage;
@@ -108,6 +110,9 @@ class Book {
           : (json['review_count'] != null
               ? (int.tryParse(json['review_count'].toString()) ?? 50)
               : 50),
+      digitalUrl: (json['digital_url'] ?? json['digitalUrl'])?.toString().trim().isNotEmpty == true
+          ? (json['digital_url'] ?? json['digitalUrl']).toString().trim()
+          : null,
     );
   }
 
@@ -128,6 +133,7 @@ class Book {
               'Naskah "Dokumen Jibril" merupakan salah satu karya monumental W.S. Rendra yang merekam dialektika batin kemanusiaan, kritik sosial yang tajam, serta pergolakan spiritual di era 70-an. Dengan gaya puitik yang kuat dan metafora yang berani, Rendra menghadirkan perenungan mendalam mengenai keadilan, integritas moral, dan suara nurani rakyat. Dokumen ini menjadi rujukan vital bagi telaah sastra perlawanan dan estetika panggung Bengkel Teater di Yogyakarta.',
           rating: 4.9,
           reviewCount: 128,
+          digitalUrl: 'https://archive.org/details/dokumen-jibril',
         ),
         Book(
           id: '2',

@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 import '../models/book_model.dart';
 import '../theme/colors.dart';
+import 'facsimile_webview_view.dart';
 
 class BookDetailView extends StatefulWidget {
   final Book book;
@@ -223,103 +227,68 @@ class _BookDetailViewState extends State<BookDetailView> {
     );
   }
 
-  void _showFacsimilePreview() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.auto_stories, color: Color(0xFFFBC02D)),
-            const SizedBox(width: 8),
-            Text(
-              'Pratinjau E-Faksimili',
-              style: GoogleFonts.lora(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkText,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Digital Scan Preservasi Arsip Kertas Asli:',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.darkText,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              height: 140,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFBF8EE),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2D9C8)),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.picture_as_pdf_outlined, size: 40, color: AppColors.maroon),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${book.title.replaceAll(' ', '_')}_Faksimili.pdf',
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '${book.pageCount} Halaman • Resolusi Tinggi 600 DPI',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.greyText),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Tutup',
-              style: GoogleFonts.plusJakartaSans(color: AppColors.greyText),
-            ),
+  Future<void> _showFacsimilePreview() async {
+    String? digitalUrl = book.digitalUrl?.trim();
+
+    // Jika digitalUrl belum terisi pada instance lokal, sinkronisasi dari backend buku
+    if (digitalUrl == null || digitalUrl.isEmpty) {
+      if (book.id.isNotEmpty) {
+        try {
+          final res = await http
+              .get(Uri.parse('${ApiConfig.booksUrl}/${book.id}'))
+              .timeout(const Duration(seconds: 4));
+          if (res.statusCode == 200) {
+            final data = jsonDecode(res.body);
+            if (data is Map<String, dynamic>) {
+              final fetched = (data['digital_url'] ?? data['digitalUrl'])?.toString().trim();
+              if (fetched != null && fetched.isNotEmpty) {
+                digitalUrl = fetched;
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('[BookDetail] Cek digitalUrl backend notice: $e');
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    if (digitalUrl != null && digitalUrl.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FacsimileWebViewView(
+            title: book.title,
+            url: digitalUrl!,
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Membuka penampil E-Faksimili untuk ${book.title}...',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 12),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Versi digital belum tersedia untuk buku ini.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
-                  backgroundColor: AppColors.maroon,
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFBC02D),
-              foregroundColor: const Color(0xFF3E2723),
-              elevation: 0,
-            ),
-            child: Text(
-              'Buka Faksimili',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+          backgroundColor: AppColors.maroon,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
