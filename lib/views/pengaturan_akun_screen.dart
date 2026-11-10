@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/user_session.dart';
 import '../widgets/user_avatar_widget.dart';
 import '../theme/colors.dart';
@@ -13,6 +14,8 @@ class PengaturanAkunScreen extends StatefulWidget {
 }
 
 class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
+  final ImagePicker _imagePicker = ImagePicker();
+
   final _passwordFormKey = GlobalKey<FormState>();
 
   final _currentPasswordController = TextEditingController();
@@ -29,6 +32,32 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   bool _notifCuratorArticles = true;
   bool _notifWhatsapp = true;
   bool _publicReviewProfile = false;
+
+  Future<void> _pickProfilePhoto() async {
+    try {
+      final selected = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
+      if (selected == null) return;
+
+      await UserSession.instance.updateUser(
+        name: UserSession.instance.name,
+        photoUrl: selected.path,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Foto profil tidak dapat dipilih: $error'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -52,7 +81,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
           ),
           backgroundColor: AppColors.maroon,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }
@@ -67,7 +97,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
           backgroundColor: AppColors.bgCanvas,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
+            icon:
+                const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -165,42 +196,50 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
               ),
             ],
           ),
-          child: Row(
+          child: Column(
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: AppColors.maroon.withValues(alpha: 0.12),
-                child: Text(
-                  session.initials,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.maroon,
+              Row(
+                children: [
+                  UserAvatarWidget(
+                    radius: 22,
+                    onTap: _pickProfilePhoto,
+                    tooltip: 'Ubah foto profil',
                   ),
-                ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          session.name,
+                          style: GoogleFonts.lora(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkText,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          '${session.email} • Anggota Terverifikasi',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: AppColors.greyText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      session.name,
-                      style: GoogleFonts.lora(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkText,
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      '${session.email} • Anggota Terverifikasi',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: AppColors.greyText,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _pickProfilePhoto,
+                  icon: const Icon(Icons.photo_camera_outlined, size: 17),
+                  label: const Text('Ubah Foto Profil'),
+                  style:
+                      TextButton.styleFrom(foregroundColor: AppColors.maroon),
                 ),
               ),
             ],
@@ -235,9 +274,11 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
               label: 'Kata Sandi Saat Ini',
               hint: 'Masukkan kata sandi lama',
               obscure: _obscureCurrent,
-              onToggle: () => setState(() => _obscureCurrent = !_obscureCurrent),
-              validator: (val) =>
-                  val == null || val.isEmpty ? 'Kata sandi saat ini wajib diisi' : null,
+              onToggle: () =>
+                  setState(() => _obscureCurrent = !_obscureCurrent),
+              validator: (val) => val == null || val.isEmpty
+                  ? 'Kata sandi saat ini wajib diisi'
+                  : null,
             ),
             const SizedBox(height: 12),
             _buildPasswordField(
@@ -247,7 +288,9 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
               obscure: _obscureNew,
               onToggle: () => setState(() => _obscureNew = !_obscureNew),
               validator: (val) {
-                if (val == null || val.isEmpty) return 'Kata sandi baru wajib diisi';
+                if (val == null || val.isEmpty) {
+                  return 'Kata sandi baru wajib diisi';
+                }
                 if (val.length < 6) return 'Kata sandi minimal 6 karakter';
                 return null;
               },
@@ -258,9 +301,12 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
               label: 'Konfirmasi Kata Sandi Baru',
               hint: 'Ulangi kata sandi baru',
               obscure: _obscureConfirm,
-              onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
+              onToggle: () =>
+                  setState(() => _obscureConfirm = !_obscureConfirm),
               validator: (val) {
-                if (val == null || val.isEmpty) return 'Konfirmasi kata sandi wajib diisi';
+                if (val == null || val.isEmpty) {
+                  return 'Konfirmasi kata sandi wajib diisi';
+                }
                 if (val != _newPasswordController.text) {
                   return 'Konfirmasi kata sandi tidak cocok';
                 }
@@ -285,7 +331,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
                   backgroundColor: AppColors.maroon,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ),
@@ -322,17 +369,22 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
           style: GoogleFonts.plusJakartaSans(fontSize: 12),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.greyText.withValues(alpha: 0.6)),
-            prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.maroon),
+            hintStyle: GoogleFonts.plusJakartaSans(
+                fontSize: 12, color: AppColors.greyText.withValues(alpha: 0.6)),
+            prefixIcon: const Icon(Icons.lock_outline_rounded,
+                size: 18, color: AppColors.maroon),
             suffixIcon: IconButton(
               icon: Icon(
-                obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                obscure
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
                 size: 18,
                 color: AppColors.greyText,
               ),
               onPressed: onToggle,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             filled: true,
             fillColor: AppColors.bgCanvas,
             border: OutlineInputBorder(
@@ -364,67 +416,75 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         child: Column(
-        children: [
-          SwitchListTile(
-            title: Text(
-              'Pengingat Jatuh Tempo Buku',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold),
+          children: [
+            SwitchListTile(
+              title: Text(
+                'Pengingat Jatuh Tempo Buku',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'Pemberitahuan H-3 dan H-1 batas pengembalian koleksi',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11, color: AppColors.greyText),
+              ),
+              activeThumbColor: AppColors.maroon,
+              value: _notifLoanDue,
+              onChanged: (val) => setState(() => _notifLoanDue = val),
             ),
-            subtitle: Text(
-              'Pemberitahuan H-3 dan H-1 batas pengembalian koleksi',
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.greyText),
+            const Divider(height: 1, color: AppColors.lightBorder),
+            SwitchListTile(
+              title: Text(
+                'Notifikasi Agenda & Lokakarya',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'Jadwal lokakarya, pementasan drama, & bedah buku baru',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11, color: AppColors.greyText),
+              ),
+              activeThumbColor: AppColors.maroon,
+              value: _notifWorkshopAgenda,
+              onChanged: (val) => setState(() => _notifWorkshopAgenda = val),
             ),
-            activeThumbColor: AppColors.maroon,
-            value: _notifLoanDue,
-            onChanged: (val) => setState(() => _notifLoanDue = val),
-          ),
-          const Divider(height: 1, color: AppColors.lightBorder),
-          SwitchListTile(
-            title: Text(
-              'Notifikasi Agenda & Lokakarya',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold),
+            const Divider(height: 1, color: AppColors.lightBorder),
+            SwitchListTile(
+              title: Text(
+                'Kabar Kuratorial & Terbitan Pustaka',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'Artikel telaah bulanan & naskah arsip yang baru didigitasi',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11, color: AppColors.greyText),
+              ),
+              activeThumbColor: AppColors.maroon,
+              value: _notifCuratorArticles,
+              onChanged: (val) => setState(() => _notifCuratorArticles = val),
             ),
-            subtitle: Text(
-              'Jadwal lokakarya, pementasan drama, & bedah buku baru',
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.greyText),
+            const Divider(height: 1, color: AppColors.lightBorder),
+            SwitchListTile(
+              title: Text(
+                'Pemberitahuan via WhatsApp',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'Terima tiket E-Tiket & bukti peminjaman langsung ke WA',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11, color: AppColors.greyText),
+              ),
+              activeThumbColor: AppColors.maroon,
+              value: _notifWhatsapp,
+              onChanged: (val) => setState(() => _notifWhatsapp = val),
             ),
-            activeThumbColor: AppColors.maroon,
-            value: _notifWorkshopAgenda,
-            onChanged: (val) => setState(() => _notifWorkshopAgenda = val),
-          ),
-          const Divider(height: 1, color: AppColors.lightBorder),
-          SwitchListTile(
-            title: Text(
-              'Kabar Kuratorial & Terbitan Pustaka',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              'Artikel telaah bulanan & naskah arsip yang baru didigitasi',
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.greyText),
-            ),
-            activeThumbColor: AppColors.maroon,
-            value: _notifCuratorArticles,
-            onChanged: (val) => setState(() => _notifCuratorArticles = val),
-          ),
-          const Divider(height: 1, color: AppColors.lightBorder),
-          SwitchListTile(
-            title: Text(
-              'Pemberitahuan via WhatsApp',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              'Terima tiket E-Tiket & bukti peminjaman langsung ke WA',
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.greyText),
-            ),
-            activeThumbColor: AppColors.maroon,
-            value: _notifWhatsapp,
-            onChanged: (val) => setState(() => _notifWhatsapp = val),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildPrivacyCard() {
     return Container(
@@ -437,19 +497,21 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         child: SwitchListTile(
-        title: Text(
-          'Tampilkan Nama di Forum Ulasan Publik',
-          style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold),
+          title: Text(
+            'Tampilkan Nama di Forum Ulasan Publik',
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 12.5, fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(
+            'Bila dinonaktifkan, ulasan Anda akan bertuliskan "Pembaca Ratna"',
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 11, color: AppColors.greyText),
+          ),
+          activeThumbColor: AppColors.maroon,
+          value: _publicReviewProfile,
+          onChanged: (val) => setState(() => _publicReviewProfile = val),
         ),
-        subtitle: Text(
-          'Bila dinonaktifkan, ulasan Anda akan bertuliskan "Pembaca Ratna"',
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.greyText),
-        ),
-        activeThumbColor: AppColors.maroon,
-        value: _publicReviewProfile,
-        onChanged: (val) => setState(() => _publicReviewProfile = val),
       ),
-    ),
-  );
-}
+    );
+  }
 }

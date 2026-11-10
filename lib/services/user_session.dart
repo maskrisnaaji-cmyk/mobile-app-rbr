@@ -21,6 +21,7 @@ class UserSession extends ChangeNotifier {
   String _name = 'Ratna Anindita';
   String _email = 'ratna.anindita@budaya.id';
   String _initials = 'RA';
+  String? _photoUrl;
   String? _token;
   bool _isLoggedIn = false;
   bool _isInitialized = false;
@@ -28,6 +29,7 @@ class UserSession extends ChangeNotifier {
   String get name => _name;
   String get email => _email;
   String get initials => _initials;
+  String? get photoUrl => _photoUrl;
   String? get token => _token;
   bool get isLoggedIn => _isLoggedIn;
   bool get isInitialized => _isInitialized;
@@ -45,7 +47,8 @@ class UserSession extends ChangeNotifier {
     if (cleaned.isEmpty) return fallback;
 
     // Split by any consecutive whitespace
-    final parts = cleaned.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts =
+        cleaned.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return fallback;
 
     if (parts.length == 1) {
@@ -68,7 +71,8 @@ class UserSession extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final savedName = prefs.getString('userName');
       final savedEmail = prefs.getString('userEmail');
-      
+      final savedPhotoUrl = prefs.getString('userPhotoUrl');
+
       // Ambil token dari FlutterSecureStorage; fallback ke SharedPreferences jika migrasi
       String? savedToken;
       try {
@@ -82,16 +86,23 @@ class UserSession extends ChangeNotifier {
 
       String? resolvedName = savedName;
       String? resolvedEmail = savedEmail;
+      String? resolvedPhotoUrl = savedPhotoUrl;
 
       if (userStr != null) {
         try {
           final userMap = jsonDecode(userStr);
           if (userMap is Map) {
-            if ((resolvedName == null || resolvedName.trim().isEmpty) && userMap['name'] != null) {
+            if ((resolvedName == null || resolvedName.trim().isEmpty) &&
+                userMap['name'] != null) {
               resolvedName = userMap['name'].toString();
             }
-            if ((resolvedEmail == null || resolvedEmail.trim().isEmpty) && userMap['email'] != null) {
+            if ((resolvedEmail == null || resolvedEmail.trim().isEmpty) &&
+                userMap['email'] != null) {
               resolvedEmail = userMap['email'].toString();
+            }
+            if ((resolvedPhotoUrl == null || resolvedPhotoUrl.trim().isEmpty) &&
+                userMap['photoUrl'] != null) {
+              resolvedPhotoUrl = userMap['photoUrl'].toString();
             }
           }
         } catch (_) {}
@@ -103,6 +114,9 @@ class UserSession extends ChangeNotifier {
       }
       if (resolvedEmail != null && resolvedEmail.trim().isNotEmpty) {
         _email = resolvedEmail.trim();
+      }
+      if (resolvedPhotoUrl != null && resolvedPhotoUrl.trim().isNotEmpty) {
+        _photoUrl = resolvedPhotoUrl.trim();
       }
       _token = savedToken;
       _isLoggedIn = savedToken != null || savedName != null;
@@ -118,6 +132,7 @@ class UserSession extends ChangeNotifier {
     required String name,
     String? email,
     String? token,
+    String? photoUrl,
     Map<String, dynamic>? rawUser,
   }) async {
     _name = name.trim();
@@ -128,6 +143,12 @@ class UserSession extends ChangeNotifier {
     if (token != null) {
       _token = token;
     }
+    final resolvedPhotoUrl = photoUrl ??
+        rawUser?['photoUrl']?.toString() ??
+        rawUser?['picture']?.toString();
+    if (resolvedPhotoUrl != null && resolvedPhotoUrl.trim().isNotEmpty) {
+      _photoUrl = resolvedPhotoUrl.trim();
+    }
     _isLoggedIn = true;
     notifyListeners();
 
@@ -136,6 +157,9 @@ class UserSession extends ChangeNotifier {
       await prefs.setString('userName', _name);
       if (email != null && email.trim().isNotEmpty) {
         await prefs.setString('userEmail', _email);
+      }
+      if (_photoUrl != null && _photoUrl!.trim().isNotEmpty) {
+        await prefs.setString('userPhotoUrl', _photoUrl!);
       }
       if (token != null) {
         try {
@@ -154,6 +178,7 @@ class UserSession extends ChangeNotifier {
             'name': _name,
             'email': _email,
             'role': 'user',
+            if (_photoUrl != null) 'photoUrl': _photoUrl,
           }),
         );
       }
@@ -161,11 +186,15 @@ class UserSession extends ChangeNotifier {
   }
 
   /// Update user profile name and/or email
-  Future<void> updateUser({required String name, String? email}) async {
+  Future<void> updateUser(
+      {required String name, String? email, String? photoUrl}) async {
     _name = name.trim();
     _initials = parseInitials(_name);
     if (email != null && email.trim().isNotEmpty) {
       _email = email.trim();
+    }
+    if (photoUrl != null && photoUrl.trim().isNotEmpty) {
+      _photoUrl = photoUrl.trim();
     }
     notifyListeners();
 
@@ -174,6 +203,9 @@ class UserSession extends ChangeNotifier {
       await prefs.setString('userName', _name);
       if (email != null && email.trim().isNotEmpty) {
         await prefs.setString('userEmail', _email);
+      }
+      if (photoUrl != null && photoUrl.trim().isNotEmpty) {
+        await prefs.setString('userPhotoUrl', _photoUrl!);
       }
 
       final userStr = prefs.getString('user');
@@ -185,6 +217,7 @@ class UserSession extends ChangeNotifier {
       }
       userMap['name'] = _name;
       if (email != null) userMap['email'] = _email;
+      if (_photoUrl != null) userMap['photoUrl'] = _photoUrl;
       await prefs.setString('user', jsonEncode(userMap));
     } catch (_) {}
   }
@@ -194,6 +227,7 @@ class UserSession extends ChangeNotifier {
     _name = 'Ratna Anindita';
     _email = 'ratna.anindita@budaya.id';
     _initials = 'RA';
+    _photoUrl = null;
     _token = null;
     _isLoggedIn = false;
     notifyListeners();
@@ -209,4 +243,3 @@ class UserSession extends ChangeNotifier {
     } catch (_) {}
   }
 }
-

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/user_session.dart';
 import '../widgets/user_avatar_widget.dart';
 import '../theme/colors.dart';
@@ -23,9 +24,10 @@ class ProfilView extends StatefulWidget {
 }
 
 class _ProfilViewState extends State<ProfilView> {
+  final ImagePicker _imagePicker = ImagePicker();
+
   String get _userName => UserSession.instance.name;
   String get _userEmail => UserSession.instance.email;
-  String get _userInitials => UserSession.instance.initials;
 
   @override
   void initState() {
@@ -48,6 +50,32 @@ class _ProfilViewState extends State<ProfilView> {
 
   Future<void> _loadUserProfile() async {
     await UserSession.instance.init();
+  }
+
+  Future<void> _pickProfilePhoto() async {
+    try {
+      final selected = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
+      if (selected == null || !mounted) return;
+
+      await UserSession.instance.updateUser(
+        name: _userName,
+        photoUrl: selected.path,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Foto profil tidak dapat dipilih: $error'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _showEditProfileDialog() {
@@ -91,7 +119,8 @@ class _ProfilViewState extends State<ProfilView> {
                     color: AppColors.maroon.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.edit_note, color: AppColors.maroon, size: 24),
+                  child: const Icon(Icons.edit_note,
+                      color: AppColors.maroon, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -119,13 +148,34 @@ class _ProfilViewState extends State<ProfilView> {
               ],
             ),
             const SizedBox(height: 20),
+            Center(
+              child: Column(
+                children: [
+                  UserAvatarWidget(
+                    radius: 38,
+                    onTap: _pickProfilePhoto,
+                    tooltip: 'Pilih foto profil',
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: _pickProfilePhoto,
+                    icon: const Icon(Icons.photo_camera_outlined, size: 17),
+                    label: const Text('Ubah Foto Profil'),
+                    style:
+                        TextButton.styleFrom(foregroundColor: AppColors.maroon),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
             TextField(
               controller: nameCtrl,
               decoration: InputDecoration(
                 labelText: 'Nama Lengkap',
                 labelStyle: GoogleFonts.plusJakartaSans(fontSize: 12),
                 prefixIcon: const Icon(Icons.person_outline, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
             const SizedBox(height: 12),
@@ -135,7 +185,8 @@ class _ProfilViewState extends State<ProfilView> {
                 labelText: 'Alamat Email',
                 labelStyle: GoogleFonts.plusJakartaSans(fontSize: 12),
                 prefixIcon: const Icon(Icons.mail_outline, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
             const SizedBox(height: 20),
@@ -163,19 +214,22 @@ class _ProfilViewState extends State<ProfilView> {
                       ),
                       backgroundColor: AppColors.maroon,
                       behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.maroon,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
                 child: Text(
                   'Simpan Perubahan',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+                  style:
+                      GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -240,7 +294,8 @@ class _ProfilViewState extends State<ProfilView> {
               backgroundColor: AppColors.maroon,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: Text(
               'Ya, Keluar',
@@ -251,7 +306,6 @@ class _ProfilViewState extends State<ProfilView> {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +389,8 @@ class _ProfilViewState extends State<ProfilView> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const PengaturanAkunScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const PengaturanAkunScreen()),
                 );
               },
               tooltip: 'Pengaturan',
@@ -392,7 +447,8 @@ class _ProfilViewState extends State<ProfilView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFEF3C7), // Gold/Kuning pastel
                         borderRadius: BorderRadius.circular(20),
@@ -401,7 +457,8 @@ class _ProfilViewState extends State<ProfilView> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.badge_outlined, size: 12, color: Color(0xFF92400E)),
+                          const Icon(Icons.badge_outlined,
+                              size: 12, color: Color(0xFF92400E)),
                           const SizedBox(width: 5),
                           Text(
                             'KARTU PUSTAKA DIGITAL',
@@ -442,23 +499,18 @@ class _ProfilViewState extends State<ProfilView> {
                           ),
                         ],
                       ),
-                      child: CircleAvatar(
+                      child: UserAvatarWidget(
                         radius: 38,
-                        backgroundColor: const Color(0xFFFAF7F2),
-                        child: Text(
-                          _userInitials,
-                          style: GoogleFonts.lora(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.maroon,
-                          ),
-                        ),
+                        showBorder: false,
+                        tooltip: 'Ubah foto profil',
+                        onTap: _pickProfilePhoto,
                       ),
                     ),
 
                     // Badge Status Kecil "AKTIF"
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
                         color: const Color(0xFFDCFCE7), // Hijau pastel
                         borderRadius: BorderRadius.circular(12),
@@ -521,7 +573,8 @@ class _ProfilViewState extends State<ProfilView> {
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF5EBE6),
                     borderRadius: BorderRadius.circular(8),
@@ -770,7 +823,8 @@ class _ProfilViewState extends State<ProfilView> {
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(14),
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               leading: Container(
                 padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
@@ -804,7 +858,8 @@ class _ProfilViewState extends State<ProfilView> {
                 color: AppColors.maroon,
               ),
               onTap: _showLogoutDialog,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
           ),
         ),
@@ -851,7 +906,8 @@ class _ProfilViewState extends State<ProfilView> {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.25)),
                   ),
                   child: Icon(icon, color: Colors.white, size: 20),
                 ),
@@ -872,7 +928,8 @@ class _ProfilViewState extends State<ProfilView> {
                           ),
                           const SizedBox(width: 7),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
@@ -899,7 +956,8 @@ class _ProfilViewState extends State<ProfilView> {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, size: 20, color: Colors.white54),
+                const Icon(Icons.chevron_right,
+                    size: 20, color: Colors.white54),
               ],
             ),
           ),
@@ -934,7 +992,8 @@ class _ProfilViewState extends State<ProfilView> {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           leading: Container(
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
@@ -962,7 +1021,8 @@ class _ProfilViewState extends State<ProfilView> {
               ),
               if (badgeText != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                   decoration: BoxDecoration(
                     color: badgeBg ?? const Color(0xFFE8F5E9),
                     borderRadius: BorderRadius.circular(12),
@@ -992,7 +1052,8 @@ class _ProfilViewState extends State<ProfilView> {
             color: Color(0xFFA8A29E),
           ),
           onTap: onTap,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );
@@ -1046,7 +1107,8 @@ class _ProfilViewState extends State<ProfilView> {
     );
   }
 
-  Widget _buildBottomNavItem(IconData icon, String label, int targetIndex, {bool isSelected = false}) {
+  Widget _buildBottomNavItem(IconData icon, String label, int targetIndex,
+      {bool isSelected = false}) {
     return InkWell(
       onTap: () {
         if (!isSelected) {

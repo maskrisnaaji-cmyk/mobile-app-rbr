@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/user_session.dart';
@@ -36,6 +38,17 @@ class UserAvatarWidget extends StatelessWidget {
       builder: (context, _) {
         final initials = UserSession.instance.initials;
         final name = UserSession.instance.name;
+        final photoUrl = UserSession.instance.photoUrl;
+
+        ImageProvider<Object>? photoImage;
+        if (photoUrl != null && photoUrl.trim().isNotEmpty) {
+          final photo = photoUrl.trim();
+          if (photo.startsWith('http://') || photo.startsWith('https://')) {
+            photoImage = NetworkImage(photo) as ImageProvider<Object>;
+          } else {
+            photoImage = FileImage(File(photo)) as ImageProvider<Object>;
+          }
+        }
 
         Widget avatar = Container(
           padding: showBorder ? const EdgeInsets.all(2) : EdgeInsets.zero,
@@ -50,15 +63,19 @@ class UserAvatarWidget extends StatelessWidget {
               : null,
           child: CircleAvatar(
             radius: radius,
-            backgroundColor: backgroundColor ?? AppColors.maroon.withValues(alpha: 0.12),
-            child: Text(
-              initials,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: fontSize ?? (radius * 0.72).clamp(8.0, 18.0),
-                fontWeight: FontWeight.bold,
-                color: textColor ?? AppColors.maroon,
-              ),
-            ),
+            backgroundColor:
+                backgroundColor ?? AppColors.maroon.withValues(alpha: 0.12),
+            backgroundImage: photoImage,
+            child: photoImage == null
+                ? Text(
+                    initials,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: fontSize ?? (radius * 0.72).clamp(8.0, 18.0),
+                      fontWeight: FontWeight.bold,
+                      color: textColor ?? AppColors.maroon,
+                    ),
+                  )
+                : null,
           ),
         );
 
@@ -86,4 +103,3 @@ class UserAvatarWidget extends StatelessWidget {
     );
   }
 }
-
