@@ -236,7 +236,10 @@ class _ProfilViewState extends State<ProfilView> {
           ],
         ),
       ),
-    );
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      emailCtrl.dispose();
+    });
   }
 
   void _showLogoutDialog() {

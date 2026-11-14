@@ -46,6 +46,10 @@ class _FacsimileWebViewViewState extends State<FacsimileWebViewView> {
   @override
   void dispose() {
     _cancelTimers();
+    // Bersihkan request WebGL/JavaScript dan unhook listener saat keluar untuk mencegah memory leak
+    try {
+      _controller?.loadRequest(Uri.parse('about:blank'));
+    } catch (_) {}
     super.dispose();
   }
 
