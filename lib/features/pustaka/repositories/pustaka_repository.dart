@@ -11,6 +11,15 @@ abstract class PustakaRepository {
   Future<List<Book>> getBooks();
   Future<Book?> getBookDetail(String id);
   Future<List<LoanItem>> getMyLoans(String? token);
+  Future<void> requestLoan({
+    required String bookCode,
+    required String title,
+    required String author,
+    required String rackLocation,
+    required String borrowDate,
+    required String dueDate,
+    required String? token,
+  });
   Future<void> requestLoanExtension(String loanId, String? token);
   Future<List<FavoriteBook>> getFavoriteBooks();
   Future<List<BookReview>> getReviews();
@@ -77,6 +86,42 @@ class PustakaRepositoryImpl implements PustakaRepository {
       // Fallback ke demo data
     }
     return LoanItem.demoLoans;
+  }
+
+  @override
+  Future<void> requestLoan({
+    required String bookCode,
+    required String title,
+    required String author,
+    required String rackLocation,
+    required String borrowDate,
+    required String dueDate,
+    required String? token,
+  }) async {
+    if (token == null || token.isEmpty) {
+      throw Exception('Sesi login tidak ditemukan. Silakan login kembali.');
+    }
+
+    final response = await _client.post(
+      Uri.parse('${ApiConfig.baseUrl}/loans/request'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'bookCode': bookCode,
+        'title': title,
+        'author': author,
+        'rackLocation': rackLocation,
+        'borrowDate': borrowDate,
+        'dueDate': dueDate,
+      }),
+    ).timeout(const Duration(seconds: 8));
+
+    final body = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(body is Map ? body['message'] ?? 'Pengajuan peminjaman gagal.' : 'Pengajuan peminjaman gagal.');
+    }
   }
 
   @override

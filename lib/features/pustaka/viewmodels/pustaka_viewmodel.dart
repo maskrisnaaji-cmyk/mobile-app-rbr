@@ -130,6 +130,34 @@ class PustakaViewModel extends ChangeNotifier {
     }
   }
 
+  Future<bool> requestLoan({
+    required Book book,
+    required String? token,
+  }) async {
+    try {
+      final today = DateTime.now();
+      final dueDate = today.add(const Duration(days: 7));
+      String dateOnly(DateTime value) =>
+          '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+
+      await _repository.requestLoan(
+        bookCode: book.id,
+        title: book.title,
+        author: book.author,
+        rackLocation: book.shelfLocation,
+        borrowDate: dateOnly(today),
+        dueDate: dateOnly(dueDate),
+        token: token,
+      );
+      _errorMessage = null;
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> fetchFavorites() async {
     try {
       _favorites = await _repository.getFavoriteBooks();

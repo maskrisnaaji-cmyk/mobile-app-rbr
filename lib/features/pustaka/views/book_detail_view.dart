@@ -5,7 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:mobile_app/core/config/api_config.dart';
 import 'package:mobile_app/features/pustaka/models/book_model.dart';
 import 'package:mobile_app/core/theme/colors.dart';
+import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/features/pustaka/views/facsimile_webview_view.dart';
+import 'package:mobile_app/features/pustaka/viewmodels/pustaka_viewmodel.dart';
 
 class BookDetailView extends StatefulWidget {
   final Book book;
@@ -24,6 +26,8 @@ class BookDetailView extends StatefulWidget {
 class _BookDetailViewState extends State<BookDetailView> {
   int _selectedTabIndex = 0;
   bool _isBookmarked = false;
+  bool _isBorrowRequestLoading = false;
+  final PustakaViewModel _pustakaViewModel = PustakaViewModel();
 
   Book get book => widget.book;
 
@@ -183,26 +187,7 @@ class _BookDetailViewState extends State<BookDetailView> {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(Icons.check_circle, color: Colors.white),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Pengajuan peminjaman "${book.title}" berhasil dicatat! Kode: RBR-LIB-${DateTime.now().millisecondsSinceEpoch % 10000}',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                      backgroundColor: AppColors.maroon,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  );
+                  _submitBorrowRequest(ctx);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.maroon,
@@ -212,7 +197,9 @@ class _BookDetailViewState extends State<BookDetailView> {
                   ),
                   elevation: 0,
                 ),
-                child: Text(
+                child: _isBorrowRequestLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(
                   isAvailable ? 'Konfirmasi Peminjaman' : 'Reservasi Antrean Buku',
                   style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.bold,
@@ -223,6 +210,31 @@ class _BookDetailViewState extends State<BookDetailView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _submitBorrowRequest(BuildContext modalContext) async {
+    if (_isBorrowRequestLoading) return;
+    setState(() => _isBorrowRequestLoading = true);
+    final success = await _pustakaViewModel.requestLoan(
+      book: book,
+      token: UserSession.instance.token,
+    );
+    if (!mounted) return;
+    setState(() => _isBorrowRequestLoading = false);
+    if (modalContext.mounted) Navigator.pop(modalContext);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Pengajuan "${book.title}" sudah dikirim ke admin dan menunggu konfirmasi.'
+              : (_pustakaViewModel.errorMessage ?? 'Pengajuan peminjaman gagal dikirim.'),
+          style: GoogleFonts.plusJakartaSans(fontSize: 12),
+        ),
+        backgroundColor: success ? AppColors.maroon : Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }

@@ -71,7 +71,8 @@ class LoanCardWidget extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: badgeBg,
                   borderRadius: BorderRadius.circular(12),
@@ -115,56 +116,29 @@ class LoanCardWidget extends StatelessWidget {
               color: const Color(0xFFFBF8F5),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Tgl Pinjam',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.greyText),
-                    ),
-                    Text(
-                      loan.borrowDateLabel,
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.darkText),
-                    ),
-                  ],
+                _buildDateInfo('Tgl Pinjam', loan.borrowDateLabel),
+                _buildDateInfo('Waktu Pinjam', loan.borrowTimeLabel),
+                _buildDateInfo(
+                  'Jatuh Tempo',
+                  loan.dueDateLabel,
+                  valueColor: isOverdue ? const Color(0xFFDC2626) : null,
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Jatuh Tempo',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.greyText),
-                    ),
-                    Text(
-                      loan.dueDateLabel,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isOverdue ? const Color(0xFFDC2626) : AppColors.darkText,
-                      ),
-                    ),
-                  ],
+                _buildDateInfo(
+                  'Tgl Kembali',
+                  loan.returnedDateLabel,
+                  valueColor: isReturned ? const Color(0xFF15803D) : null,
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Lokasi',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.greyText),
-                    ),
-                    Text(
-                      loan.rackLocation,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.maroon,
-                      ),
-                    ),
-                  ],
+                _buildDateInfo(
+                  'Waktu Kembali',
+                  loan.returnedTimeLabel,
+                  valueColor: isReturned ? const Color(0xFF15803D) : null,
                 ),
+                _buildDateInfo('Lokasi', loan.rackLocation,
+                    valueColor: AppColors.maroon),
               ],
             ),
           ),
@@ -177,9 +151,12 @@ class LoanCardWidget extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    isOverdue ? Icons.error_outline_rounded : Icons.schedule_rounded,
+                    isOverdue
+                        ? Icons.error_outline_rounded
+                        : Icons.schedule_rounded,
                     size: 16,
-                    color: isOverdue ? const Color(0xFFDC2626) : AppColors.maroon,
+                    color:
+                        isOverdue ? const Color(0xFFDC2626) : AppColors.maroon,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -187,26 +164,33 @@ class LoanCardWidget extends StatelessWidget {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isOverdue ? const Color(0xFFDC2626) : AppColors.maroon,
+                      color: isOverdue
+                          ? const Color(0xFFDC2626)
+                          : AppColors.maroon,
                     ),
                   ),
                 ],
               ),
               if (!isReturned)
                 ElevatedButton(
-                  onPressed: loan.extensionStatus == 'pending' ? null : onRequestExtension,
+                  onPressed: loan.extensionStatus == 'pending'
+                      ? null
+                      : onRequestExtension,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.maroon,
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Colors.grey.shade300,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                   child: Text(
-                    loan.extensionStatus == 'pending' ? 'Menunggu Konfirmasi' : 'Perpanjang',
+                    loan.extensionStatus == 'pending'
+                        ? 'Menunggu Konfirmasi'
+                        : 'Perpanjang',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -214,6 +198,32 @@ class LoanCardWidget extends StatelessWidget {
                   ),
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateInfo(String label, String value, {Color? valueColor}) {
+    return SizedBox(
+      width: 128,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10,
+              color: AppColors.greyText,
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: valueColor ?? AppColors.darkText,
+            ),
           ),
         ],
       ),

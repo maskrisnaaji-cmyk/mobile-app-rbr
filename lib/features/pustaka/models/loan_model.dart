@@ -6,7 +6,9 @@ class LoanItem {
   final String author;
   final String rackLocation;
   final DateTime borrowDate;
+  final DateTime? borrowAt;
   final DateTime dueDate;
+  final DateTime? returnedAt;
   final String status;
   final String extensionStatus;
 
@@ -17,7 +19,9 @@ class LoanItem {
     required this.author,
     required this.rackLocation,
     required this.borrowDate,
+    this.borrowAt,
     required this.dueDate,
+    this.returnedAt,
     this.status = 'active',
     this.extensionStatus = 'none',
   });
@@ -25,18 +29,29 @@ class LoanItem {
   factory LoanItem.fromJson(Map<String, dynamic> json) {
     return LoanItem(
       id: json['id']?.toString(),
-      bookCode: json['book_code']?.toString() ?? json['bookCode']?.toString() ?? '-',
+      bookCode:
+          json['book_code']?.toString() ?? json['bookCode']?.toString() ?? '-',
       title: json['title']?.toString() ?? 'Buku tanpa judul',
       author: json['author']?.toString() ?? 'Penulis tidak diketahui',
-      rackLocation: json['rack_location']?.toString() ?? json['rackLocation']?.toString() ?? 'Belum ditentukan',
+      rackLocation: json['rack_location']?.toString() ??
+          json['rackLocation']?.toString() ??
+          'Belum ditentukan',
       borrowDate: json['borrow_date'] != null
           ? DateTime.parse(json['borrow_date'].toString())
-          : (json['borrowDate'] != null ? DateTime.parse(json['borrowDate'].toString()) : DateTime.now()),
+          : (json['borrowDate'] != null
+              ? DateTime.parse(json['borrowDate'].toString())
+              : DateTime.now()),
+      borrowAt: _parseDateTime(json['borrow_at'] ?? json['borrowAt']),
       dueDate: json['due_date'] != null
           ? DateTime.parse(json['due_date'].toString())
-          : (json['dueDate'] != null ? DateTime.parse(json['dueDate'].toString()) : DateTime.now().add(const Duration(days: 14))),
+          : (json['dueDate'] != null
+              ? DateTime.parse(json['dueDate'].toString())
+              : DateTime.now().add(const Duration(days: 14))),
+      returnedAt: _parseReturnedAt(json),
       status: json['status']?.toString() ?? 'active',
-      extensionStatus: json['extension_status']?.toString() ?? json['extensionStatus']?.toString() ?? 'none',
+      extensionStatus: json['extension_status']?.toString() ??
+          json['extensionStatus']?.toString() ??
+          'none',
     );
   }
 
@@ -52,7 +67,8 @@ class LoanItem {
   }
 
   bool get isOverdue =>
-      status == 'overdue' || (status == 'active' && dueDate.isBefore(DateTime.now()));
+      status == 'overdue' ||
+      (status == 'active' && dueDate.isBefore(DateTime.now()));
 
   String get daysLabel {
     if (status == 'returned') return 'Selesai';
@@ -63,7 +79,41 @@ class LoanItem {
   }
 
   String get borrowDateLabel => _formatDate(borrowDate);
+  String get borrowTimeLabel =>
+      borrowAt == null ? '-' : _formatWibTime(borrowAt!);
   String get dueDateLabel => _formatDate(dueDate);
+  String get returnedDateLabel =>
+      returnedAt == null ? 'Belum dikembalikan' : _formatWibDate(returnedAt!);
+  String get returnedTimeLabel =>
+      returnedAt == null ? '-' : _formatWibTime(returnedAt!);
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null || value.toString().trim().isEmpty) return null;
+    return DateTime.tryParse(value.toString());
+  }
+
+  static DateTime? _parseReturnedAt(Map<String, dynamic> json) {
+    final timestamp = _parseDateTime(
+      json['returned_at'] ?? json['returnedAt'],
+    );
+    if (timestamp != null) return timestamp;
+
+    final date = json['returned_date'] ??
+        json['returnedDate'] ??
+        json['return_date'] ??
+        json['returnDate'];
+    final time = json['returned_time'] ??
+        json['returnedTime'] ??
+        json['return_time'] ??
+        json['returnTime'];
+    if (date == null) return null;
+
+    final dateText = date.toString().trim();
+    final timeText = time?.toString().trim();
+    return _parseDateTime(timeText == null || timeText.isEmpty
+        ? dateText
+        : '$dateText $timeText+07:00');
+  }
 
   static String _formatDate(DateTime date) {
     const months = <String>[
@@ -81,6 +131,18 @@ class LoanItem {
       'Des',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  static String _formatWibDate(DateTime date) {
+    final wib = date.toUtc().add(const Duration(hours: 7));
+    return _formatDate(wib);
+  }
+
+  static String _formatWibTime(DateTime date) {
+    final wib = date.toUtc().add(const Duration(hours: 7));
+    final hour = wib.hour.toString().padLeft(2, '0');
+    final minute = wib.minute.toString().padLeft(2, '0');
+    return '$hour:$minute WIB';
   }
 
   static List<LoanItem> get demoLoans => [
