@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
+import 'package:mobile_app/features/profil/viewmodels/profil_viewmodel.dart';
 
 class TentangView extends StatelessWidget {
-  const TentangView({super.key});
+  final ProfilViewModel? viewModel;
+
+  const TentangView({super.key, this.viewModel});
 
   @override
   Widget build(BuildContext context) {

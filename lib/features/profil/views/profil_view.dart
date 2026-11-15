@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/core/widgets/user_avatar_widget.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/features/auth/views/login_view.dart';
@@ -11,66 +9,40 @@ import 'package:mobile_app/features/pustaka/views/koleksi_favorit_screen.dart';
 import 'package:mobile_app/features/pustaka/views/ulasan_diskusi_screen.dart';
 import 'package:mobile_app/features/profil/views/pengaturan_akun_screen.dart';
 import 'package:mobile_app/features/profil/views/pusat_bantuan_screen.dart';
+import 'package:mobile_app/features/profil/viewmodels/profil_viewmodel.dart';
+import 'package:mobile_app/features/profil/widgets/profil_menu_item.dart';
 import 'package:mobile_app/features/booking_payment/views/riwayat_pesanan_screen.dart';
 import 'package:mobile_app/features/chatbot/views/chatbot_view.dart';
 
 class ProfilView extends StatefulWidget {
   final bool showBottomNav;
+  final ProfilViewModel? viewModel;
 
-  const ProfilView({super.key, this.showBottomNav = false});
+  const ProfilView({
+    super.key,
+    this.showBottomNav = false,
+    this.viewModel,
+  });
 
   @override
   State<ProfilView> createState() => _ProfilViewState();
 }
 
 class _ProfilViewState extends State<ProfilView> {
-  final ImagePicker _imagePicker = ImagePicker();
-
-  String get _userName => UserSession.instance.name;
-  String get _userEmail => UserSession.instance.email;
+  late final ProfilViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
-    UserSession.instance.addListener(_onSessionChanged);
-    _loadUserProfile();
-  }
-
-  @override
-  void dispose() {
-    UserSession.instance.removeListener(_onSessionChanged);
-    super.dispose();
-  }
-
-  void _onSessionChanged() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  Future<void> _loadUserProfile() async {
-    await UserSession.instance.init();
+    _viewModel = widget.viewModel ?? ProfilViewModel();
   }
 
   Future<void> _pickProfilePhoto() async {
-    try {
-      final selected = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 85,
-      );
-      if (selected == null || !mounted) return;
-
-      await UserSession.instance.updateUser(
-        name: _userName,
-        photoUrl: selected.path,
-      );
-    } catch (error) {
-      if (!mounted) return;
+    final success = await _viewModel.pickProfilePhoto();
+    if (!success && _viewModel.errorMessage != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Foto profil tidak dapat dipilih: $error'),
+          content: Text(_viewModel.errorMessage!),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -79,8 +51,8 @@ class _ProfilViewState extends State<ProfilView> {
   }
 
   void _showEditProfileDialog() {
-    final nameCtrl = TextEditingController(text: _userName);
-    final emailCtrl = TextEditingController(text: _userEmail);
+    final nameCtrl = TextEditingController(text: _viewModel.userName);
+    final emailCtrl = TextEditingController(text: _viewModel.userEmail);
 
     showModalBottomSheet(
       context: context,
@@ -198,7 +170,7 @@ class _ProfilViewState extends State<ProfilView> {
                   final newName = nameCtrl.text.trim();
                   final newEmail = emailCtrl.text.trim();
                   if (newName.isNotEmpty) {
-                    await UserSession.instance.updateUser(
+                    await _viewModel.updateProfile(
                       name: newName,
                       email: newEmail.isNotEmpty ? newEmail : null,
                     );
@@ -283,7 +255,7 @@ class _ProfilViewState extends State<ProfilView> {
           ),
           ElevatedButton(
             onPressed: () async {
-              await UserSession.instance.clearSession();
+              await _viewModel.logout();
               if (!ctx.mounted) return;
               Navigator.pop(ctx);
               if (!mounted) return;
@@ -312,56 +284,50 @@ class _ProfilViewState extends State<ProfilView> {
 
   @override
   Widget build(BuildContext context) {
-    final content = SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Header Atas: Judul "Profil Saya" di kiri, Settings & Avatar di kanan
-          _buildTopHeader(),
-          const SizedBox(height: 14),
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        final content = SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTopHeader(),
+              const SizedBox(height: 14),
+              _buildMainProfileCard(),
+              const SizedBox(height: 22),
+              _buildActivitySection(),
+              const SizedBox(height: 22),
+              _buildPreferenceSection(),
+              const SizedBox(height: 28),
+              _buildFooterText(),
+              const SizedBox(height: 32),
+            ],
+          ),
+        );
 
-          // 2. Kartu Profil Utama (Background Putih / Krem Lembut)
-          _buildMainProfileCard(),
-          const SizedBox(height: 22),
+        if (widget.showBottomNav) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF9F6F0),
+            body: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 480),
+                color: const Color(0xFFFAF7F2),
+                child: SafeArea(child: content),
+              ),
+            ),
+            bottomNavigationBar: _buildStandaloneBottomBar(),
+          );
+        }
 
-          // 3. Section "AKTIVITAS & KURASI"
-          _buildActivitySection(),
-          const SizedBox(height: 22),
-
-          // 4. Section "PREFERENSI & BANTUAN"
-          _buildPreferenceSection(),
-          const SizedBox(height: 28),
-
-          // 5. Footer Teks Kutipan & Versi
-          _buildFooterText(),
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-
-    // Jika dipanggil mandiri (showBottomNav = true), bungkus dengan Scaffold dan Bottom Navigation
-    if (widget.showBottomNav) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF9F6F0),
-        body: Center(
+        return Center(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 480),
-            color: const Color(0xFFFAF7F2),
-            child: SafeArea(child: content),
+            child: content,
           ),
-        ),
-        bottomNavigationBar: _buildStandaloneBottomBar(),
-      );
-    }
-
-    // Default untuk dirender di dalam MainScreen
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: content,
-      ),
+        );
+      },
     );
   }
 
@@ -370,7 +336,6 @@ class _ProfilViewState extends State<ProfilView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Judul: "Profil Saya"
         Text(
           'Profil Saya',
           style: GoogleFonts.lora(
@@ -379,8 +344,6 @@ class _ProfilViewState extends State<ProfilView> {
             color: AppColors.maroonDark,
           ),
         ),
-
-        // Action Icons: Settings & Avatar Kecil
         Row(
           children: [
             IconButton(
@@ -393,7 +356,9 @@ class _ProfilViewState extends State<ProfilView> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const PengaturanAkunScreen()),
+                    builder: (_) =>
+                        PengaturanAkunScreen(viewModel: _viewModel),
+                  ),
                 );
               },
               tooltip: 'Pengaturan',
@@ -411,6 +376,12 @@ class _ProfilViewState extends State<ProfilView> {
 
   // --- 2. Kartu Profil Utama ---
   Widget _buildMainProfileCard() {
+    final profile = _viewModel.profile;
+    final borrowedCount = profile?.borrowedBooksCount.toString() ?? '12';
+    final agendasCount = profile?.culturalAgendasCount.toString() ?? '8';
+    final favoritesCount = profile?.favoriteCollectionsCount.toString() ?? '14';
+    final memberId = profile?.memberId ?? 'RBR-2024-8842';
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -427,7 +398,6 @@ class _ProfilViewState extends State<ProfilView> {
       ),
       child: Stack(
         children: [
-          // Background aksen ornamen kartu pustaka di sudut kanan atas
           Positioned(
             top: -20,
             right: -20,
@@ -440,12 +410,10 @@ class _ProfilViewState extends State<ProfilView> {
               ),
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(18),
             child: Column(
               children: [
-                // Baris Atas: Badge "KARTU PUSTAKA DIGITAL"
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -453,7 +421,7 @@ class _ProfilViewState extends State<ProfilView> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7), // Gold/Kuning pastel
+                        color: const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: const Color(0xFFFDE68A)),
                       ),
@@ -483,8 +451,6 @@ class _ProfilViewState extends State<ProfilView> {
                   ],
                 ),
                 const SizedBox(height: 14),
-
-                // Foto Profil Bulat dengan Border Marun & Badge "AKTIF"
                 Stack(
                   alignment: Alignment.bottomCenter,
                   children: [
@@ -509,13 +475,11 @@ class _ProfilViewState extends State<ProfilView> {
                         onTap: _pickProfilePhoto,
                       ),
                     ),
-
-                    // Badge Status Kecil "AKTIF"
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7), // Hijau pastel
+                        color: const Color(0xFFDCFCE7),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFF86EFAC)),
                         boxShadow: [
@@ -552,10 +516,8 @@ class _ProfilViewState extends State<ProfilView> {
                   ],
                 ),
                 const SizedBox(height: 10),
-
-                // Nama Pengguna Dinamis
                 Text(
-                  _userName,
+                  _viewModel.userName,
                   textAlign: TextAlign.center,
                   style: GoogleFonts.lora(
                     fontSize: 20,
@@ -564,10 +526,8 @@ class _ProfilViewState extends State<ProfilView> {
                   ),
                 ),
                 const SizedBox(height: 4),
-
-                // Email Dinamis & ID Anggota
                 Text(
-                  _userEmail,
+                  _viewModel.userEmail,
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
@@ -584,7 +544,7 @@ class _ProfilViewState extends State<ProfilView> {
                     border: Border.all(color: const Color(0xFFEAD8D0)),
                   ),
                   child: Text(
-                    'ID ANGGOTA: RBR-2024-8842',
+                    'ID ANGGOTA: $memberId',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10.5,
                       fontWeight: FontWeight.bold,
@@ -596,20 +556,17 @@ class _ProfilViewState extends State<ProfilView> {
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: Color(0xFFEFEAE2)),
                 const SizedBox(height: 14),
-
-                // Statistik Ringkas (Grid 3 Kolom)
                 Row(
                   children: [
-                    _buildStatItem('12', 'Buku Pinjam'),
+                    ProfilStatItem(count: borrowedCount, label: 'Buku Pinjam'),
                     _buildVerticalDivider(),
-                    _buildStatItem('8', 'Agenda Budaya'),
+                    ProfilStatItem(count: agendasCount, label: 'Agenda Budaya'),
                     _buildVerticalDivider(),
-                    _buildStatItem('14', 'Koleksi Suka'),
+                    ProfilStatItem(
+                        count: favoritesCount, label: 'Koleksi Suka'),
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Tombol Aksi Utama: "Edit Profil & Preferensi"
                 SizedBox(
                   width: double.infinity,
                   height: 46,
@@ -624,7 +581,7 @@ class _ProfilViewState extends State<ProfilView> {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.maroon, // #6B1D2F solid
+                      backgroundColor: AppColors.maroon,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -634,33 +591,6 @@ class _ProfilViewState extends State<ProfilView> {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String count, String label) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            count,
-            style: GoogleFonts.lora(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkText,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              color: AppColors.greyText,
-              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -693,9 +623,7 @@ class _ProfilViewState extends State<ProfilView> {
             ),
           ),
         ),
-
-        // Kartu menu 1: "Peminjaman Buku"
-        _buildMenuCard(
+        ProfilMenuCard(
           icon: Icons.menu_book_rounded,
           title: 'Peminjaman Buku',
           subtitle: 'Status peminjaman, lokasi rak & request perpanjangan',
@@ -710,9 +638,7 @@ class _ProfilViewState extends State<ProfilView> {
           },
         ),
         const SizedBox(height: 10),
-
-        // Kartu menu 2: "Koleksi Favorit"
-        _buildMenuCard(
+        ProfilMenuCard(
           icon: Icons.bookmark_outline_rounded,
           title: 'Koleksi Favorit',
           subtitle: '14 karya sastra, manuskrip, & arsip tersimpan',
@@ -724,9 +650,7 @@ class _ProfilViewState extends State<ProfilView> {
           },
         ),
         const SizedBox(height: 10),
-
-        // Kartu menu 3: "Ulasan & Diskusi Saya"
-        _buildMenuCard(
+        ProfilMenuCard(
           icon: Icons.rate_review_outlined,
           title: 'Ulasan & Diskusi Saya',
           subtitle: '8 telaah budaya & tanggapan kuratorial naskah',
@@ -738,9 +662,7 @@ class _ProfilViewState extends State<ProfilView> {
           },
         ),
         const SizedBox(height: 10),
-
-        // Kartu menu 4: "Riwayat Pesanan & Tiket"
-        _buildMenuCard(
+        ProfilMenuCard(
           icon: Icons.receipt_long_rounded,
           title: 'Riwayat Pesanan & Tiket',
           subtitle: 'Transaksi kedai kopi & tiket agenda budaya',
@@ -752,9 +674,7 @@ class _ProfilViewState extends State<ProfilView> {
           },
         ),
         const SizedBox(height: 10),
-
-        // Kartu menu 5: "Tanya Kurator AI"
-        _buildMenuCardHighlighted(
+        ProfilMenuCardHighlighted(
           icon: Icons.auto_awesome_rounded,
           title: 'Tanya Kurator AI',
           subtitle: 'Obrolan budaya dengan Ratna AI — kurator digital RBR',
@@ -786,39 +706,39 @@ class _ProfilViewState extends State<ProfilView> {
             ),
           ),
         ),
-
-        // Kartu menu 4: "Pengaturan Akun"
-        _buildMenuCard(
+        ProfilMenuCard(
           icon: Icons.lock_outline_rounded,
           title: 'Pengaturan Akun',
           subtitle: 'Keamanan kata sandi, privasi, & notifikasi',
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const PengaturanAkunScreen()),
+              MaterialPageRoute(
+                builder: (_) =>
+                    PengaturanAkunScreen(viewModel: _viewModel),
+              ),
             );
           },
         ),
         const SizedBox(height: 10),
-
-        // Kartu menu 5: "Pusat Bantuan & Panduan"
-        _buildMenuCard(
+        ProfilMenuCard(
           icon: Icons.help_outline_rounded,
           title: 'Pusat Bantuan & Panduan',
           subtitle: 'Tata tertib salon pustaka, preservasi & kontak kurator',
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const PusatBantuanScreen()),
+              MaterialPageRoute(
+                builder: (_) =>
+                    PusatBantuanScreen(viewModel: _viewModel),
+              ),
             );
           },
         ),
         const SizedBox(height: 10),
-
-        // Kartu menu 6: "Keluar dari Akun" (Latar merah muda lembut, teks marun)
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFFEF2F2), // Merah muda lembut
+            color: const Color(0xFFFEF2F2),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFFFECACA)),
           ),
@@ -870,198 +790,6 @@ class _ProfilViewState extends State<ProfilView> {
     );
   }
 
-  /// Varian menu card dengan aksen gradien AI (untuk "Tanya Kurator AI")
-  Widget _buildMenuCardHighlighted({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6B1D2F), Color(0xFF8B2543)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6B1D2F).withValues(alpha: 0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          splashColor: Colors.white.withValues(alpha: 0.1),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                    border:
-                        Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            title,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 7),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'AI',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          color: Colors.white.withValues(alpha: 0.75),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right,
-                    size: 20, color: Colors.white54),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    String? badgeText,
-    Color? badgeBg,
-    Color? badgeColor,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.lightBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFAF7F2),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFEBE6DC)),
-            ),
-            child: Icon(
-              icon,
-              color: AppColors.maroon,
-              size: 20,
-            ),
-          ),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
-                  ),
-                ),
-              ),
-              if (badgeText != null) ...[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                  decoration: BoxDecoration(
-                    color: badgeBg ?? const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    badgeText,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.bold,
-                      color: badgeColor ?? const Color(0xFF2E7D32),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          subtitle: Text(
-            subtitle,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              color: AppColors.greyText,
-            ),
-          ),
-          trailing: const Icon(
-            Icons.chevron_right,
-            size: 20,
-            color: Color(0xFFA8A29E),
-          ),
-          onTap: onTap,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-      ),
-    );
-  }
-
   // --- 5. Footer Teks Kutipan & Versi ---
   Widget _buildFooterText() {
     return Column(
@@ -1092,7 +820,6 @@ class _ProfilViewState extends State<ProfilView> {
     );
   }
 
-  // Bottom bar mandiri (jika view dipanggil via pushReplacement secara langsung)
   Widget _buildStandaloneBottomBar() {
     return Container(
       color: Colors.white,

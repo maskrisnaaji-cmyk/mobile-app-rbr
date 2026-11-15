@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/core/widgets/user_avatar_widget.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
+import 'package:mobile_app/features/profil/viewmodels/profil_viewmodel.dart';
 
 class PengaturanAkunScreen extends StatefulWidget {
-  const PengaturanAkunScreen({super.key});
+  final ProfilViewModel? viewModel;
+
+  const PengaturanAkunScreen({super.key, this.viewModel});
 
   @override
   State<PengaturanAkunScreen> createState() => _PengaturanAkunScreenState();
 }
 
 class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
-  final ImagePicker _imagePicker = ImagePicker();
-
+  late final ProfilViewModel _viewModel;
   final _passwordFormKey = GlobalKey<FormState>();
 
   final _currentPasswordController = TextEditingController();
@@ -26,37 +26,10 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
-  // Preferences toggles
-  bool _notifLoanDue = true;
-  bool _notifWorkshopAgenda = true;
-  bool _notifCuratorArticles = true;
-  bool _notifWhatsapp = true;
-  bool _publicReviewProfile = false;
-
-  Future<void> _pickProfilePhoto() async {
-    try {
-      final selected = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 85,
-      );
-      if (selected == null) return;
-
-      await UserSession.instance.updateUser(
-        name: UserSession.instance.name,
-        photoUrl: selected.path,
-      );
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Foto profil tidak dapat dipilih: $error'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = widget.viewModel ?? ProfilViewModel();
   }
 
   @override
@@ -67,185 +40,211 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
     super.dispose();
   }
 
-  void _submitChangePassword() {
-    if (_passwordFormKey.currentState?.validate() ?? false) {
-      _currentPasswordController.clear();
-      _newPasswordController.clear();
-      _confirmPasswordController.clear();
-
+  Future<void> _pickProfilePhoto() async {
+    final success = await _viewModel.pickProfilePhoto();
+    if (!success && _viewModel.errorMessage != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Kata sandi akun Anda berhasil diperbarui!',
-            style: GoogleFonts.plusJakartaSans(fontSize: 12),
-          ),
-          backgroundColor: AppColors.maroon,
+          content: Text(_viewModel.errorMessage!),
+          backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }
   }
 
+  Future<void> _submitChangePassword() async {
+    if (_passwordFormKey.currentState?.validate() ?? false) {
+      final success = await _viewModel.changePassword(
+        currentPassword: _currentPasswordController.text,
+        newPassword: _newPasswordController.text,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Kata sandi akun Anda berhasil diperbarui!',
+              style: GoogleFonts.plusJakartaSans(fontSize: 12),
+            ),
+            backgroundColor: AppColors.maroon,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _viewModel.errorMessage ?? 'Gagal memperbarui kata sandi',
+              style: GoogleFonts.plusJakartaSans(fontSize: 12),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MobileFrame(
-      child: Scaffold(
-        backgroundColor: AppColors.bgCanvas,
-        appBar: AppBar(
-          backgroundColor: AppColors.bgCanvas,
-          elevation: 0,
-          leading: IconButton(
-            icon:
-                const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'Pengaturan Akun',
-            style: GoogleFonts.lora(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.maroonDark,
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return MobileFrame(
+          child: Scaffold(
+            backgroundColor: AppColors.bgCanvas,
+            appBar: AppBar(
+              backgroundColor: AppColors.bgCanvas,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded,
+                    color: AppColors.textMain),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                'Pengaturan Akun',
+                style: GoogleFonts.lora(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.maroonDark,
+                ),
+              ),
+              centerTitle: false,
+              actions: const [
+                Padding(
+                  padding: EdgeInsets.only(right: 16),
+                  child: Center(
+                    child: UserAvatarWidget(radius: 14),
+                  ),
+                ),
+              ],
+            ),
+            body: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAccountBadgeCard(),
+                  const SizedBox(height: 20),
+                  Text(
+                    'KEAMANAN KATA SANDI',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1,
+                      color: AppColors.greyText,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildChangePasswordCard(),
+                  const SizedBox(height: 22),
+                  Text(
+                    'PREFERENSI NOTIFIKASI',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1,
+                      color: AppColors.greyText,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildNotificationPreferencesCard(),
+                  const SizedBox(height: 22),
+                  Text(
+                    'PRIVASI & FORUM BUDAYA',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1,
+                      color: AppColors.greyText,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildPrivacyCard(),
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
           ),
-          centerTitle: false,
-          actions: const [
-            Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: Center(
-                child: UserAvatarWidget(radius: 14),
-              ),
-            ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Identitas Akun Singkat
-              _buildAccountBadgeCard(),
-              const SizedBox(height: 20),
-
-              // Bagian 1: Keamanan & Ganti Password
-              Text(
-                'KEAMANAN KATA SANDI',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.1,
-                  color: AppColors.greyText,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _buildChangePasswordCard(),
-              const SizedBox(height: 22),
-
-              // Bagian 2: Preferensi Notifikasi
-              Text(
-                'PREFERENSI NOTIFIKASI',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.1,
-                  color: AppColors.greyText,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _buildNotificationPreferencesCard(),
-              const SizedBox(height: 22),
-
-              // Bagian 3: Privasi
-              Text(
-                'PRIVASI & FORUM BUDAYA',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.1,
-                  color: AppColors.greyText,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _buildPrivacyCard(),
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildAccountBadgeCard() {
-    return ListenableBuilder(
-      listenable: UserSession.instance,
-      builder: (context, _) {
-        final session = UserSession.instance;
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.lightBorder),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: Column(
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  UserAvatarWidget(
-                    radius: 22,
-                    onTap: _pickProfilePhoto,
-                    tooltip: 'Ubah foto profil',
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          session.name,
-                          style: GoogleFonts.lora(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkText,
-                          ),
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          '${session.email} • Anggota Terverifikasi',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: AppColors.greyText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              UserAvatarWidget(
+                radius: 22,
+                onTap: _pickProfilePhoto,
+                tooltip: 'Ubah foto profil',
               ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _pickProfilePhoto,
-                  icon: const Icon(Icons.photo_camera_outlined, size: 17),
-                  label: const Text('Ubah Foto Profil'),
-                  style:
-                      TextButton.styleFrom(foregroundColor: AppColors.maroon),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _viewModel.userName,
+                      style: GoogleFonts.lora(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      '${_viewModel.userEmail} • Anggota Terverifikasi',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: AppColors.greyText,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _pickProfilePhoto,
+              icon: const Icon(Icons.photo_camera_outlined, size: 17),
+              label: const Text('Ubah Foto Profil'),
+              style:
+                  TextButton.styleFrom(foregroundColor: AppColors.maroon),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -318,7 +317,7 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
               width: double.infinity,
               height: 44,
               child: ElevatedButton.icon(
-                onPressed: _submitChangePassword,
+                onPressed: _viewModel.isLoading ? null : _submitChangePassword,
                 icon: const Icon(Icons.check_circle_outline, size: 18),
                 label: Text(
                   'Perbarui Kata Sandi',
@@ -370,7 +369,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.plusJakartaSans(
-                fontSize: 12, color: AppColors.greyText.withValues(alpha: 0.6)),
+                fontSize: 12,
+                color: AppColors.greyText.withValues(alpha: 0.6)),
             prefixIcon: const Icon(Icons.lock_outline_rounded,
                 size: 18, color: AppColors.maroon),
             suffixIcon: IconButton(
@@ -397,7 +397,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.maroon, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.maroon, width: 1.5),
             ),
           ),
         ),
@@ -406,6 +407,7 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   }
 
   Widget _buildNotificationPreferencesCard() {
+    final prefs = _viewModel.preferences;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -429,8 +431,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
                     fontSize: 11, color: AppColors.greyText),
               ),
               activeThumbColor: AppColors.maroon,
-              value: _notifLoanDue,
-              onChanged: (val) => setState(() => _notifLoanDue = val),
+              value: prefs.notifLoanDue,
+              onChanged: (val) => _viewModel.setNotifLoanDue(val),
             ),
             const Divider(height: 1, color: AppColors.lightBorder),
             SwitchListTile(
@@ -445,8 +447,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
                     fontSize: 11, color: AppColors.greyText),
               ),
               activeThumbColor: AppColors.maroon,
-              value: _notifWorkshopAgenda,
-              onChanged: (val) => setState(() => _notifWorkshopAgenda = val),
+              value: prefs.notifWorkshopAgenda,
+              onChanged: (val) => _viewModel.setNotifWorkshopAgenda(val),
             ),
             const Divider(height: 1, color: AppColors.lightBorder),
             SwitchListTile(
@@ -461,8 +463,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
                     fontSize: 11, color: AppColors.greyText),
               ),
               activeThumbColor: AppColors.maroon,
-              value: _notifCuratorArticles,
-              onChanged: (val) => setState(() => _notifCuratorArticles = val),
+              value: prefs.notifCuratorArticles,
+              onChanged: (val) => _viewModel.setNotifCuratorArticles(val),
             ),
             const Divider(height: 1, color: AppColors.lightBorder),
             SwitchListTile(
@@ -477,8 +479,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
                     fontSize: 11, color: AppColors.greyText),
               ),
               activeThumbColor: AppColors.maroon,
-              value: _notifWhatsapp,
-              onChanged: (val) => setState(() => _notifWhatsapp = val),
+              value: prefs.notifWhatsapp,
+              onChanged: (val) => _viewModel.setNotifWhatsapp(val),
             ),
           ],
         ),
@@ -487,6 +489,7 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   }
 
   Widget _buildPrivacyCard() {
+    final prefs = _viewModel.preferences;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -508,8 +511,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
                 fontSize: 11, color: AppColors.greyText),
           ),
           activeThumbColor: AppColors.maroon,
-          value: _publicReviewProfile,
-          onChanged: (val) => setState(() => _publicReviewProfile = val),
+          value: prefs.publicReviewProfile,
+          onChanged: (val) => _viewModel.setPublicReviewProfile(val),
         ),
       ),
     );
