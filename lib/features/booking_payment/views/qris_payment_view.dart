@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
-import 'package:mobile_app/core/services/payment_service.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_pembayaran_view.dart';
+import 'package:mobile_app/features/booking_payment/viewmodels/booking_payment_viewmodel.dart';
 
 class QrisPaymentView extends StatefulWidget {
   final String title;
@@ -15,6 +15,7 @@ class QrisPaymentView extends StatefulWidget {
   final String? qrString;
   final String buttonLabel;
   final Widget? nextScreen;
+  final PaymentStatusViewModel? viewModel;
 
   const QrisPaymentView({
     super.key,
@@ -27,6 +28,7 @@ class QrisPaymentView extends StatefulWidget {
     this.qrString,
     this.buttonLabel = 'CEK STATUS PEMBAYARAN',
     this.nextScreen,
+    this.viewModel,
   });
 
   @override
@@ -34,16 +36,17 @@ class QrisPaymentView extends StatefulWidget {
 }
 
 class _QrisPaymentViewState extends State<QrisPaymentView> {
-  bool _isChecking = false;
+  late final PaymentStatusViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = widget.viewModel ?? PaymentStatusViewModel();
+  }
 
   Future<void> _checkStatus() async {
-    setState(() => _isChecking = true);
-    final statusData = await PaymentService.checkPaymentStatus(widget.orderNumber);
+    final isPaid = await _viewModel.checkStatus(widget.orderNumber);
     if (!mounted) return;
-    setState(() => _isChecking = false);
-
-    final txStatus = (statusData?['transaction_status'] ?? '').toString().toLowerCase();
-    final isPaid = statusData?['is_paid'] == true || txStatus == 'settlement' || txStatus == 'paid';
 
     if (isPaid) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,23 +67,21 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Status: ${txStatus.isEmpty ? "Menunggu Pembayaran" : txStatus}. Silakan scan kode QR di atas.'),
-          duration: const Duration(seconds: 3),
+        const SnackBar(
+          content: Text('Menunggu Pembayaran. Silakan scan kode QR di atas.'),
+          duration: Duration(seconds: 3),
         ),
       );
     }
   }
 
   Future<void> _simulateSettlement() async {
-    setState(() => _isChecking = true);
-    final success = await PaymentService.simulateSettlement(
+    final success = await _viewModel.simulateSettlement(
       orderId: widget.orderNumber,
       grossAmount: widget.rawAmount ?? 35000,
       paymentType: 'qris',
     );
     if (!mounted) return;
-    setState(() => _isChecking = false);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -104,64 +105,65 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
 
   @override
   Widget build(BuildContext context) {
-    return MobileFrame(
-      child: Scaffold(
-        backgroundColor: AppColors.bgCanvas,
-        appBar: AppBar(
-          backgroundColor: AppColors.bgCanvas,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.darkText),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            widget.title,
-            style: GoogleFonts.lora(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkText,
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return MobileFrame(
+          child: Scaffold(
+            backgroundColor: AppColors.bgCanvas,
+            appBar: AppBar(
+              backgroundColor: AppColors.bgCanvas,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded,
+                    color: AppColors.darkText),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                widget.title,
+                style: GoogleFonts.lora(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkText,
+                ),
+              ),
+              centerTitle: false,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.share_outlined,
+                      color: AppColors.darkText, size: 20),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: const Icon(Icons.person_outline_rounded,
+                      color: AppColors.darkText, size: 20),
+                  onPressed: () {},
+                ),
+              ],
+            ),
+            body: SingleChildScrollView(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildTimerCard(),
+                  const SizedBox(height: 14),
+                  _buildMerchantInfoCard(),
+                  const SizedBox(height: 14),
+                  _buildQrisCard(context),
+                  const SizedBox(height: 20),
+                  _buildActionButtons(context),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
-          centerTitle: false,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.share_outlined, color: AppColors.darkText, size: 20),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: const Icon(Icons.person_outline_rounded, color: AppColors.darkText, size: 20),
-              onPressed: () {},
-            ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. Timer Card
-              _buildTimerCard(),
-              const SizedBox(height: 14),
-
-              // 2. Merchant Info Card
-              _buildMerchantInfoCard(),
-              const SizedBox(height: 14),
-
-              // 3. QRIS Card
-              _buildQrisCard(context),
-              const SizedBox(height: 20),
-
-              // 4. Action Buttons
-              _buildActionButtons(context),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // --- Widget: Timer Card ---
   Widget _buildTimerCard() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -173,7 +175,8 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.timer_outlined, color: Color(0xFFB45309), size: 18),
+          const Icon(Icons.timer_outlined,
+              color: Color(0xFFB45309), size: 18),
           const SizedBox(width: 8),
           Text(
             'Berlaku hingga ',
@@ -196,7 +199,6 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
     );
   }
 
-  // --- Widget: Merchant Info Card ---
   Widget _buildMerchantInfoCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -242,11 +244,13 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: AppColors.maroon.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.maroon.withValues(alpha: 0.2)),
+                  border: Border.all(
+                      color: AppColors.maroon.withValues(alpha: 0.2)),
                 ),
                 child: Text(
                   widget.badgeText,
@@ -289,7 +293,6 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
     );
   }
 
-  // --- Widget: QRIS Card ---
   Widget _buildQrisCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -307,12 +310,12 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
       ),
       child: Column(
         children: [
-          // Header QRIS & GPN
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFDC2626),
                   borderRadius: BorderRadius.circular(6),
@@ -337,7 +340,8 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E3A8A),
                   borderRadius: BorderRadius.circular(6),
@@ -354,8 +358,6 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // QR Code Container
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -379,18 +381,13 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
                       width: 210,
                       height: 210,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => CustomPaint(
-                        painter: _QrisPainter(),
-                      ),
+                      errorBuilder: (_, __, ___) =>
+                          CustomPaint(painter: _QrisPainter()),
                     )
-                  : CustomPaint(
-                      painter: _QrisPainter(),
-                    ),
+                  : CustomPaint(painter: _QrisPainter()),
             ),
           ),
           const SizedBox(height: 14),
-
-          // NMID
           Text(
             'NMID : ID10200392019',
             style: GoogleFonts.plusJakartaSans(
@@ -405,15 +402,11 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
             'Pindai QR ini melalui aplikasi m-Banking atau E-Wallet',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              color: AppColors.greyText,
-            ),
+                fontSize: 11, color: AppColors.greyText),
           ),
           const SizedBox(height: 16),
           const Divider(color: AppColors.lightBorder, height: 1),
           const SizedBox(height: 14),
-
-          // Daftar E-Wallet & Bank yang didukung
           Text(
             'DAPAT DIBAYAR DENGAN',
             style: GoogleFonts.plusJakartaSans(
@@ -460,33 +453,32 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
     );
   }
 
-  // --- Widget: Action Buttons ---
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Tombol Utama "CEK STATUS PEMBAYARAN"
         SizedBox(
           height: 52,
           child: ElevatedButton(
-            onPressed: _isChecking ? null : _checkStatus,
+            onPressed: _viewModel.isChecking ? null : _checkStatus,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6B1D2F),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
+                  borderRadius: BorderRadius.circular(14)),
               elevation: 2,
             ),
-            child: _isChecking
+            child: _viewModel.isChecking
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2),
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                      const Icon(Icons.check_circle_outline,
+                          color: Colors.white, size: 20),
                       const SizedBox(width: 8),
                       Text(
                         widget.buttonLabel,
@@ -502,8 +494,6 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
           ),
         ),
         const SizedBox(height: 10),
-
-        // Tombol "Unduh Kode QR"
         SizedBox(
           height: 46,
           child: OutlinedButton.icon(
@@ -515,7 +505,8 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
                 ),
               );
             },
-            icon: const Icon(Icons.download_rounded, color: AppColors.maroon, size: 18),
+            icon: const Icon(Icons.download_rounded,
+                color: AppColors.maroon, size: 18),
             label: Text(
               'Unduh Kode QR',
               style: GoogleFonts.plusJakartaSans(
@@ -527,20 +518,16 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: AppColors.maroon, width: 1.2),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+                  borderRadius: BorderRadius.circular(12)),
               backgroundColor: Colors.white,
             ),
           ),
         ),
         const SizedBox(height: 8),
-
-        // Tombol "Ubah Metode Pembayaran"
         TextButton(
           onPressed: () => Navigator.pop(context),
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-          ),
+          style:
+              TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 8)),
           child: Text(
             'Ubah Metode Pembayaran',
             style: GoogleFonts.plusJakartaSans(
@@ -550,11 +537,9 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
             ),
           ),
         ),
-
-        // Quick simulation helper for local sandbox test
         Center(
           child: TextButton(
-            onPressed: _isChecking ? null : _simulateSettlement,
+            onPressed: _viewModel.isChecking ? null : _simulateSettlement,
             child: Text(
               '⚡ Simulasi Lunas (Demo Sandbox)',
               style: GoogleFonts.plusJakartaSans(
@@ -571,13 +556,12 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
   }
 }
 
-/// CustomPainter untuk menggambar ilustrasi QR code yang rapi dan presisi
+/// CustomPainter untuk menggambar ilustrasi QR code
 class _QrisPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paintDark = Paint()..color = const Color(0xFF1E1C1A);
     final paintLight = Paint()..color = Colors.white;
-
     final cell = size.width / 25;
 
     void drawDot(int col, int row) {
@@ -601,7 +585,8 @@ class _QrisPainter extends CustomPainter {
       );
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(startX + cell * 2, startY + cell * 2, cell * 3, cell * 3),
+          Rect.fromLTWH(
+              startX + cell * 2, startY + cell * 2, cell * 3, cell * 3),
           const Radius.circular(2),
         ),
         paintDark,
@@ -646,7 +631,6 @@ class _QrisPainter extends CustomPainter {
       [18, 18], [20, 20], [22, 22], [24, 24],
       [19, 21], [21, 23], [23, 19],
     ];
-
     for (final dot in dummyDots) {
       drawDot(dot[0], dot[1]);
     }

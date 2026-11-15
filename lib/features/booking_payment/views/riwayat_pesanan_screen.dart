@@ -3,14 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_app/core/widgets/user_avatar_widget.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
+import 'package:mobile_app/features/booking_payment/models/payment_model.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_pembayaran_view.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_tiket_view.dart';
+import 'package:mobile_app/features/booking_payment/viewmodels/booking_payment_viewmodel.dart';
 
 /// Halaman Riwayat Pesanan & Tiket
-/// Menampilkan ringkasan transaksi Kedai Kopi dan Tiket Agenda,
-/// dengan aksi "Lihat Struk" yang mengarahkan ke [StrukPembayaranView] / [StrukTiketView].
 class RiwayatPesananScreen extends StatefulWidget {
-  const RiwayatPesananScreen({super.key});
+  final RiwayatPesananViewModel? viewModel;
+
+  const RiwayatPesananScreen({super.key, this.viewModel});
 
   @override
   State<RiwayatPesananScreen> createState() => _RiwayatPesananScreenState();
@@ -19,81 +21,12 @@ class RiwayatPesananScreen extends StatefulWidget {
 class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // --- Data statis riwayat pesanan kedai ---
-  final List<Map<String, dynamic>> _pesananKedai = [
-    {
-      'orderNumber': '#ORD-9042',
-      'date': 'Sabtu, 25 Okt 2026 • 14:32 WIB',
-      'items': ['Kopi Susu Gula Aren (x1)', 'Pisang Goreng Keju (x2)'],
-      'total': 45000,
-      'status': 'Selesai',
-      'meja': 'Meja No. 04 (Dine-In)',
-      'payment': 'QRIS (INSTAN)',
-    },
-    {
-      'orderNumber': '#ORD-8817',
-      'date': 'Rabu, 15 Okt 2026 • 11:10 WIB',
-      'items': ['Wedang Uwuh (x2)', 'Teh Rempah Nusantara (x1)'],
-      'total': 36000,
-      'status': 'Selesai',
-      'meja': 'Meja No. 02 (Dine-In)',
-      'payment': 'QRIS (INSTAN)',
-    },
-    {
-      'orderNumber': '#ORD-8201',
-      'date': 'Jum, 03 Okt 2026 • 16:45 WIB',
-      'items': ['Kopi Hitam Tubruk (x1)'],
-      'total': 15000,
-      'status': 'Selesai',
-      'meja': 'Meja No. 01 (Dine-In)',
-      'payment': 'Tunai',
-    },
-  ];
-
-  // --- Data statis riwayat tiket agenda ---
-  final List<Map<String, dynamic>> _tiketAgenda = [
-    {
-      'bookingId': '#TKT-3041',
-      'eventTitle': 'Napak Tanah Jilid II — Book Club & Pot Luck',
-      'category': 'Lokakarya Seni',
-      'eventTime': 'Rabu, 28 Sep 2026 • 15:30 WIB',
-      'location': 'Ruang Komunal Lt. 2, Rumah Budaya Ratna',
-      'ticketType': 'Tiket Reguler',
-      'ticketCount': 2,
-      'totalPrice': 'Rp 50.000',
-      'payment': 'QRIS',
-      'status': 'Hadir',
-    },
-    {
-      'bookingId': '#TKT-2988',
-      'eventTitle': 'Obrolan Budaya: Dialektika Tradisi & Modernitas',
-      'category': 'Diskusi',
-      'eventTime': 'Rabu, 08 Okt 2026 • 19:00 WIB',
-      'location': 'Pendopo Utama, Rumah Budaya Ratna',
-      'ticketType': 'Tiket Gratis (Daftar)',
-      'ticketCount': 1,
-      'totalPrice': 'Gratis',
-      'payment': '-',
-      'status': 'Hadir',
-    },
-    {
-      'bookingId': '#TKT-3109',
-      'eventTitle': 'Workshop Keramik: Tanah & Tangan',
-      'category': 'Workshop',
-      'eventTime': 'Min, 11 Okt 2026 • 10:00 WIB',
-      'location': 'Studio Kriya Lt. 1, Rumah Budaya Ratna',
-      'ticketType': 'Tiket Reguler',
-      'ticketCount': 1,
-      'totalPrice': 'Rp 75.000',
-      'payment': 'Transfer Bank',
-      'status': 'Hadir',
-    },
-  ];
+  late final RiwayatPesananViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
+    _viewModel = widget.viewModel ?? RiwayatPesananViewModel();
     _tabController = TabController(length: 2, vsync: this);
   }
 
@@ -101,13 +34,6 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  String _formatRupiah(int amount) {
-    return 'Rp ${amount.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]}.',
-        )}';
   }
 
   @override
@@ -119,7 +45,8 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
           backgroundColor: AppColors.bgCanvas,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
+            icon: const Icon(Icons.arrow_back_rounded,
+                color: AppColors.textMain),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -147,7 +74,8 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
               fontSize: 12.5,
               fontWeight: FontWeight.bold,
             ),
-            unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 12.5),
+            unselectedLabelStyle:
+                GoogleFonts.plusJakartaSans(fontSize: 12.5),
             tabs: const [
               Tab(text: 'Pesanan Kedai'),
               Tab(text: 'Tiket Agenda'),
@@ -167,7 +95,8 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
 
   // ─── TAB 1: Pesanan Kedai ────────────────────────────────────────────────
   Widget _buildPesananKedaiTab() {
-    if (_pesananKedai.isEmpty) {
+    final list = _viewModel.pesananKedai;
+    if (list.isEmpty) {
       return _buildEmptyState(
         icon: Icons.receipt_long_outlined,
         message: 'Belum ada riwayat pesanan kedai.',
@@ -175,34 +104,18 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: _pesananKedai.length,
+      itemCount: list.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final order = _pesananKedai[index];
-        final items = (order['items'] as List<String>).join(', ');
-        final total = _formatRupiah(order['total'] as int);
-        return _buildKedaiCard(
-          orderNumber: order['orderNumber'] as String,
-          date: order['date'] as String,
-          items: items,
-          total: total,
-          status: order['status'] as String,
-          meja: order['meja'] as String,
-          payment: order['payment'] as String,
-        );
+        final order = list[index];
+        return _buildKedaiCard(order);
       },
     );
   }
 
-  Widget _buildKedaiCard({
-    required String orderNumber,
-    required String date,
-    required String items,
-    required String total,
-    required String status,
-    required String meja,
-    required String payment,
-  }) {
+  Widget _buildKedaiCard(PesananKedaiModel order) {
+    final total = _viewModel.formatRupiah(order.total);
+    final items = order.items.join(', ');
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -221,7 +134,6 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Nomor pesanan + status
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -238,7 +150,7 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      orderNumber,
+                      order.orderNumber,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -247,48 +159,35 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
                     ),
                   ],
                 ),
-                _buildStatusBadge(status),
+                _buildStatusBadge(order.status),
               ],
             ),
             const SizedBox(height: 10),
             const Divider(height: 1, color: Color(0xFFEFEAE2)),
             const SizedBox(height: 10),
-
-            // Tanggal
-            _buildDetailRow(Icons.access_time_outlined, date),
+            _buildDetailRow(Icons.access_time_outlined, order.date),
             const SizedBox(height: 5),
-            // Item
             _buildDetailRow(Icons.fastfood_outlined, items),
             const SizedBox(height: 5),
-            // Meja
-            _buildDetailRow(Icons.table_restaurant_outlined, meja),
+            _buildDetailRow(Icons.table_restaurant_outlined, order.meja),
             const SizedBox(height: 5),
-            // Pembayaran
-            _buildDetailRow(Icons.payment_outlined, payment),
+            _buildDetailRow(Icons.payment_outlined, order.payment),
             const SizedBox(height: 12),
-
-            // Footer: total + tombol struk
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Total Pembayaran',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        color: AppColors.greyText,
-                      ),
-                    ),
-                    Text(
-                      total,
-                      style: GoogleFonts.lora(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.maroon,
-                      ),
-                    ),
+                    Text('Total Pembayaran',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10, color: AppColors.greyText)),
+                    Text(total,
+                        style: GoogleFonts.lora(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.maroon,
+                        )),
                   ],
                 ),
                 OutlinedButton.icon(
@@ -297,28 +196,24 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
                       context,
                       MaterialPageRoute(
                         builder: (_) => StrukPembayaranView(
-                          orderNumber: orderNumber,
-                          paymentMethod: payment,
-                          tableName: meja,
+                          orderNumber: order.orderNumber,
+                          paymentMethod: order.payment,
+                          tableName: order.meja,
                         ),
                       ),
                     );
                   },
                   icon: const Icon(Icons.receipt_outlined, size: 14),
-                  label: Text(
-                    'Lihat Struk',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  label: Text('Lihat Struk',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.maroon,
                     side: const BorderSide(color: AppColors.maroon),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
@@ -332,7 +227,8 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
 
   // ─── TAB 2: Tiket Agenda ────────────────────────────────────────────────
   Widget _buildTiketAgendaTab() {
-    if (_tiketAgenda.isEmpty) {
+    final list = _viewModel.tiketAgenda;
+    if (list.isEmpty) {
       return _buildEmptyState(
         icon: Icons.confirmation_num_outlined,
         message: 'Belum ada riwayat tiket agenda.',
@@ -340,16 +236,13 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: _tiketAgenda.length,
+      itemCount: list.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final ticket = _tiketAgenda[index];
-        return _buildTiketCard(ticket);
-      },
+      itemBuilder: (context, index) => _buildTiketCard(list[index]),
     );
   }
 
-  Widget _buildTiketCard(Map<String, dynamic> ticket) {
+  Widget _buildTiketCard(TiketAgendaModel ticket) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -368,7 +261,6 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: ID Tiket + status
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -385,7 +277,7 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      ticket['bookingId'] as String,
+                      ticket.bookingId,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -394,16 +286,14 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
                     ),
                   ],
                 ),
-                _buildStatusBadge(ticket['status'] as String),
+                _buildStatusBadge(ticket.status),
               ],
             ),
             const SizedBox(height: 10),
             const Divider(height: 1, color: Color(0xFFEFEAE2)),
             const SizedBox(height: 10),
-
-            // Judul event
             Text(
-              ticket['eventTitle'] as String,
+              ticket.eventTitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.lora(
@@ -413,8 +303,6 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
               ),
             ),
             const SizedBox(height: 6),
-
-            // Kategori badge
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
@@ -423,7 +311,7 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                ticket['category'] as String,
+                ticket.category,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 9.5,
                   fontWeight: FontWeight.bold,
@@ -432,31 +320,26 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
               ),
             ),
             const SizedBox(height: 8),
-
-            _buildDetailRow(Icons.access_time_outlined, ticket['eventTime'] as String),
+            _buildDetailRow(Icons.access_time_outlined, ticket.eventTime),
             const SizedBox(height: 5),
-            _buildDetailRow(Icons.location_on_outlined, ticket['location'] as String),
+            _buildDetailRow(Icons.location_on_outlined, ticket.location),
             const SizedBox(height: 5),
             _buildDetailRow(
               Icons.confirmation_num_outlined,
-              '${ticket['ticketType']} • ${ticket['ticketCount']} tiket',
+              '${ticket.ticketType} • ${ticket.ticketCount} tiket',
             ),
             const SizedBox(height: 12),
-
-            // Footer: total + tombol struk
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text('Total',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10, color: AppColors.greyText)),
                     Text(
-                      'Total',
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10, color: AppColors.greyText),
-                    ),
-                    Text(
-                      ticket['totalPrice'] as String,
+                      ticket.totalPrice,
                       style: GoogleFonts.lora(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -471,34 +354,30 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
                       context,
                       MaterialPageRoute(
                         builder: (_) => StrukTiketView(
-                          bookingId: ticket['bookingId'] as String,
-                          eventTitle: ticket['eventTitle'] as String,
-                          category: ticket['category'] as String,
-                          eventTime: ticket['eventTime'] as String,
-                          eventLocation: ticket['location'] as String,
-                          ticketType: ticket['ticketType'] as String,
-                          ticketCount: ticket['ticketCount'] as int,
-                          totalPrice: ticket['totalPrice'] as String,
-                          paymentMethod: ticket['payment'] as String,
+                          bookingId: ticket.bookingId,
+                          eventTitle: ticket.eventTitle,
+                          category: ticket.category,
+                          eventTime: ticket.eventTime,
+                          eventLocation: ticket.location,
+                          ticketType: ticket.ticketType,
+                          ticketCount: ticket.ticketCount,
+                          totalPrice: ticket.totalPrice,
+                          paymentMethod: ticket.payment,
                         ),
                       ),
                     );
                   },
                   icon: const Icon(Icons.qr_code_2_rounded, size: 14),
-                  label: Text(
-                    'Lihat Tiket',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  label: Text('Lihat Tiket',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.maroon,
                     side: const BorderSide(color: AppColors.maroon),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
@@ -551,9 +430,7 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
+          color: bg, borderRadius: BorderRadius.circular(12)),
       child: Text(
         status,
         style: GoogleFonts.plusJakartaSans(
@@ -565,20 +442,19 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
     );
   }
 
-  Widget _buildEmptyState({required IconData icon, required String message}) {
+  Widget _buildEmptyState(
+      {required IconData icon, required String message}) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 52, color: AppColors.greyText.withValues(alpha: 0.4)),
+          Icon(icon,
+              size: 52,
+              color: AppColors.greyText.withValues(alpha: 0.4)),
           const SizedBox(height: 12),
-          Text(
-            message,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              color: AppColors.greyText,
-            ),
-          ),
+          Text(message,
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13, color: AppColors.greyText)),
         ],
       ),
     );

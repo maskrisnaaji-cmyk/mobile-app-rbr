@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
-import 'package:mobile_app/core/services/payment_service.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_pembayaran_view.dart';
+import 'package:mobile_app/features/booking_payment/viewmodels/booking_payment_viewmodel.dart';
 
 class VaPaymentView extends StatefulWidget {
   final String title;
@@ -16,6 +16,7 @@ class VaPaymentView extends StatefulWidget {
   final String bankName;
   final String buttonLabel;
   final Widget? nextScreen;
+  final PaymentStatusViewModel? viewModel;
 
   const VaPaymentView({
     super.key,
@@ -28,6 +29,7 @@ class VaPaymentView extends StatefulWidget {
     this.bankName = 'BCA Virtual Account',
     this.buttonLabel = 'CEK STATUS PEMBAYARAN',
     this.nextScreen,
+    this.viewModel,
   });
 
   @override
@@ -35,22 +37,24 @@ class VaPaymentView extends StatefulWidget {
 }
 
 class _VaPaymentViewState extends State<VaPaymentView> {
-  bool _isChecking = false;
+  late final PaymentStatusViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = widget.viewModel ?? PaymentStatusViewModel();
+  }
 
   Future<void> _checkStatus() async {
-    setState(() => _isChecking = true);
-    final statusData = await PaymentService.checkPaymentStatus(widget.orderNumber);
+    final isPaid = await _viewModel.checkStatus(widget.orderNumber);
     if (!mounted) return;
-    setState(() => _isChecking = false);
-
-    final txStatus = (statusData?['transaction_status'] ?? '').toString().toLowerCase();
-    final isPaid = statusData?['is_paid'] == true || txStatus == 'settlement' || txStatus == 'paid';
 
     if (isPaid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Color(0xFF2E7D32),
-          content: Text('🎉 Pembayaran Virtual Account Berhasil Terverifikasi!'),
+          content:
+              Text('🎉 Pembayaran Virtual Account Berhasil Terverifikasi!'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -65,23 +69,22 @@ class _VaPaymentViewState extends State<VaPaymentView> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Status: ${txStatus.isEmpty ? "Menunggu Pembayaran" : txStatus}. Silakan transfer ke nomor VA di atas.'),
-          duration: const Duration(seconds: 3),
+        const SnackBar(
+          content: Text(
+              'Menunggu Pembayaran. Silakan transfer ke nomor VA di atas.'),
+          duration: Duration(seconds: 3),
         ),
       );
     }
   }
 
   Future<void> _simulateSettlement() async {
-    setState(() => _isChecking = true);
-    final success = await PaymentService.simulateSettlement(
+    final success = await _viewModel.simulateSettlement(
       orderId: widget.orderNumber,
       grossAmount: widget.rawAmount ?? 35000,
       paymentType: 'bank_transfer',
     );
     if (!mounted) return;
-    setState(() => _isChecking = false);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -105,68 +108,67 @@ class _VaPaymentViewState extends State<VaPaymentView> {
 
   @override
   Widget build(BuildContext context) {
-    return MobileFrame(
-      child: Scaffold(
-        backgroundColor: AppColors.bgCanvas,
-        appBar: AppBar(
-          backgroundColor: AppColors.bgCanvas,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.darkText),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            widget.title,
-            style: GoogleFonts.lora(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkText,
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return MobileFrame(
+          child: Scaffold(
+            backgroundColor: AppColors.bgCanvas,
+            appBar: AppBar(
+              backgroundColor: AppColors.bgCanvas,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded,
+                    color: AppColors.darkText),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                widget.title,
+                style: GoogleFonts.lora(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkText,
+                ),
+              ),
+              centerTitle: false,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.share_outlined,
+                      color: AppColors.darkText, size: 20),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: const Icon(Icons.person_outline_rounded,
+                      color: AppColors.darkText, size: 20),
+                  onPressed: () {},
+                ),
+              ],
+            ),
+            body: SingleChildScrollView(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildTimerCard(),
+                  const SizedBox(height: 14),
+                  _buildMerchantInfoCard(),
+                  const SizedBox(height: 14),
+                  _buildVaDetailsCard(context),
+                  const SizedBox(height: 16),
+                  _buildInstructionsSection(context),
+                  const SizedBox(height: 20),
+                  _buildActionButtons(context),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
-          centerTitle: false,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.share_outlined, color: AppColors.darkText, size: 20),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: const Icon(Icons.person_outline_rounded, color: AppColors.darkText, size: 20),
-              onPressed: () {},
-            ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. Timer Card
-              _buildTimerCard(),
-              const SizedBox(height: 14),
-
-              // 2. Merchant Info Card
-              _buildMerchantInfoCard(),
-              const SizedBox(height: 14),
-
-              // 3. VA Details Card
-              _buildVaDetailsCard(context),
-              const SizedBox(height: 16),
-
-              // 4. Accordion Tata Cara Pembayaran
-              _buildInstructionsSection(context),
-              const SizedBox(height: 20),
-
-              // 5. Action Buttons
-              _buildActionButtons(context),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // --- Widget: Timer Card ---
   Widget _buildTimerCard() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -178,7 +180,8 @@ class _VaPaymentViewState extends State<VaPaymentView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.alarm_outlined, color: Color(0xFFDC2626), size: 18),
+          const Icon(Icons.alarm_outlined,
+              color: Color(0xFFDC2626), size: 18),
           const SizedBox(width: 8),
           Text(
             'BATAS PEMBAYARAN • ',
@@ -202,7 +205,6 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     );
   }
 
-  // --- Widget: Merchant Info Card ---
   Widget _buildMerchantInfoCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -246,11 +248,13 @@ class _VaPaymentViewState extends State<VaPaymentView> {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: AppColors.maroon.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.maroon.withValues(alpha: 0.2)),
+                  border: Border.all(
+                      color: AppColors.maroon.withValues(alpha: 0.2)),
                 ),
                 child: Text(
                   widget.badgeText,
@@ -293,7 +297,6 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     );
   }
 
-  // --- Widget: VA Details Card ---
   Widget _buildVaDetailsCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -312,20 +315,22 @@ class _VaPaymentViewState extends State<VaPaymentView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Bank Badge
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: const Color(0xFF00388A).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF00388A).withValues(alpha: 0.3)),
+                  border: Border.all(
+                      color: const Color(0xFF00388A).withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.account_balance, color: Color(0xFF00388A), size: 14),
+                    const Icon(Icons.account_balance,
+                        color: Color(0xFF00388A), size: 14),
                     const SizedBox(width: 6),
                     Text(
                       widget.bankName,
@@ -340,7 +345,8 @@ class _VaPaymentViewState extends State<VaPaymentView> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
@@ -357,8 +363,6 @@ class _VaPaymentViewState extends State<VaPaymentView> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // Nomor Virtual Account
           Text(
             'Nomor Virtual Account',
             style: GoogleFonts.plusJakartaSans(
@@ -369,7 +373,8 @@ class _VaPaymentViewState extends State<VaPaymentView> {
           ),
           const SizedBox(height: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.bgCanvas,
               borderRadius: BorderRadius.circular(12),
@@ -391,7 +396,8 @@ class _VaPaymentViewState extends State<VaPaymentView> {
                 ),
                 InkWell(
                   onTap: () {
-                    Clipboard.setData(ClipboardData(text: widget.vaNumber.replaceAll(' ', '')));
+                    Clipboard.setData(ClipboardData(
+                        text: widget.vaNumber.replaceAll(' ', '')));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -406,7 +412,8 @@ class _VaPaymentViewState extends State<VaPaymentView> {
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppColors.maroon,
                       borderRadius: BorderRadius.circular(8),
@@ -414,7 +421,8 @@ class _VaPaymentViewState extends State<VaPaymentView> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.copy_rounded, color: Colors.white, size: 13),
+                        const Icon(Icons.copy_rounded,
+                            color: Colors.white, size: 13),
                         const SizedBox(width: 4),
                         Text(
                           'SALIN',
@@ -432,12 +440,11 @@ class _VaPaymentViewState extends State<VaPaymentView> {
             ),
           ),
           const SizedBox(height: 12),
-
-          // Info Verifikasi Singkat
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.info_outline_rounded, color: AppColors.greyText, size: 14),
+              const Icon(Icons.info_outline_rounded,
+                  color: AppColors.greyText, size: 14),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -456,7 +463,6 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     );
   }
 
-  // --- Widget: Accordion Tata Cara Pembayaran ---
   Widget _buildInstructionsSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,7 +477,6 @@ class _VaPaymentViewState extends State<VaPaymentView> {
           ),
         ),
         const SizedBox(height: 8),
-
         Container(
           decoration: BoxDecoration(
             color: AppColors.cardBg,
@@ -520,7 +525,8 @@ class _VaPaymentViewState extends State<VaPaymentView> {
       child: ExpansionTile(
         initiallyExpanded: initiallyExpanded,
         shape: const Border(),
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        tilePadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
         title: Text(
           title,
           style: GoogleFonts.plusJakartaSans(
@@ -574,33 +580,32 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     );
   }
 
-  // --- Widget: Action Buttons ---
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Tombol Utama "CEK STATUS PEMBAYARAN"
         SizedBox(
           height: 52,
           child: ElevatedButton(
-            onPressed: _isChecking ? null : _checkStatus,
+            onPressed: _viewModel.isChecking ? null : _checkStatus,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6B1D2F),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
+                  borderRadius: BorderRadius.circular(14)),
               elevation: 2,
             ),
-            child: _isChecking
+            child: _viewModel.isChecking
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2),
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                      const Icon(Icons.check_circle_outline,
+                          color: Colors.white, size: 20),
                       const SizedBox(width: 8),
                       Text(
                         widget.buttonLabel,
@@ -616,13 +621,10 @@ class _VaPaymentViewState extends State<VaPaymentView> {
           ),
         ),
         const SizedBox(height: 8),
-
-        // Tombol "Ubah Metode Pembayaran"
         TextButton(
           onPressed: () => Navigator.pop(context),
           style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-          ),
+              padding: const EdgeInsets.symmetric(vertical: 8)),
           child: Text(
             'Ubah Metode Pembayaran',
             style: GoogleFonts.plusJakartaSans(
@@ -632,11 +634,9 @@ class _VaPaymentViewState extends State<VaPaymentView> {
             ),
           ),
         ),
-
-        // Quick simulation helper for local sandbox test
         Center(
           child: TextButton(
-            onPressed: _isChecking ? null : _simulateSettlement,
+            onPressed: _viewModel.isChecking ? null : _simulateSettlement,
             child: Text(
               '⚡ Simulasi Lunas (Demo Sandbox)',
               style: GoogleFonts.plusJakartaSans(

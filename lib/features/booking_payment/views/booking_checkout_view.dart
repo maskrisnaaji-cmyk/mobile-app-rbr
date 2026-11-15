@@ -5,38 +5,12 @@ import 'package:mobile_app/core/widgets/mobile_frame.dart';
 import 'package:mobile_app/features/booking_payment/views/qris_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/va_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_tiket_view.dart';
-import 'package:mobile_app/core/services/payment_service.dart';
+import 'package:mobile_app/features/booking_payment/viewmodels/booking_payment_viewmodel.dart';
 
 const Color _paymentEspresso = Color(0xFF2C1810);
 const Color _paymentTerracotta = Color(0xFF8B2B1B);
 const Color _paymentSoftTint = Color(0xFFFFFDFB);
 const Color _paymentMuted = Color(0xFF7A6E67);
-
-enum _PaymentMethod {
-  qris(
-    label: 'QRIS Nasional',
-    description: 'GoPay, OVO, DANA, ShopeePay, & m-Banking',
-    icon: Icons.qr_code_2_rounded,
-    badge: 'INSTAN',
-  ),
-  bankTransfer(
-    label: 'Transfer Bank VA',
-    description: 'BCA, Mandiri, BNI, BRI (Verifikasi Otomatis)',
-    icon: Icons.account_balance_rounded,
-  );
-
-  const _PaymentMethod({
-    required this.label,
-    required this.description,
-    required this.icon,
-    this.badge,
-  });
-
-  final String label;
-  final String description;
-  final IconData icon;
-  final String? badge;
-}
 
 class BookingCheckoutView extends StatefulWidget {
   final String eventTitle;
@@ -48,6 +22,7 @@ class BookingCheckoutView extends StatefulWidget {
   final String? eventImage;
   final String? eventImageFallback;
   final int? eventId;
+  final BookingCheckoutViewModel? viewModel;
 
   const BookingCheckoutView({
     super.key,
@@ -60,6 +35,7 @@ class BookingCheckoutView extends StatefulWidget {
     this.eventImage,
     this.eventImageFallback,
     this.eventId,
+    this.viewModel,
   });
 
   @override
@@ -68,16 +44,8 @@ class BookingCheckoutView extends StatefulWidget {
 
 class _BookingCheckoutViewState extends State<BookingCheckoutView> {
   final _formKey = GlobalKey<FormState>();
+  late final BookingCheckoutViewModel _viewModel;
 
-  // State Pilihan Tiket (0 = Presale, 1 = Reguler)
-  int _selectedTicketType = 0;
-  int _ticketQuantity = 1;
-  _PaymentMethod _selectedPaymentMethod = _PaymentMethod.qris;
-
-  final int _presalePrice = 25000;
-  final int _regulerPrice = 35000;
-
-  // Controllers Form Informasi Pemesan
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
@@ -85,6 +53,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
   @override
   void initState() {
     super.initState();
+    _viewModel = widget.viewModel ?? BookingCheckoutViewModel();
     _nameController = TextEditingController(text: 'Budi Santoso');
     _emailController = TextEditingController(text: 'budi.santoso@gmail.com');
     _phoneController = TextEditingController(text: '0812-3456-7890');
@@ -98,83 +67,68 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     super.dispose();
   }
 
-  int get _currentUnitPrice =>
-      _selectedTicketType == 0 ? _presalePrice : _regulerPrice;
-  int get _totalAmount => _currentUnitPrice * _ticketQuantity;
-
-  String _formatRupiah(int amount) {
-    return 'Rp ${amount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    return MobileFrame(
-      child: Scaffold(
-        backgroundColor: AppColors.bgCanvas,
-        appBar: AppBar(
-          backgroundColor: AppColors.bgCanvas,
-          elevation: 0,
-          leading: IconButton(
-            icon:
-                const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'Booking Tiket / Checkout',
-            style: GoogleFonts.lora(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textMain,
-            ),
-          ),
-          centerTitle: false,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.info_outline_rounded,
-                  color: AppColors.textMain, size: 20),
-              onPressed: () {},
-            ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Informasi Event Card
-                _buildEventInfoCard(),
-                const SizedBox(height: 16),
-
-                // 2. Pilihan Jenis Tiket
-                _buildTicketTypeSection(),
-                const SizedBox(height: 16),
-
-                // 3. Pengatur Jumlah Tiket (+ / -)
-                _buildTicketQuantitySection(),
-                const SizedBox(height: 16),
-
-                // 4. Form Informasi Pemesan
-                _buildBookerFormSection(),
-                const SizedBox(height: 16),
-
-                // 5. Metode Pembayaran
-                _buildPaymentMethodSection(),
-                const SizedBox(height: 16),
-
-                // 6. Ringkasan Biaya
-                _buildPriceSummaryCard(),
-                const SizedBox(height: 20),
-
-                // 7. Tombol Lanjut ke Pembayaran
-                _buildSubmitButton(),
-                const SizedBox(height: 24),
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return MobileFrame(
+          child: Scaffold(
+            backgroundColor: AppColors.bgCanvas,
+            appBar: AppBar(
+              backgroundColor: AppColors.bgCanvas,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded,
+                    color: AppColors.textMain),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                'Booking Tiket / Checkout',
+                style: GoogleFonts.lora(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textMain,
+                ),
+              ),
+              centerTitle: false,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.info_outline_rounded,
+                      color: AppColors.textMain, size: 20),
+                  onPressed: () {},
+                ),
               ],
             ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0, vertical: 12.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildEventInfoCard(),
+                    const SizedBox(height: 16),
+                    _buildTicketTypeSection(),
+                    const SizedBox(height: 16),
+                    _buildTicketQuantitySection(),
+                    const SizedBox(height: 16),
+                    _buildBookerFormSection(),
+                    const SizedBox(height: 16),
+                    _buildPaymentMethodSection(),
+                    const SizedBox(height: 16),
+                    _buildPriceSummaryCard(),
+                    const SizedBox(height: 20),
+                    _buildSubmitButton(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -293,36 +247,32 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     if (image == null || image.isEmpty) return const SizedBox.shrink();
 
     Widget fallback() {
-      final fallbackImage = widget.eventImageFallback;
-      if (fallbackImage == null || fallbackImage.isEmpty) {
+      final fb = widget.eventImageFallback;
+      if (fb == null || fb.isEmpty) {
         return Container(color: _paymentTerracotta);
       }
-      return Image.asset(
-        fallbackImage,
-        width: double.infinity,
-        height: 170,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(color: _paymentTerracotta),
-      );
+      return Image.asset(fb,
+          width: double.infinity,
+          height: 170,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              Container(color: _paymentTerracotta));
     }
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       child: image.startsWith('http')
-          ? Image.network(
-              image,
+          ? Image.network(image,
               width: double.infinity,
               height: 170,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => fallback(),
-            )
+              errorBuilder: (_, __, ___) => fallback())
           : Image.asset(
               image.startsWith('/') ? image.substring(1) : image,
               width: double.infinity,
               height: 170,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => fallback(),
-            ),
+              errorBuilder: (_, __, ___) => fallback()),
     );
   }
 
@@ -353,40 +303,32 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
               Text(
                 'Pilih salah satu',
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  color: AppColors.textMuted,
-                ),
+                    fontSize: 10, color: AppColors.textMuted),
               ),
             ],
           ),
           const SizedBox(height: 12),
-
-          // Pilihan 1: Presale Ticket
           _buildTicketTypeCard(
             index: 0,
             title: 'Tiket Presale (Early Bird)',
             badge: 'HEMAT 28% • Kuota Terbatas',
             badgeColor: const Color(0xFF047857),
             badgeBgColor: const Color(0xFF10B981).withValues(alpha: 0.12),
-            price: _formatRupiah(_presalePrice),
+            price: _viewModel.formatRupiah(_viewModel.presalePrice),
             description:
                 'Akses penuh lokakarya, booklet materi, dan free kopi seduh.',
           ),
           const SizedBox(height: 10),
-
-          // Pilihan 2: Reguler Ticket
           _buildTicketTypeCard(
             index: 1,
             title: 'Tiket Reguler',
             badge: 'TERSEDIA',
             badgeColor: AppColors.maroon,
             badgeBgColor: AppColors.maroon.withValues(alpha: 0.08),
-            price: _formatRupiah(_regulerPrice),
+            price: _viewModel.formatRupiah(_viewModel.regulerPrice),
             description: 'Akses lokakarya dan sertifikat kehadiran digital.',
           ),
           const SizedBox(height: 10),
-
-          // Pilihan 3: OTS Ticket (hanya dapat dibeli di venue)
           _buildTicketTypeCard(
             index: 2,
             title: 'Tiket OTS (On The Spot)',
@@ -413,12 +355,11 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     required String description,
     bool enabled = true,
   }) {
-    final isSelected = _selectedTicketType == index;
+    final isSelected = _viewModel.selectedTicketType == index;
     return Opacity(
       opacity: enabled ? 1 : 0.55,
       child: InkWell(
-        onTap:
-            enabled ? () => setState(() => _selectedTicketType = index) : null,
+        onTap: enabled ? () => _viewModel.selectTicketType(index) : null,
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.all(14),
@@ -463,8 +404,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                     ],
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
                       color: badgeBgColor,
                       borderRadius: BorderRadius.circular(6),
@@ -489,9 +430,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                     Text(
                       description,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        color: AppColors.textMuted,
-                      ),
+                          fontSize: 10, color: AppColors.textMuted),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -512,7 +451,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     );
   }
 
-  // --- Widget: Pengatur Jumlah Tiket (+ dan -) ---
+  // --- Widget: Jumlah Tiket ---
   Widget _buildTicketQuantitySection() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -540,14 +479,10 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
               Text(
                 'Maksimal 5 tiket per akun',
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  color: AppColors.textMuted,
-                ),
+                    fontSize: 10, color: AppColors.textMuted),
               ),
             ],
           ),
-
-          // Stepper + / -
           Container(
             decoration: BoxDecoration(
               color: AppColors.bgCanvas,
@@ -559,8 +494,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                 IconButton(
                   icon: const Icon(Icons.remove,
                       size: 16, color: AppColors.maroon),
-                  onPressed: _ticketQuantity > 1
-                      ? () => setState(() => _ticketQuantity--)
+                  onPressed: _viewModel.ticketQuantity > 1
+                      ? _viewModel.decrementQuantity
                       : null,
                   constraints:
                       const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -570,7 +505,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                   constraints: const BoxConstraints(minWidth: 32),
                   alignment: Alignment.center,
                   child: Text(
-                    '$_ticketQuantity',
+                    '${_viewModel.ticketQuantity}',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -579,10 +514,10 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                   ),
                 ),
                 IconButton(
-                  icon:
-                      const Icon(Icons.add, size: 16, color: AppColors.maroon),
-                  onPressed: _ticketQuantity < 5
-                      ? () => setState(() => _ticketQuantity++)
+                  icon: const Icon(Icons.add,
+                      size: 16, color: AppColors.maroon),
+                  onPressed: _viewModel.ticketQuantity < 5
+                      ? _viewModel.incrementQuantity
                       : null,
                   constraints:
                       const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -596,7 +531,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     );
   }
 
-  // --- Widget: Form Informasi Pemesan ---
+  // --- Widget: Form Pemesan ---
   Widget _buildBookerFormSection() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -628,202 +563,38 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           Text(
             'E-Tiket akan diterbitkan sesuai nama dan kontak di bawah ini.',
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 10,
-              color: AppColors.textMuted,
-            ),
+                fontSize: 10, color: AppColors.textMuted),
           ),
           const SizedBox(height: 14),
-
-          // Nama Lengkap
           _buildFormField(
             controller: _nameController,
             label: 'Nama Lengkap',
             icon: Icons.person_outline_rounded,
             hint: 'Contoh: Budi Santoso',
-            validator: (value) => value == null || value.trim().isEmpty
-                ? 'Nama wajib diisi'
-                : null,
+            validator: (v) =>
+                v == null || v.trim().isEmpty ? 'Nama wajib diisi' : null,
           ),
           const SizedBox(height: 12),
-
-          // Email Aktif
           _buildFormField(
             controller: _emailController,
             label: 'Email Aktif (Pengiriman E-Tiket)',
             icon: Icons.mail_outline_rounded,
             hint: 'Contoh: budi@gmail.com',
             keyboardType: TextInputType.emailAddress,
-            validator: (value) => value == null || !value.contains('@')
-                ? 'Email tidak valid'
-                : null,
+            validator: (v) =>
+                v == null || !v.contains('@') ? 'Email tidak valid' : null,
           ),
           const SizedBox(height: 12),
-
-          // No. WhatsApp
           _buildFormField(
             controller: _phoneController,
             label: 'No. WhatsApp (Notifikasi Booking)',
             icon: Icons.phone_android_rounded,
             hint: 'Contoh: 081234567890',
             keyboardType: TextInputType.phone,
-            validator: (value) => value == null || value.trim().length < 8
-                ? 'Nomor HP tidak valid'
-                : null,
+            validator: (v) =>
+                v == null || v.trim().length < 8 ? 'Nomor HP tidak valid' : null,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodSection() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'METODE PEMBAYARAN',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.8,
-                color: _paymentEspresso,
-              ),
-            ),
-            Text(
-              'Pilih salah satu',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 10,
-                color: _paymentMuted,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        for (final method in _PaymentMethod.values) ...[
-          _buildPaymentMethodOption(method),
-          if (method != _PaymentMethod.values.last) const SizedBox(height: 8),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildPaymentMethodOption(_PaymentMethod method) {
-    final isSelected = _selectedPaymentMethod == method;
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      child: InkWell(
-        onTap: () => setState(() => _selectedPaymentMethod = method),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isSelected ? _paymentSoftTint : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? _paymentTerracotta : AppColors.border,
-              width: isSelected ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.025),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _paymentTerracotta.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  method.icon,
-                  color: _paymentTerracotta,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            method.label,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: _paymentEspresso,
-                            ),
-                          ),
-                        ),
-                        if (method.badge case final badge?) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE5F4E8),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              badge,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF39734D),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      method.description,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 9,
-                        color: _paymentMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isSelected ? _paymentTerracotta : _paymentMuted,
-                    width: 1.5,
-                  ),
-                ),
-                child: isSelected
-                    ? Center(
-                        child: Container(
-                          width: 9,
-                          height: 9,
-                          decoration: const BoxDecoration(
-                            color: _paymentTerracotta,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -878,11 +649,163 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.maroon, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.maroon, width: 1.5),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  // --- Widget: Metode Pembayaran ---
+  Widget _buildPaymentMethodSection() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'METODE PEMBAYARAN',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.8,
+                color: _paymentEspresso,
+              ),
+            ),
+            Text(
+              'Pilih salah satu',
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10, color: _paymentMuted),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        for (final method in CheckoutPaymentMethod.values) ...[
+          _buildPaymentMethodOption(method),
+          if (method != CheckoutPaymentMethod.values.last)
+            const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPaymentMethodOption(CheckoutPaymentMethod method) {
+    final isSelected = _viewModel.selectedPaymentMethod == method;
+    final icon = method == CheckoutPaymentMethod.qris
+        ? Icons.qr_code_2_rounded
+        : Icons.account_balance_rounded;
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      child: InkWell(
+        onTap: () => _viewModel.selectPaymentMethod(method),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isSelected ? _paymentSoftTint : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? _paymentTerracotta : AppColors.border,
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.025),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _paymentTerracotta.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: _paymentTerracotta, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            method.label,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _paymentEspresso,
+                            ),
+                          ),
+                        ),
+                        if (method.badge case final badge?) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE5F4E8),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              badge,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF39734D),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      method.description,
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9, color: _paymentMuted),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color:
+                        isSelected ? _paymentTerracotta : _paymentMuted,
+                    width: 1.5,
+                  ),
+                ),
+                child: isSelected
+                    ? Center(
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: const BoxDecoration(
+                            color: _paymentTerracotta,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -909,8 +832,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           ),
           const SizedBox(height: 12),
           _buildPriceRow(
-            '$_ticketQuantity x ${_selectedTicketType == 0 ? "Tiket Presale" : "Tiket Reguler"}',
-            _formatRupiah(_totalAmount),
+            '${_viewModel.ticketQuantity} x ${_viewModel.selectedTicketType == 0 ? "Tiket Presale" : "Tiket Reguler"}',
+            _viewModel.formatRupiah(_viewModel.totalAmount),
           ),
           _buildPriceRow('Biaya Admin Platform', 'Gratis (Rp 0)'),
           const Divider(color: AppColors.border, height: 18),
@@ -926,7 +849,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                 ),
               ),
               Text(
-                _formatRupiah(_totalAmount),
+                _viewModel.formatRupiah(_viewModel.totalAmount),
                 style: GoogleFonts.lora(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -946,132 +869,125 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              color: AppColors.textMuted,
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textMain,
-            ),
-          ),
+          Text(label,
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11, color: AppColors.textMuted)),
+          Text(value,
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMain)),
         ],
       ),
     );
   }
 
-  // --- Widget: Tombol Lanjut ke Pembayaran ---
+  // --- Widget: Tombol Submit ---
   Widget _buildSubmitButton() {
     return SizedBox(
       height: 52,
       child: ElevatedButton(
-        onPressed: () async {
-          if (_formKey.currentState?.validate() ?? false) {
-            final buyerName = _nameController.text.trim();
-            final buyerEmail = _emailController.text.trim();
-            final buyerPhone = _phoneController.text.trim();
-            final orderId = 'RBR-TKT-${DateTime.now().millisecondsSinceEpoch}';
+        onPressed: _viewModel.isSubmitting
+            ? null
+            : () async {
+                if (!(_formKey.currentState?.validate() ?? false)) return;
 
-            final eTicketView = StrukTiketView(
-              bookingId: orderId,
-              eventTitle: widget.eventTitle,
-              category: widget.category,
-              eventTime: widget.time,
-              eventLocation: widget.location,
-              buyerName: buyerName,
-              buyerEmail: buyerEmail,
-              buyerPhone: buyerPhone,
-              ticketType: _selectedTicketType == 0 ? 'Presale' : 'Reguler',
-              ticketCount: _ticketQuantity,
-              totalPrice: _formatRupiah(_totalAmount),
-              paymentMethod: _selectedPaymentMethod.label,
-            );
+                final buyerName = _nameController.text.trim();
+                final buyerEmail = _emailController.text.trim();
+                final buyerPhone = _phoneController.text.trim();
 
-            // Tampilkan loading indikator
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const Center(
-                child: CircularProgressIndicator(color: AppColors.maroon),
-              ),
-            );
+                final eTicketView = StrukTiketView(
+                  bookingId:
+                      'RBR-TKT-${DateTime.now().millisecondsSinceEpoch}',
+                  eventTitle: widget.eventTitle,
+                  category: widget.category,
+                  eventTime: widget.time,
+                  eventLocation: widget.location,
+                  buyerName: buyerName,
+                  buyerEmail: buyerEmail,
+                  buyerPhone: buyerPhone,
+                  ticketType: _viewModel.selectedTicketType == 0
+                      ? 'Presale'
+                      : 'Reguler',
+                  ticketCount: _viewModel.ticketQuantity,
+                  totalPrice:
+                      _viewModel.formatRupiah(_viewModel.totalAmount),
+                  paymentMethod: _viewModel.selectedPaymentMethod.label,
+                );
 
-            final isQris = _selectedPaymentMethod == _PaymentMethod.qris;
-            final chargeResult = await PaymentService.createCharge(
-              orderId: orderId,
-              grossAmount: _totalAmount,
-              customerName: buyerName,
-              customerEmail: buyerEmail,
-              customerPhone: buyerPhone,
-              paymentType: isQris ? 'qris' : 'bank_transfer',
-              bank: 'bca',
-              orderType: 'ticket',
-              eventId: widget.eventId,
-              items: [
-                {
-                  'id': widget.eventId?.toString() ?? 'TKT',
-                  'name': 'Tiket: ${widget.eventTitle}',
-                  'price': _totalAmount ~/ _ticketQuantity,
-                  'quantity': _ticketQuantity,
+                if (!mounted) return;
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const Center(
+                    child: CircularProgressIndicator(
+                        color: AppColors.maroon),
+                  ),
+                );
+
+                final result = await _viewModel.submitCheckout(
+                  customerName: buyerName,
+                  customerEmail: buyerEmail,
+                  customerPhone: buyerPhone,
+                  eventTitle: widget.eventTitle,
+                  eventId: widget.eventId,
+                );
+
+                if (!mounted) return;
+                Navigator.pop(context);
+
+                final chargeResult =
+                    result?['charge_result'] as Map<String, dynamic>?;
+                final finalOrderId =
+                    result?['order_id'] as String? ?? '';
+                final isQris = result?['is_qris'] as bool? ?? true;
+                final badgeText =
+                    '${_viewModel.ticketQuantity} x ${_viewModel.selectedTicketType == 0 ? "Presale" : "Reguler"}';
+
+                if (isQris) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => QrisPaymentView(
+                        title: 'Instruksi Pembayaran QRIS',
+                        orderNumber: finalOrderId,
+                        badgeText: badgeText,
+                        totalAmount: _viewModel
+                            .formatRupiah(_viewModel.totalAmount),
+                        rawAmount: _viewModel.totalAmount,
+                        qrUrl: chargeResult?['qr_url'],
+                        qrString: chargeResult?['qr_string'],
+                        buttonLabel: 'CEK STATUS PEMBAYARAN',
+                        nextScreen: eTicketView,
+                      ),
+                    ),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => VaPaymentView(
+                        title: 'Instruksi Pembayaran VA',
+                        orderNumber: finalOrderId,
+                        badgeText: badgeText,
+                        totalAmount: _viewModel
+                            .formatRupiah(_viewModel.totalAmount),
+                        rawAmount: _viewModel.totalAmount,
+                        vaNumber: chargeResult?['va_number'] ??
+                            '5213 1845 9403 1716',
+                        bankName:
+                            '${(chargeResult?['bank'] ?? 'BCA').toUpperCase()} Virtual Account',
+                        buttonLabel: 'CEK STATUS PEMBAYARAN',
+                        nextScreen: eTicketView,
+                      ),
+                    ),
+                  );
                 }
-              ],
-            );
-
-            if (!mounted) return;
-            Navigator.pop(context); // Tutup loading dialog
-
-            final finalOrderId = chargeResult?['order_id'] ?? orderId;
-
-            if (isQris) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => QrisPaymentView(
-                    title: 'Instruksi Pembayaran QRIS',
-                    orderNumber: finalOrderId,
-                    badgeText:
-                        '$_ticketQuantity x ${_selectedTicketType == 0 ? "Presale" : "Reguler"}',
-                    totalAmount: _formatRupiah(_totalAmount),
-                    rawAmount: _totalAmount,
-                    qrUrl: chargeResult?['qr_url'],
-                    qrString: chargeResult?['qr_string'],
-                    buttonLabel: 'CEK STATUS PEMBAYARAN',
-                    nextScreen: eTicketView,
-                  ),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => VaPaymentView(
-                    title: 'Instruksi Pembayaran VA',
-                    orderNumber: finalOrderId,
-                    badgeText:
-                        '$_ticketQuantity x ${_selectedTicketType == 0 ? "Presale" : "Reguler"}',
-                    totalAmount: _formatRupiah(_totalAmount),
-                    rawAmount: _totalAmount,
-                    vaNumber: chargeResult?['va_number'] ?? '5213 1845 9403 1716',
-                    bankName: '${(chargeResult?['bank'] ?? 'BCA').toUpperCase()} Virtual Account',
-                    buttonLabel: 'CEK STATUS PEMBAYARAN',
-                    nextScreen: eTicketView,
-                  ),
-                ),
-              );
-            }
-          }
-        },
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.maroon,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+              borderRadius: BorderRadius.circular(14)),
           elevation: 2,
         ),
         child: Row(

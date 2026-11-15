@@ -71,4 +71,3 @@ class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
     );
   }
 }
-
