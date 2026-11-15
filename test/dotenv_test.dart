@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:mobile_app/config/api_config.dart';
+import 'package:mobile_app/core/config/api_config.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

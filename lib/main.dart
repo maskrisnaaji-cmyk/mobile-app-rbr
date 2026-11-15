@@ -2,8 +2,8 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'services/user_session.dart';
-import 'views/login_view.dart';
+import 'package:mobile_app/core/services/user_session.dart';
+import 'package:mobile_app/features/auth/views/login_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

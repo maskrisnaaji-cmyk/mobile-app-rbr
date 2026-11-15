@@ -7,7 +7,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/main.dart';
-import 'package:mobile_app/views/login_view.dart';
+import 'package:mobile_app/features/auth/views/login_view.dart';
 
 void main() {
   testWidgets('App renders LoginView initial screen test', (WidgetTester tester) async {
