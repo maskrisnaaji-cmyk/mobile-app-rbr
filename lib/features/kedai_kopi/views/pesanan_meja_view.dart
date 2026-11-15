@@ -8,18 +8,20 @@ import 'package:mobile_app/features/booking_payment/widgets/price_summary_card.d
 import 'package:mobile_app/features/booking_payment/views/qris_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/va_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_pembayaran_view.dart';
-import 'package:mobile_app/core/services/payment_service.dart';
+import 'package:mobile_app/features/kedai_kopi/viewmodels/kedai_kopi_viewmodel.dart';
 
 class PesananMejaView extends StatefulWidget {
   final List<CartItem> cartItems;
   final String tableName;
   final String orderNumber;
+  final KedaiKopiViewModel? viewModel;
 
   const PesananMejaView({
     super.key,
     this.cartItems = const [],
     this.tableName = 'Meja No. 04',
     this.orderNumber = '#ORD-9042',
+    this.viewModel,
   });
 
   @override
@@ -27,7 +29,13 @@ class PesananMejaView extends StatefulWidget {
 }
 
 class _PesananMejaViewState extends State<PesananMejaView> {
-  int _selectedPaymentMethod = 0; // 0: QRIS, 1: Tunai Kasir, 2: Transfer Bank
+  late final KedaiKopiViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = widget.viewModel ?? KedaiKopiViewModel();
+  }
 
   List<CartItem> get _effectiveCartItems {
     if (widget.cartItems.isNotEmpty) {
@@ -118,7 +126,7 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               _buildPromoSection(),
               const SizedBox(height: 16),
 
-              // Rincian Pembayaran (menggunakan Widget PriceSummaryCard)
+              // Rincian Pembayaran
               PriceSummaryCard(
                 subtotalLabel: 'Subtotal ($_totalItemsCount Item)',
                 subtotal: _formatRupiah(_subtotal),
@@ -128,8 +136,11 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               ),
               const SizedBox(height: 16),
 
-              // Metode Pembayaran (menggunakan Widget PaymentOptionCard)
-              _buildPaymentSection(),
+              // Metode Pembayaran
+              ListenableBuilder(
+                listenable: _viewModel,
+                builder: (context, _) => _buildPaymentSection(),
+              ),
               const SizedBox(height: 24),
 
               // Tombol Konfirmasi Bayar
@@ -524,24 +535,24 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             title: 'QRIS Nasional',
             badge: 'INSTAN',
             subtitle: 'BCA, GoPay, OVO, ShopeePay, Dana, LinkAja',
-            isSelected: _selectedPaymentMethod == 0,
-            onTap: () => setState(() => _selectedPaymentMethod = 0),
+            isSelected: _viewModel.selectedPaymentMethod == 0,
+            onTap: () => _viewModel.selectPaymentMethod(0),
           ),
           const SizedBox(height: 8),
           PaymentOptionCard(
             title: 'Bayar di Kasir (Tunai)',
             badge: 'Kasir Pendopo',
             subtitle: 'Bayar langsung di meja kasir setelah memesan',
-            isSelected: _selectedPaymentMethod == 1,
-            onTap: () => setState(() => _selectedPaymentMethod = 1),
+            isSelected: _viewModel.selectedPaymentMethod == 1,
+            onTap: () => _viewModel.selectPaymentMethod(1),
           ),
           const SizedBox(height: 8),
           PaymentOptionCard(
             title: 'Transfer Bank (Virtual Account)',
             badge: 'VA 24 JAM',
             subtitle: 'BCA, Mandiri, BNI, BRI, Permata',
-            isSelected: _selectedPaymentMethod == 2,
-            onTap: () => setState(() => _selectedPaymentMethod = 2),
+            isSelected: _viewModel.selectedPaymentMethod == 2,
+            onTap: () => _viewModel.selectPaymentMethod(2),
           ),
         ],
       ),
@@ -558,6 +569,7 @@ class _PesananMejaViewState extends State<PesananMejaView> {
           final total = _totalPrice;
           final orderNo = widget.orderNumber;
           final table = widget.tableName;
+          final paymentMethod = _viewModel.selectedPaymentMethod;
 
           final strukView = StrukPembayaranView(
             orderNumber: orderNo,
@@ -565,13 +577,13 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             cartItems: items,
             subtotal: _subtotal,
             totalPrice: total,
-            paymentMethod: _selectedPaymentMethod == 0
+            paymentMethod: paymentMethod == 0
                 ? 'QRIS (INSTAN)'
-                : (_selectedPaymentMethod == 2 ? 'Transfer Bank (VA)' : 'Tunai Kasir'),
+                : (paymentMethod == 2 ? 'Transfer Bank (VA)' : 'Tunai Kasir'),
           );
 
-          if (_selectedPaymentMethod == 0 || _selectedPaymentMethod == 2) {
-            final isQris = _selectedPaymentMethod == 0;
+          if (paymentMethod == 0 || paymentMethod == 2) {
+            final isQris = paymentMethod == 0;
             final cleanOrder = 'RBR-KEDAI-${DateTime.now().millisecondsSinceEpoch}';
 
             showDialog(
@@ -582,19 +594,13 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               ),
             );
 
-            final chargeResult = await PaymentService.createCharge(
+            final chargeResult = await _viewModel.submitOrderTransaction(
               orderId: cleanOrder,
               grossAmount: total,
               customerName: 'Pelanggan $table',
               paymentType: isQris ? 'qris' : 'bank_transfer',
               bank: 'bca',
-              orderType: 'kedai',
-              items: items.map((i) => {
-                'id': i.name,
-                'name': i.name,
-                'price': i.price,
-                'quantity': i.quantity,
-              }).toList(),
+              items: items,
             );
 
             if (!mounted) return;

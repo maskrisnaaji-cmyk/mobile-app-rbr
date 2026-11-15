@@ -1,14 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-import 'package:mobile_app/core/config/api_config.dart';
-import 'package:mobile_app/features/kedai_kopi/models/cart_item_model.dart';
-import 'package:mobile_app/features/kedai_kopi/models/menu_model.dart';
 import 'package:mobile_app/core/theme/colors.dart';
-import 'package:mobile_app/features/kedai_kopi/widgets/menu_item_card.dart';
 import 'package:mobile_app/core/widgets/user_avatar_widget.dart';
+import 'package:mobile_app/features/kedai_kopi/viewmodels/kedai_kopi_viewmodel.dart';
 import 'package:mobile_app/features/kedai_kopi/views/pesanan_meja_view.dart';
+import 'package:mobile_app/features/kedai_kopi/widgets/menu_item_card.dart';
 
 class _CoffeeTable {
   final int number;
@@ -17,53 +13,19 @@ class _CoffeeTable {
   const _CoffeeTable({required this.number, required this.isOccupied});
 }
 
-class KedaiMenuItem {
-  final dynamic id;
-  final String name;
-  final String category;
-  final int price;
-  final String image;
-  final Color imageColor;
-  final String note;
-
-  const KedaiMenuItem({
-    this.id,
-    required this.name,
-    required this.category,
-    required this.price,
-    required this.image,
-    required this.imageColor,
-    this.note = '',
-  });
-
-  factory KedaiMenuItem.fromMenuModel(MenuModel model, Color color) {
-    return KedaiMenuItem(
-      id: model.id,
-      name: model.name,
-      category: model.category,
-      price: model.price,
-      image: model.image,
-      imageColor: color,
-      note: model.description,
-    );
-  }
-}
-
 class KedaiKopiView extends StatefulWidget {
-  const KedaiKopiView({super.key});
+  final KedaiKopiViewModel? viewModel;
+
+  const KedaiKopiView({super.key, this.viewModel});
 
   @override
   State<KedaiKopiView> createState() => _KedaiKopiViewState();
 }
 
 class _KedaiKopiViewState extends State<KedaiKopiView> {
+  late final KedaiKopiViewModel _viewModel;
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = "";
-  bool _isLoading = true;
-  int? _selectedTableNumber;
 
-  // Status meja sementara di sisi aplikasi. Data ini dapat diganti dengan
-  // response API ketika backend sudah menyediakan status meja secara real-time.
   static const List<_CoffeeTable> _tables = [
     _CoffeeTable(number: 1, isOccupied: false),
     _CoffeeTable(number: 2, isOccupied: true),
@@ -75,130 +37,22 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
     _CoffeeTable(number: 8, isOccupied: false),
   ];
 
-  static final List<KedaiMenuItem> _defaultMenus = [
-    KedaiMenuItem(
-      name: 'Kopi Tubruk Nusantara',
-      category: 'Manual Brew',
-      price: 18000,
-      image: 'assets/images/kopi_tubruk.jpg',
-      imageColor: Colors.brown.shade900,
-      note: 'Single Origin • Tubruk Tradisional',
-    ),
-    KedaiMenuItem(
-      name: 'V60 Manual Brew',
-      category: 'Manual Brew',
-      price: 25000,
-      image: 'assets/images/americano.jpg',
-      imageColor: Colors.brown.shade800,
-      note: 'Light Roast • Fruity Notes',
-    ),
-    KedaiMenuItem(
-      name: 'Kopi Susu Creamy',
-      category: 'Kopi Nusantara',
-      price: 18000,
-      image: 'assets/images/kopi_susu.jpg',
-      imageColor: Colors.brown.shade700,
-      note: 'Less Sugar • Less Ice',
-    ),
-    KedaiMenuItem(
-      name: 'Americano Signature',
-      category: 'Kopi Nusantara',
-      price: 17000,
-      image: 'assets/images/americano.jpg',
-      imageColor: Colors.brown.shade700,
-      note: 'Single Origin • Hot',
-    ),
-    KedaiMenuItem(
-      name: 'Wedang Uwuh Kraton',
-      category: 'Non-Kopi',
-      price: 15000,
-      image: 'assets/images/wedang_uwuh.jpg',
-      imageColor: Colors.teal.shade800,
-      note: 'Rempah Hangat Tradisional',
-    ),
-    KedaiMenuItem(
-      name: 'Pisang Goreng Wijen',
-      category: 'Camilan Nusantara',
-      price: 15000,
-      image: 'assets/images/pisang_goreng_keju.jpg',
-      imageColor: Colors.orange.shade800,
-      note: 'Garing & Manis Legit',
-    ),
-  ];
-
-  List<KedaiMenuItem> _allMenuList = [];
-  List<KedaiMenuItem> _filteredMenuList = [];
-
-  int _selectedCategoryIndex = 0;
-  List<String> _categories = [
-    'Semua',
-    'Kopi Nusantara',
-    'Manual Brew',
-    'Non-Kopi',
-    'Camilan Nusantara',
-  ];
-
-  final Map<String, int> _itemCounts = {};
-  final Map<String, int> _itemPrices = {};
-
   @override
   void initState() {
     super.initState();
-    _allMenuList = List.from(_defaultMenus);
-    for (var item in _defaultMenus) {
-      _itemPrices[item.name] = item.price;
-      _itemCounts[item.name] = 0;
-    }
-    _applyFilter();
-    _fetchMenus();
+    _viewModel = widget.viewModel ?? KedaiKopiViewModel();
+    _viewModel.init();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _selectedTableNumber == null) {
+      if (mounted && _viewModel.selectedTableNumber == null) {
         _showTableSelection();
       }
     });
   }
 
-  Future<void> _fetchMenus() async {
-    setState(() => _isLoading = true);
-    try {
-      final response = await http.get(Uri.parse(ApiConfig.menusUrl)).timeout(
-            const Duration(seconds: 8),
-          );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        if (data.isNotEmpty) {
-          final List<KedaiMenuItem> loaded = [];
-          final Set<String> categories = {'Semua'};
-
-          for (var item in data) {
-            final menuModel = MenuModel.fromJson(item as Map<String, dynamic>);
-            categories.add(menuModel.category);
-            loaded.add(KedaiMenuItem.fromMenuModel(
-              menuModel,
-              _colorForCategory(menuModel.category),
-            ));
-
-            _itemPrices[menuModel.name] = menuModel.price;
-            _itemCounts.putIfAbsent(menuModel.name, () => 0);
-          }
-
-          if (mounted) {
-            setState(() {
-              _allMenuList = loaded;
-              _categories = categories.toList();
-              _applyFilter();
-              _isLoading = false;
-            });
-            return;
-          }
-        }
-      }
-    } catch (_) {}
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Color _colorForCategory(String category) {
@@ -219,56 +73,6 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
     }
   }
 
-  void _applyFilter() {
-    final selectedCat = _selectedCategoryIndex < _categories.length
-        ? _categories[_selectedCategoryIndex]
-        : 'Semua';
-    _filteredMenuList = _allMenuList.where((menu) {
-      final nameMatches = menu.name.toLowerCase().contains(_searchQuery);
-      final categoryMatches =
-          menu.category.toLowerCase().contains(_searchQuery);
-      final matchesSearch =
-          _searchQuery.isEmpty || nameMatches || categoryMatches;
-      final matchesCategory =
-          selectedCat == 'Semua' || menu.category == selectedCat;
-      return matchesSearch && matchesCategory;
-    }).toList();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _incrementItem(String name) {
-    setState(() {
-      _itemCounts[name] = (_itemCounts[name] ?? 0) + 1;
-    });
-  }
-
-  void _decrementItem(String name) {
-    setState(() {
-      if ((_itemCounts[name] ?? 0) > 0) {
-        _itemCounts[name] = (_itemCounts[name] ?? 0) - 1;
-      }
-    });
-  }
-
-  int get _totalItems {
-    int total = 0;
-    _itemCounts.forEach((_, value) => total += value);
-    return total;
-  }
-
-  int get _totalPrice {
-    int total = 0;
-    _itemCounts.forEach((key, count) {
-      total += (_itemPrices[key] ?? 0) * count;
-    });
-    return total;
-  }
-
   String _formatRupiah(int price) {
     return 'Rp ${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
   }
@@ -279,6 +83,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        final currentSelected = _viewModel.selectedTableNumber;
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -345,7 +150,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                   ),
                   itemBuilder: (context, index) {
                     final table = _tables[index];
-                    final isSelected = table.number == _selectedTableNumber;
+                    final isSelected = table.number == currentSelected;
                     final isAvailable = !table.isOccupied;
                     final color = isSelected
                         ? AppColors.maroon
@@ -410,7 +215,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
     );
 
     if (selectedTable != null && mounted) {
-      setState(() => _selectedTableNumber = selectedTable);
+      _viewModel.selectTable(selectedTable);
     }
   }
 
@@ -435,456 +240,134 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgCanvas,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        final vm = _viewModel;
+        return Scaffold(
+          backgroundColor: AppColors.bgCanvas,
+          body: SafeArea(
+            child: Stack(
               children: [
-                // Header Top Bar
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.maroon,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.storefront_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Kedai Kopi',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.darkText,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.search_rounded,
-                                color: AppColors.darkText),
-                            onPressed: () {},
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.notifications_none_rounded,
-                                color: AppColors.darkText),
-                            onPressed: () {},
-                          ),
-                          const SizedBox(width: 4),
-                          const UserAvatarWidget(radius: 13),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Card pemilihan meja
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: _showTableSelection,
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.goldLight.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: AppColors.gold.withValues(alpha: 0.4)),
-                      ),
+                Column(
+                  children: [
+                    // Header Top Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.chair_alt_rounded,
-                                  color: AppColors.maroon, size: 20),
-                              const SizedBox(width: 10),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'KEDAI & GALERI',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.greyText,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                  Text(
-                                    _selectedTableNumber == null
-                                        ? 'Pilih nomor meja'
-                                        : 'Meja No. ${_selectedTableNumber.toString().padLeft(2, '0')}',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.darkText,
-                                    ),
-                                  ),
-                                ],
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.maroon,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.storefront_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Kedai Kopi',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.darkText,
+                                ),
                               ),
                             ],
                           ),
                           Row(
                             children: [
-                              Text(
-                                _selectedTableNumber == null
-                                    ? 'Lihat meja'
-                                    : 'Ganti meja',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.maroon,
-                                ),
+                              IconButton(
+                                icon: const Icon(Icons.search_rounded,
+                                    color: AppColors.darkText),
+                                onPressed: () {},
                               ),
-                              const SizedBox(width: 2),
-                              const Icon(Icons.chevron_right_rounded,
-                                  color: AppColors.maroon, size: 18),
+                              IconButton(
+                                icon: const Icon(
+                                    Icons.notifications_none_rounded,
+                                    color: AppColors.darkText),
+                                onPressed: () {},
+                              ),
+                              const SizedBox(width: 4),
+                              const UserAvatarWidget(radius: 13),
                             ],
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: 16),
-
-                // Search Bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.lightBorder),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value.toLowerCase();
-                          if (_searchQuery.isNotEmpty &&
-                              _selectedCategoryIndex != 0) {
-                            _selectedCategoryIndex = 0;
-                          }
-                          _applyFilter();
-                        });
-                      },
-                      decoration: InputDecoration(
-                        icon: const Icon(Icons.search_rounded,
-                            color: AppColors.greyText, size: 20),
-                        hintText: 'Cari menu kopi atau camilan...',
-                        hintStyle: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          color: AppColors.greyText,
-                        ),
-                        border: InputBorder.none,
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear,
-                                    color: AppColors.greyText, size: 18),
-                                splashRadius: 18,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: () {
-                                  setState(() {
-                                    _searchController.clear();
-                                    _searchQuery = "";
-                                    _applyFilter();
-                                  });
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Kategori Filter
-                SizedBox(
-                  height: 38,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: _categories.length,
-                    itemBuilder: (context, index) {
-                      bool isSelected = _selectedCategoryIndex == index;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(_categories[index]),
-                          selected: isSelected,
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _selectedCategoryIndex = index;
-                              _applyFilter();
-                            });
-                          },
-                          selectedColor: AppColors.maroon,
-                          backgroundColor: Colors.white,
-                          labelStyle: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight:
-                                isSelected ? FontWeight.bold : FontWeight.w500,
-                            color:
-                                isSelected ? Colors.white : AppColors.darkText,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            side: BorderSide(
-                              color: isSelected
-                                  ? AppColors.maroon
-                                  : AppColors.lightBorder,
-                            ),
-                          ),
-                          showCheckmark: false,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Daftar Menu List
-                Expanded(
-                  child: _isLoading && _allMenuList.isEmpty
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.maroon),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _fetchMenus,
-                          color: AppColors.maroon,
-                          child: _filteredMenuList.isEmpty
-                              ? ListView(
-                                  physics:
-                                      const AlwaysScrollableScrollPhysics(),
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 32, vertical: 48),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(16),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.cardBg,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                  color: AppColors.lightBorder),
-                                            ),
-                                            child: const Icon(
-                                              Icons.search_off_rounded,
-                                              size: 36,
-                                              color: AppColors.greyText,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'Menu tidak ditemukan',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.darkText,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            _searchQuery.isNotEmpty
-                                                ? 'Menu dengan kata kunci "$_searchQuery" tidak ditemukan. Coba kata kunci lain.'
-                                                : 'Tidak ada menu pada kategori ini.',
-                                            textAlign: TextAlign.center,
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 12,
-                                              color: AppColors.greyText,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : ListView.builder(
-                                  physics: const AlwaysScrollableScrollPhysics(
-                                      parent: BouncingScrollPhysics()),
-                                  padding: const EdgeInsets.only(
-                                      left: 20, right: 20, bottom: 90),
-                                  itemCount: _filteredMenuList.length,
-                                  itemBuilder: (context, index) {
-                                    final menu = _filteredMenuList[index];
-                                    return MenuItemCard(
-                                      name: menu.name,
-                                      price: menu.price,
-                                      image: menu.image,
-                                      imageColor: menu.imageColor,
-                                      count: _itemCounts[menu.name] ?? 0,
-                                      onAdd: () => _incrementItem(menu.name),
-                                      onRemove: () => _decrementItem(menu.name),
-                                    );
-                                  },
-                                ),
-                        ),
-                ),
-              ],
-            ),
-
-            // Floating Bottom Bar untuk BAYAR (Hanya muncul jika user telah menambah pesanan)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: AnimatedSlide(
-                duration: const Duration(milliseconds: 320),
-                curve: Curves.easeOutCubic,
-                offset: _totalItems > 0 ? Offset.zero : const Offset(0, 1.5),
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 250),
-                  opacity: _totalItems > 0 ? 1.0 : 0.0,
-                  child: IgnorePointer(
-                    ignoring: _totalItems == 0,
-                    child: Material(
-                      color: Colors.transparent,
+                    // Card pemilihan meja
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16),
-                        onTap: () {
-                          if (_selectedTableNumber == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text(
-                                    'Silakan pilih meja yang kosong terlebih dahulu.'),
-                                action: SnackBarAction(
-                                  label: 'PILIH MEJA',
-                                  onPressed: _showTableSelection,
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final List<CartItem> cartItems = [];
-                          for (var menu in _allMenuList) {
-                            final count = _itemCounts[menu.name] ?? 0;
-                            if (count > 0) {
-                              cartItems.add(CartItem(
-                                name: menu.name,
-                                price: menu.price,
-                                quantity: count,
-                                note: menu.note.isNotEmpty
-                                    ? menu.note
-                                    : (menu.category == 'Manual Brew'
-                                        ? 'Single Origin • Panas'
-                                        : 'Pilihan Favorit'),
-                                image: menu.image,
-                                category: menu.category,
-                              ));
-                            }
-                          }
-
-                          // Pastikan jika ada item tambahan di _itemCounts yang tidak tercantum di _allMenuList
-                          _itemCounts.forEach((name, count) {
-                            if (count > 0 &&
-                                !cartItems.any((item) => item.name == name)) {
-                              cartItems.add(CartItem(
-                                name: name,
-                                price: _itemPrices[name] ?? 0,
-                                quantity: count,
-                                note: 'Menu Pilihan',
-                              ));
-                            }
-                          });
-
-                          if (cartItems.isEmpty) return;
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PesananMejaView(
-                                cartItems: cartItems,
-                                tableName:
-                                    'Meja No. ${_selectedTableNumber.toString().padLeft(2, '0')}',
-                                orderNumber:
-                                    '#ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7, 12)}',
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: _showTableSelection,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 14),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: AppColors.maroon,
+                            color: AppColors.goldLight.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.maroon.withValues(alpha: 0.35),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
+                            border: Border.all(
+                                color: AppColors.gold.withValues(alpha: 0.4)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
+                              Row(
                                 children: [
-                                  Text(
-                                    '$_totalItems Item • ${_selectedTableNumber == null ? 'Pilih meja' : 'Meja ${_selectedTableNumber.toString().padLeft(2, '0')}'}',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11,
-                                      color: Colors.white70,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _formatRupiah(_totalPrice),
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
+                                  const Icon(Icons.chair_alt_rounded,
+                                      color: AppColors.maroon, size: 20),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'KEDAI & GALERI',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.greyText,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                      Text(
+                                        vm.selectedTableNumber == null
+                                            ? 'Pilih nomor meja'
+                                            : 'Meja No. ${vm.selectedTableNumber.toString().padLeft(2, '0')}',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.darkText,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
                               Row(
                                 children: [
                                   Text(
-                                    'BAYAR',
+                                    vm.selectedTableNumber == null
+                                        ? 'Lihat meja'
+                                        : 'Ganti meja',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.maroon,
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 2),
                                   const Icon(Icons.chevron_right_rounded,
-                                      color: Colors.white, size: 20),
+                                      color: AppColors.maroon, size: 18),
                                 ],
                               ),
                             ],
@@ -892,13 +375,315 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // Search Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.lightBorder),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _viewModel.updateSearch,
+                          decoration: InputDecoration(
+                            icon: const Icon(Icons.search_rounded,
+                                color: AppColors.greyText, size: 20),
+                            hintText: 'Cari menu kopi atau camilan...',
+                            hintStyle: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              color: AppColors.greyText,
+                            ),
+                            border: InputBorder.none,
+                            suffixIcon: vm.searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear,
+                                        color: AppColors.greyText, size: 18),
+                                    splashRadius: 18,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _viewModel.clearSearch();
+                                    },
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Kategori Filter
+                    SizedBox(
+                      height: 38,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: vm.categories.length,
+                        itemBuilder: (context, index) {
+                          final isSelected =
+                              vm.selectedCategoryIndex == index;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(vm.categories[index]),
+                              selected: isSelected,
+                              onSelected: (_) =>
+                                  _viewModel.selectCategory(index),
+                              selectedColor: AppColors.maroon,
+                              backgroundColor: Colors.white,
+                              labelStyle: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.darkText,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? AppColors.maroon
+                                      : AppColors.lightBorder,
+                                ),
+                              ),
+                              showCheckmark: false,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Daftar Menu List
+                    Expanded(
+                      child: vm.isLoading && vm.allMenuList.isEmpty
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                  color: AppColors.maroon),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: _viewModel.fetchMenus,
+                              color: AppColors.maroon,
+                              child: vm.filteredMenuList.isEmpty
+                                  ? ListView(
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 32, vertical: 48),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.all(16),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.cardBg,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                      color: AppColors
+                                                          .lightBorder),
+                                                ),
+                                                child: const Icon(
+                                                  Icons.search_off_rounded,
+                                                  size: 36,
+                                                  color: AppColors.greyText,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                'Menu tidak ditemukan',
+                                                style: GoogleFonts
+                                                    .plusJakartaSans(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.darkText,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                vm.searchQuery.isNotEmpty
+                                                    ? 'Menu dengan kata kunci "${vm.searchQuery}" tidak ditemukan. Coba kata kunci lain.'
+                                                    : 'Tidak ada menu pada kategori ini.',
+                                                textAlign: TextAlign.center,
+                                                style: GoogleFonts
+                                                    .plusJakartaSans(
+                                                  fontSize: 12,
+                                                  color: AppColors.greyText,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : ListView.builder(
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(
+                                              parent:
+                                                  BouncingScrollPhysics()),
+                                      padding: const EdgeInsets.only(
+                                          left: 20, right: 20, bottom: 90),
+                                      itemCount: vm.filteredMenuList.length,
+                                      itemBuilder: (context, index) {
+                                        final menu =
+                                            vm.filteredMenuList[index];
+                                        return MenuItemCard(
+                                          name: menu.name,
+                                          price: menu.price,
+                                          image: menu.image,
+                                          imageColor: _colorForCategory(
+                                              menu.category),
+                                          count: vm.itemCounts[menu.name] ?? 0,
+                                          onAdd: () => _viewModel
+                                              .incrementItem(menu.name),
+                                          onRemove: () => _viewModel
+                                              .decrementItem(menu.name),
+                                        );
+                                      },
+                                    ),
+                            ),
+                    ),
+                  ],
+                ),
+
+                // Floating Bottom Bar untuk BAYAR
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: AnimatedSlide(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    offset: vm.totalItems > 0
+                        ? Offset.zero
+                        : const Offset(0, 1.5),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 250),
+                      opacity: vm.totalItems > 0 ? 1.0 : 0.0,
+                      child: IgnorePointer(
+                        ignoring: vm.totalItems == 0,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {
+                              if (vm.selectedTableNumber == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text(
+                                        'Silakan pilih meja yang kosong terlebih dahulu.'),
+                                    action: SnackBarAction(
+                                      label: 'PILIH MEJA',
+                                      onPressed: _showTableSelection,
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              final cartItems = _viewModel.cartItems;
+                              if (cartItems.isEmpty) return;
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PesananMejaView(
+                                    cartItems: cartItems,
+                                    tableName:
+                                        'Meja No. ${vm.selectedTableNumber.toString().padLeft(2, '0')}',
+                                    orderNumber:
+                                        '#ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7, 12)}',
+                                    viewModel: _viewModel,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: AppColors.maroon,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.maroon
+                                        .withValues(alpha: 0.35),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '${vm.totalItems} Item • ${vm.selectedTableNumber == null ? 'Pilih meja' : 'Meja ${vm.selectedTableNumber.toString().padLeft(2, '0')}'}',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          color: Colors.white70,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _formatRupiah(vm.totalPrice),
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'BAYAR',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.chevron_right_rounded,
+                                          color: Colors.white, size: 20),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
