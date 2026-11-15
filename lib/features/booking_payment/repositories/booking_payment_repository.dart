@@ -1,0 +1,74 @@
+import 'package:mobile_app/core/services/payment_service.dart';
+
+/// Abstract interface untuk operasi pembayaran.
+abstract class BookingPaymentRepository {
+  Future<Map<String, dynamic>?> createCharge({
+    required String orderId,
+    required int grossAmount,
+    required String customerName,
+    String? customerEmail,
+    String? customerPhone,
+    required String paymentType,
+    String bank,
+    String orderType,
+    int? eventId,
+    List<Map<String, dynamic>>? items,
+  });
+
+  Future<Map<String, dynamic>?> checkPaymentStatus(String orderId);
+
+  Future<bool> simulateSettlement({
+    required String orderId,
+    required int grossAmount,
+    String paymentType,
+  });
+}
+
+/// Implementasi [BookingPaymentRepository] menggunakan [PaymentService].
+class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
+  @override
+  Future<Map<String, dynamic>?> createCharge({
+    required String orderId,
+    required int grossAmount,
+    required String customerName,
+    String? customerEmail,
+    String? customerPhone,
+    required String paymentType,
+    String bank = 'bca',
+    String orderType = 'ticket',
+    int? eventId,
+    List<Map<String, dynamic>>? items,
+  }) {
+    return PaymentService.createCharge(
+      orderId: orderId,
+      grossAmount: grossAmount,
+      customerName: customerName,
+      customerEmail: customerEmail,
+      customerPhone: customerPhone,
+      paymentType: paymentType,
+      bank: bank,
+      orderType: orderType,
+      eventId: eventId,
+      items: items,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>?> checkPaymentStatus(String orderId) {
+    return PaymentService.checkPaymentStatus(orderId);
+  }
+
+  @override
+  Future<bool> simulateSettlement({
+    required String orderId,
+    required int grossAmount,
+    String paymentType = 'qris',
+  }) {
+    return PaymentService.simulateSettlement(
+      orderId: orderId,
+      grossAmount: grossAmount,
+      paymentType: paymentType,
+    );
+  }
+}
+

@@ -1,0 +1,7 @@
+﻿00:00 +0: loading C:/Users/Krisna Aji/rumah-budaya-ratna/mobile-app-rbr/test/dotenv_test.dart
+00:00 +0: C:/Users/Krisna Aji/rumah-budaya-ratna/mobile-app-rbr/test/initials_test.dart: UserSession parseInitials Tests single word username parses first 2 uppercase characters (e.g. n4yaaa -> N4)
+00:00 +1: C:/Users/Krisna Aji/rumah-budaya-ratna/mobile-app-rbr/test/initials_test.dart: UserSession parseInitials Tests multi-word names parse first char of each word
+00:00 +2: C:/Users/Krisna Aji/rumah-budaya-ratna/mobile-app-rbr/test/initials_test.dart: UserSession parseInitials Tests handles empty or null with fallback
+00:00 +3: C:/Users/Krisna Aji/rumah-budaya-ratna/mobile-app-rbr/test/dotenv_test.dart: dotenv loads GOOGLE_CLIENT_ID correctly and matches ApiConfig
+00:00 +4: C:/Users/Krisna Aji/rumah-budaya-ratna/mobile-app-rbr/test/widget_test.dart: App renders LoginView initial screen test
+00:01 +5: All tests passed!
