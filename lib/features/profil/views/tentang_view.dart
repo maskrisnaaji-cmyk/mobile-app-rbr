@@ -29,7 +29,7 @@ class TentangView extends StatelessWidget {
               // ─── Hero Banner ──────────────────────────────────────────────
               _HeroBanner(),
 
-              // ─── Misi & Perjalanan ────────────────────────────────────────
+              // ─── Tentang RBR ──────────────────────────────────────────────
               _MisiSection(),
 
               // ─── Profil Ratna Indraswari ──────────────────────────────────
@@ -97,7 +97,7 @@ class _AppHeader extends StatelessWidget {
             ),
           ),
 
-          // Badge Cagar Budaya
+          // Badge ruang budaya
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
@@ -114,7 +114,7 @@ class _AppHeader extends StatelessWidget {
                     size: 11, color: Colors.white),
                 const SizedBox(width: 4),
                 Text(
-                  'CAGAR BUDAYA',
+                  'RUANG BUDAYA MALANG',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 9,
                     fontWeight: FontWeight.bold,
@@ -141,7 +141,7 @@ class _HeroBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Background gradient (representasi gedung / visual)
+        // Foto Rumah Budaya Ratna dengan overlay maroon
         Container(
           width: double.infinity,
           height: 240,
@@ -154,24 +154,32 @@ class _HeroBanner extends StatelessWidget {
           ),
           child: Stack(
             children: [
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/images/welcome_rbr.jpg',
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.maroonDark.withValues(alpha: 0.78),
+                        AppColors.maroon.withValues(alpha: 0.72),
+                        const Color(0xFF21070D).withValues(alpha: 0.9),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               // Pola dekoratif batik
               Positioned.fill(
                 child: Opacity(
                   opacity: 0.07,
                   child: CustomPaint(painter: _BatikPatternPainter()),
-                ),
-              ),
-              // Ikon gedung besar sebagai placeholder gambar
-              const Positioned(
-                right: -20,
-                bottom: -10,
-                child: Opacity(
-                  opacity: 0.12,
-                  child: Icon(
-                    Icons.account_balance,
-                    size: 200,
-                    color: Colors.white,
-                  ),
                 ),
               ),
               // Konten teks di atas gambar
@@ -185,9 +193,10 @@ class _HeroBanner extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        _heroBadge(Icons.group_work_outlined, 'Ruang Kolaborasi'),
-                        _heroBadge(Icons.auto_stories_outlined, 'Konservasi Naskah'),
-                        _heroBadge(Icons.palette_outlined, 'Komunitas Seni'),
+                        _heroBadge(
+                            Icons.local_library_outlined, 'Perpustakaan'),
+                        _heroBadge(Icons.coffee_outlined, 'Kedai Kopi'),
+                        _heroBadge(Icons.groups_2_outlined, 'Ruang Komunitas'),
                       ],
                     ),
                     const Spacer(),
@@ -209,7 +218,7 @@ class _HeroBanner extends StatelessWidget {
                             size: 13, color: Color(0xFFEAD8AD)),
                         const SizedBox(width: 4),
                         Text(
-                          'Malang, Jawa Timur  •  Terbuka untuk Umum',
+                          'Jl. Diponegoro No. 3, Klojen, Malang',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10.5,
                             color: const Color(0xFFEAD8AD),
@@ -295,7 +304,7 @@ class _MisiSection extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'Misi & Perjalanan',
+                'Tentang Rumah Budaya Ratna',
                 style: GoogleFonts.lora(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -322,7 +331,7 @@ class _MisiSection extends StatelessWidget {
               ],
             ),
             child: Text(
-              'Rumah Budaya Ratna adalah cagar budaya yang berdiri di jantung Kota Malang sebagai warisan dari Ratna Indraswari Ibrahim — penulis, pejuang literasi, dan aktivis hak disabilitas. Tempat ini hadir sebagai ruang temu antara seni, pemikiran, dan tradisi Jawa, terbuka bagi siapa pun yang ingin merawat ingatan kolektif bangsa.\n\nDidirikan dengan semangat inklusivitas, Rumah Budaya Ratna terus menghidupkan program-program pelestarian naskah, pameran seni, diskusi publik, dan pemberdayaan komunitas lokal — selaras dengan nilai bahwa kebudayaan adalah hak semua orang.',
+              'Rumah Budaya Ratna (RBR) adalah ruang budaya berbasis komunitas di rumah peninggalan sastrawan Ratna Indraswari Ibrahim, Jl. Diponegoro No. 3, Klojen, Kota Malang. RBR diresmikan pada 24 Agustus 2024 sebagai ruang yang mempertemukan buku, seni, kopi, dan percakapan.\n\nRBR terbuka untuk pembaca, mahasiswa, seniman, komunitas, dan siapa saja yang ingin membaca, berdiskusi, berkarya, atau menikmati suasana rumah yang hangat. Semangatnya adalah merawat warisan Ratna sekaligus membuat literasi dan kebudayaan terasa dekat dengan masyarakat.',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 height: 1.7,
@@ -338,8 +347,8 @@ class _MisiSection extends StatelessWidget {
               Expanded(
                 child: _StatCard(
                   icon: Icons.auto_stories_rounded,
-                  value: '400+',
-                  label: 'Karya\nTerdokumentasi',
+                  value: '2024',
+                  label: 'Tahun\nBerdiri',
                   color: AppColors.maroon,
                 ),
               ),
@@ -347,8 +356,8 @@ class _MisiSection extends StatelessWidget {
               Expanded(
                 child: _StatCard(
                   icon: Icons.event_note_rounded,
-                  value: '12',
-                  label: 'Program\n/ Tahun',
+                  value: '300+',
+                  label: 'Cerpen\nRatna',
                   color: Color(0xFF9C3145),
                 ),
               ),
@@ -356,8 +365,8 @@ class _MisiSection extends StatelessWidget {
               Expanded(
                 child: _StatCard(
                   icon: Icons.people_alt_rounded,
-                  value: '∞',
-                  label: 'Komunitas\nTerbuka',
+                  value: '11–22',
+                  label: 'Jam Buka\nSetiap Hari',
                   color: Color(0xFFC59B27),
                 ),
               ),
@@ -462,7 +471,7 @@ class _ProfilRatnaSection extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'Profil Ratna Indraswari (1949 – 2011)',
+                'Sosok Ratna Indraswari Ibrahim',
                 style: GoogleFonts.lora(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -514,24 +523,19 @@ class _ProfilRatnaSection extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: Opacity(
-                              opacity: 0.12,
-                              child: CustomPaint(
-                                painter: _BatikPatternPainter(),
-                              ),
-                            ),
-                          ),
-                          const Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset(
+                          'assets/images/ratna_indraswari_ibrahim.jpg',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Center(
                             child: Icon(
                               Icons.person_rounded,
                               size: 40,
                               color: Colors.white,
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -549,7 +553,7 @@ class _ProfilRatnaSection extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '1949 – 2011',
+                            'Malang, 24 April 1949 – 28 Maret 2011',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               color: AppColors.maroon,
@@ -561,9 +565,9 @@ class _ProfilRatnaSection extends StatelessWidget {
                             spacing: 4,
                             runSpacing: 4,
                             children: [
-                              _profileTag('Penulis'),
-                              _profileTag('Aktivis'),
-                              _profileTag('Pejuang Literasi'),
+                              _profileTag('Sastrawan'),
+                              _profileTag('Aktivis Perempuan'),
+                              _profileTag('Inklusi & Disabilitas'),
                             ],
                           ),
                         ],
@@ -579,7 +583,7 @@ class _ProfilRatnaSection extends StatelessWidget {
 
                 // Biografi
                 Text(
-                  'Ratna Indraswari Ibrahim adalah seorang novelis, cerpenis, dan pejuang hak disabilitas yang lahir di Malang, Jawa Timur. Meskipun mengalami keterbatasan fisik sejak kecil, beliau tidak pernah berhenti berkarya dan berjuang.',
+                  'Ratna Indraswari Ibrahim adalah sastrawan kelahiran Malang yang dikenal melalui cerpen, novel, puisi, artikel, dan esainya. Ia tetap produktif berkarya meski mengalami keterbatasan fisik sejak kecil.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     height: 1.65,
@@ -588,7 +592,7 @@ class _ProfilRatnaSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Beliau dikenal luas atas novelnya yang kaya akan nilai budaya Jawa dan perjuangan kemanusiaan. Melalui Rumah Budaya Ratna, warisannya terus hidup sebagai ruang yang inklusif dan terbuka bagi seluruh lapisan masyarakat — membuktikan bahwa seni dan literasi adalah milik semua.',
+                  'Ratna juga aktif menyuarakan isu perempuan, kelompok marjinal, dan aksesibilitas. Karya serta rumahnya kini menjadi napas bagi RBR: sebuah ruang inklusif yang menjaga ingatan, buku, dan percakapan agar terus hidup di Malang.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     height: 1.65,
@@ -625,7 +629,7 @@ class _ProfilRatnaSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '"Keterbatasan fisik bukanlah batas bagi jiwa untuk merengkuh semesta kita."',
+                  'Warisan Ratna terus dihidupkan melalui buku, ruang temu, seni, dan komunitas yang terbuka untuk semua.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.lora(
                     fontSize: 13,
@@ -636,7 +640,7 @@ class _ProfilRatnaSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '— Ratna Indraswari Ibrahim',
+                  'Semangat Rumah Budaya Ratna',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 10.5,
                     fontWeight: FontWeight.bold,
@@ -710,27 +714,45 @@ class _FasilitasSection extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          // Kartu Perpustakaan Naskah
+          // Perpustakaan dan ruang baca
           const _FasilitasCard(
             icon: Icons.menu_book_rounded,
             iconBgColor: AppColors.maroon,
-            title: 'Perpustakaan Naskah',
+            title: 'Perpustakaan & Ruang Baca',
+            imageAssets: ['assets/images/ruang_literasi.jpg'],
             description:
-                'Koleksi lebih dari 400 naskah, buku, dan dokumen budaya Jawa yang terpelihara dengan baik. Tersedia ruang baca nyaman untuk umum.',
-            tags: ['Koleksi Naskah', 'Ruang Baca', 'Digital Archive'],
+                'Rak buku dan koleksi bacaan hadir di ruang rumah yang tenang. Pengunjung dapat membaca, mengerjakan tugas, atau berdiskusi tanpa suasana perpustakaan yang kaku.',
+            tags: ['Koleksi Buku', 'Ruang Baca', 'Ramah Pelajar'],
             bottomChip: null,
           ),
           const SizedBox(height: 12),
 
-          // Kartu Kedai Kopi & Teras Diskusi
+          // Kedai kopi
           const _FasilitasCard(
             icon: Icons.coffee_rounded,
             iconBgColor: Color(0xFF7C4A1E),
-            title: 'Kedai Kopi & Teras Diskusi',
+            title: 'Kedai Kopi & Ruang Santai',
+            imageAssets: [
+              'assets/images/cafe_dalam.jpg',
+              'assets/images/kasir.jpg',
+            ],
             description:
-                'Nikmati kopi pilihan dari petani lokal Jawa Timur sambil berdiskusi di teras yang hangat. Didesain inklusif dan ramah bagi semua pengunjung.',
-            tags: ['Kopi Lokal', 'Diskusi Publik'],
-            bottomChip: 'Inklusi / Ramah Kursi Roda',
+                'Kafe bernuansa rumah untuk menikmati kopi dan minuman sambil membaca atau berbincang. Suasananya sederhana, hangat, dan nyaman untuk berlama-lama.',
+            tags: ['Kopi & Minuman', 'Suasana Rumahan'],
+            bottomChip: 'Buka Setiap Hari • 11.00–22.00 WIB',
+          ),
+          const SizedBox(height: 12),
+
+          // Ruang komunitas dan kegiatan budaya
+          const _FasilitasCard(
+            icon: Icons.theater_comedy_outlined,
+            iconBgColor: Color(0xFF9C3145),
+            title: 'Ruang Seni & Komunitas',
+            imageAssets: ['assets/images/rbr_frontt.jpg'],
+            description:
+                'RBR menjadi titik temu untuk bedah buku, diskusi budaya, pembacaan puisi, teater, musik, workshop, dan kegiatan komunitas lintas generasi.',
+            tags: ['Diskusi', 'Pentas Seni', 'Workshop'],
+            bottomChip: 'Terbuka untuk Kolaborasi',
           ),
         ],
       ),
@@ -742,6 +764,7 @@ class _FasilitasCard extends StatelessWidget {
   final IconData icon;
   final Color iconBgColor;
   final String title;
+  final List<String> imageAssets;
   final String description;
   final List<String> tags;
   final String? bottomChip;
@@ -750,6 +773,7 @@ class _FasilitasCard extends StatelessWidget {
     required this.icon,
     required this.iconBgColor,
     required this.title,
+    required this.imageAssets,
     required this.description,
     required this.tags,
     this.bottomChip,
@@ -801,6 +825,42 @@ class _FasilitasCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
+          // Foto fasilitas
+          SizedBox(
+            height: 122,
+            child: Row(
+              children: imageAssets
+                  .map(
+                    (asset) => Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          right: asset == imageAssets.last ? 0 : 8,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.asset(
+                            asset,
+                            height: 122,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: AppColors.tagBg,
+                              child: const Center(
+                                child: Icon(
+                                  Icons.photo_outlined,
+                                  color: AppColors.maroon,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+
           // Deskripsi
           Text(
             description,
@@ -844,12 +904,12 @@ class _FasilitasCard extends StatelessWidget {
           if (bottomChip != null) ...[
             const SizedBox(height: 10),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: const Color(0xFFECFDF5),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                border: Border.all(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
