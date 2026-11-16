@@ -18,13 +18,18 @@ class LoanCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final isOverdue = loan.isOverdue;
     final isReturned = loan.status == 'returned';
+    final isPending = loan.isPending;
 
     final Color badgeBg = isOverdue
         ? const Color(0xFFFEE2E2)
-        : (isReturned ? const Color(0xFFE2E8F0) : const Color(0xFFECFDF5));
+        : (isReturned
+            ? const Color(0xFFE2E8F0)
+            : (isPending ? const Color(0xFFFEF3C7) : const Color(0xFFECFDF5)));
     final Color badgeText = isOverdue
         ? const Color(0xFFDC2626)
-        : (isReturned ? const Color(0xFF475569) : const Color(0xFF059669));
+        : (isReturned
+            ? const Color(0xFF475569)
+            : (isPending ? const Color(0xFFB45309) : const Color(0xFF059669)));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -171,7 +176,7 @@ class LoanCardWidget extends StatelessWidget {
                   ),
                 ],
               ),
-              if (!isReturned)
+              if (!isReturned && !isPending)
                 ElevatedButton(
                   onPressed: loan.extensionStatus == 'pending'
                       ? null

@@ -38,7 +38,7 @@ class _ProfilViewState extends State<ProfilView> {
   }
 
   Future<void> _pickProfilePhoto() async {
-    final success = await _viewModel.pickProfilePhoto();
+    final success = await _viewModel.pickProfilePhoto(context: context);
     if (!success && _viewModel.errorMessage != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -356,8 +356,7 @@ class _ProfilViewState extends State<ProfilView> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        PengaturanAkunScreen(viewModel: _viewModel),
+                    builder: (_) => PengaturanAkunScreen(viewModel: _viewModel),
                   ),
                 );
               },
@@ -714,8 +713,7 @@ class _ProfilViewState extends State<ProfilView> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    PengaturanAkunScreen(viewModel: _viewModel),
+                builder: (_) => PengaturanAkunScreen(viewModel: _viewModel),
               ),
             );
           },
@@ -729,8 +727,7 @@ class _ProfilViewState extends State<ProfilView> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    PusatBantuanScreen(viewModel: _viewModel),
+                builder: (_) => PusatBantuanScreen(viewModel: _viewModel),
               ),
             );
           },

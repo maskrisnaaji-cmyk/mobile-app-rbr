@@ -57,6 +57,8 @@ class LoanItem {
 
   String get statusLabel {
     switch (status) {
+      case 'requested':
+        return 'MENUNGGU KONFIRMASI';
       case 'overdue':
         return 'TERLAMBAT';
       case 'returned':
@@ -70,7 +72,10 @@ class LoanItem {
       status == 'overdue' ||
       (status == 'active' && dueDate.isBefore(DateTime.now()));
 
+  bool get isPending => status == 'requested';
+
   String get daysLabel {
+    if (isPending) return 'Menunggu konfirmasi admin';
     if (status == 'returned') return 'Selesai';
     final days = dueDate.difference(DateTime.now()).inDays;
     if (days < 0) return 'Lewat ${days.abs()} Hari';

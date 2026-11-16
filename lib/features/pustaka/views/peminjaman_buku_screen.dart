@@ -50,7 +50,8 @@ class _PeminjamanBukuScreenState extends State<PeminjamanBukuScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.plusJakartaSans(fontSize: 12)),
+        content:
+            Text(message, style: GoogleFonts.plusJakartaSans(fontSize: 12)),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -71,7 +72,8 @@ class _PeminjamanBukuScreenState extends State<PeminjamanBukuScreen> {
               backgroundColor: AppColors.bgCanvas,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textMain),
+                icon: const Icon(Icons.arrow_back_rounded,
+                    color: AppColors.textMain),
                 onPressed: () => Navigator.pop(context),
               ),
               title: Text(
@@ -85,7 +87,8 @@ class _PeminjamanBukuScreenState extends State<PeminjamanBukuScreen> {
               centerTitle: false,
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.refresh_rounded, color: AppColors.textMain),
+                  icon: const Icon(Icons.refresh_rounded,
+                      color: AppColors.textMain),
                   onPressed: _fetchLoans,
                 ),
                 const Padding(
@@ -103,7 +106,8 @@ class _PeminjamanBukuScreenState extends State<PeminjamanBukuScreen> {
                     color: AppColors.maroon,
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -112,7 +116,7 @@ class _PeminjamanBukuScreenState extends State<PeminjamanBukuScreen> {
                           const SizedBox(height: 20),
 
                           Text(
-                            'DAFTAR PINJAMAN AKTIF (${loans.length})',
+                            'DAFTAR PEMINJAMAN (${loans.length})',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -149,7 +153,8 @@ class _PeminjamanBukuScreenState extends State<PeminjamanBukuScreen> {
                             ...loans.map(
                               (loan) => LoanCardWidget(
                                 loan: loan,
-                                onRequestExtension: () => _handleExtension(loan),
+                                onRequestExtension: () =>
+                                    _handleExtension(loan),
                               ),
                             ),
                           const SizedBox(height: 20),
@@ -266,7 +271,8 @@ class _PeminjamanBukuScreenState extends State<PeminjamanBukuScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.info_outline_rounded, color: AppColors.maroon, size: 18),
+              const Icon(Icons.info_outline_rounded,
+                  color: AppColors.maroon, size: 18),
               const SizedBox(width: 8),
               Text(
                 'Ketentuan Peminjaman Pustaka',
@@ -279,10 +285,14 @@ class _PeminjamanBukuScreenState extends State<PeminjamanBukuScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          _buildRuleItem('1. Maksimal peminjaman 2 buku fisik sekaligus per anggota.'),
-          _buildRuleItem('2. Masa pinjam 14 hari kalender sejak tanggal pengambilan di rak.'),
-          _buildRuleItem('3. Pengajuan perpanjangan maksimal 1 kali (7 hari tambahan).'),
-          _buildRuleItem('4. Keterlambatan pengembalian dikenakan denda literasi Rp 1.000/hari.'),
+          _buildRuleItem(
+              '1. Maksimal peminjaman 2 buku fisik sekaligus per anggota.'),
+          _buildRuleItem(
+              '2. Masa pinjam 14 hari kalender sejak tanggal pengambilan di rak.'),
+          _buildRuleItem(
+              '3. Pengajuan perpanjangan maksimal 1 kali (7 hari tambahan).'),
+          _buildRuleItem(
+              '4. Keterlambatan pengembalian dikenakan denda literasi Rp 1.000/hari.'),
         ],
       ),
     );

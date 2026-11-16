@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/features/profil/models/profil_model.dart';
@@ -63,7 +64,10 @@ class ProfilViewModel extends ChangeNotifier {
   }
 
   /// Memilih foto dari galeri dan memperbarui profil pengguna.
-  Future<bool> pickProfilePhoto({ImagePicker? picker}) async {
+  Future<bool> pickProfilePhoto({
+    required BuildContext context,
+    ImagePicker? picker,
+  }) async {
     try {
       final imagePicker = picker ?? ImagePicker();
       final selected = await imagePicker.pickImage(
@@ -73,10 +77,37 @@ class ProfilViewModel extends ChangeNotifier {
         imageQuality: 85,
       );
       if (selected == null) return false;
+      if (!context.mounted) return false;
+
+      final cropped = await ImageCropper().cropImage(
+        sourcePath: selected.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 90,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Atur Foto Profil',
+            toolbarColor: const Color(0xFF5B1B14),
+            toolbarWidgetColor: Colors.white,
+            activeControlsWidgetColor: const Color(0xFF8B261D),
+            lockAspectRatio: true,
+          ),
+          IOSUiSettings(
+            title: 'Atur Foto Profil',
+            aspectRatioLockEnabled: true,
+            resetAspectRatioEnabled: false,
+          ),
+          WebUiSettings(
+            context: context,
+            presentStyle: WebPresentStyle.dialog,
+          ),
+        ],
+      );
+      if (cropped == null) return false;
 
       await updateProfile(
         name: userName,
-        photoUrl: selected.path,
+        photoUrl: cropped.path,
       );
       return true;
     } catch (e) {

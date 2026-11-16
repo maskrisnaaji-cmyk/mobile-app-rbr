@@ -41,7 +41,7 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   }
 
   Future<void> _pickProfilePhoto() async {
-    final success = await _viewModel.pickProfilePhoto();
+    final success = await _viewModel.pickProfilePhoto(context: context);
     if (!success && _viewModel.errorMessage != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -75,8 +75,8 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
             ),
             backgroundColor: AppColors.maroon,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       } else {
@@ -130,8 +130,7 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
             ),
             body: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -239,8 +238,7 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
               onPressed: _pickProfilePhoto,
               icon: const Icon(Icons.photo_camera_outlined, size: 17),
               label: const Text('Ubah Foto Profil'),
-              style:
-                  TextButton.styleFrom(foregroundColor: AppColors.maroon),
+              style: TextButton.styleFrom(foregroundColor: AppColors.maroon),
             ),
           ),
         ],
@@ -369,8 +367,7 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                color: AppColors.greyText.withValues(alpha: 0.6)),
+                fontSize: 12, color: AppColors.greyText.withValues(alpha: 0.6)),
             prefixIcon: const Icon(Icons.lock_outline_rounded,
                 size: 18, color: AppColors.maroon),
             suffixIcon: IconButton(
@@ -397,8 +394,7 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  const BorderSide(color: AppColors.maroon, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.maroon, width: 1.5),
             ),
           ),
         ),

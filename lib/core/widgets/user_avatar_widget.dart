@@ -65,7 +65,6 @@ class UserAvatarWidget extends StatelessWidget {
             radius: radius,
             backgroundColor:
                 backgroundColor ?? AppColors.maroon.withValues(alpha: 0.12),
-            backgroundImage: photoImage,
             child: photoImage == null
                 ? Text(
                     initials,
@@ -75,7 +74,25 @@ class UserAvatarWidget extends StatelessWidget {
                       color: textColor ?? AppColors.maroon,
                     ),
                   )
-                : null,
+                : ClipOval(
+                    child: Image(
+                      image: photoImage,
+                      width: radius * 2,
+                      height: radius * 2,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Center(
+                        child: Text(
+                          initials,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize:
+                                fontSize ?? (radius * 0.72).clamp(8.0, 18.0),
+                            fontWeight: FontWeight.bold,
+                            color: textColor ?? AppColors.maroon,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
           ),
         );
 
