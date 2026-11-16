@@ -158,7 +158,6 @@ class ProfilViewModel extends ChangeNotifier {
 
   /// Memperbarui kata sandi akun pengguna.
   Future<bool> changePassword({
-    required String currentPassword,
     required String newPassword,
   }) async {
     _isLoading = true;
@@ -167,7 +166,6 @@ class ProfilViewModel extends ChangeNotifier {
 
     try {
       await repository.changePassword(
-        currentPassword: currentPassword,
         newPassword: newPassword,
       );
       return true;

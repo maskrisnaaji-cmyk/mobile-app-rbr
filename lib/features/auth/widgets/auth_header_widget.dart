@@ -12,7 +12,7 @@ class AuthHeaderWidget extends StatelessWidget {
   const AuthHeaderWidget({
     super.key,
     this.title = 'Selamat Datang di Rumah\nBudaya Ratna',
-    this.subtitle = 'Ruang temu seni, literasi & kehangatan tradisi Jawa.',
+    this.subtitle = 'Library Cafe | Bookshop | Fortune Telling',
     this.bannerAsset = 'assets/images/rbr_frontt.jpg',
   });
 
@@ -30,7 +30,19 @@ class AuthHeaderWidget extends StatelessWidget {
             color: AppColors.maroon,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.other_houses, color: Colors.white, size: 28),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/rbr_front.jpeg',
+              width: 50,
+              height: 50,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.other_houses,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 12),
         Text(

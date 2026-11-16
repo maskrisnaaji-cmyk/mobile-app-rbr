@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mobile_app/core/services/user_session.dart';
-import 'package:mobile_app/features/auth/views/login_view.dart';
+import 'package:mobile_app/features/auth/views/splash_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6B1D1B)),
         useMaterial3: true,
       ),
-      home: const LoginView(),
+      home: const SplashView(),
     );
   }
 }

@@ -18,11 +18,9 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   late final ProfilViewModel _viewModel;
   final _passwordFormKey = GlobalKey<FormState>();
 
-  final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  bool _obscureCurrent = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
@@ -34,7 +32,6 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
 
   @override
   void dispose() {
-    _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -56,14 +53,12 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
   Future<void> _submitChangePassword() async {
     if (_passwordFormKey.currentState?.validate() ?? false) {
       final success = await _viewModel.changePassword(
-        currentPassword: _currentPasswordController.text,
         newPassword: _newPasswordController.text,
       );
 
       if (!mounted) return;
 
       if (success) {
-        _currentPasswordController.clear();
         _newPasswordController.clear();
         _confirmPasswordController.clear();
 
@@ -266,18 +261,6 @@ class _PengaturanAkunScreenState extends State<PengaturanAkunScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildPasswordField(
-              controller: _currentPasswordController,
-              label: 'Kata Sandi Saat Ini',
-              hint: 'Masukkan kata sandi lama',
-              obscure: _obscureCurrent,
-              onToggle: () =>
-                  setState(() => _obscureCurrent = !_obscureCurrent),
-              validator: (val) => val == null || val.isEmpty
-                  ? 'Kata sandi saat ini wajib diisi'
-                  : null,
-            ),
-            const SizedBox(height: 12),
             _buildPasswordField(
               controller: _newPasswordController,
               label: 'Kata Sandi Baru',

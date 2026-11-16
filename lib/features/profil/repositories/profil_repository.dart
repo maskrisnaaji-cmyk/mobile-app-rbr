@@ -15,7 +15,6 @@ abstract class ProfilRepository {
   Future<void> saveNotificationPreferences(
       NotificationPreferencesModel preferences);
   Future<void> changePassword({
-    required String currentPassword,
     required String newPassword,
   });
 }
@@ -82,8 +81,7 @@ class ProfilRepositoryImpl implements ProfilRepository {
             'Selasa s/d Minggu beroperasi pukul 09.00 - 21.00 WIB. Hari Senin tutup berkala untuk konservasi, restorasi buku kuno, dan pemeliharaan fasilitas salon.',
       ),
       FaqItemModel(
-        question:
-            'Bagaimana mekanisme donasi buku atau manuskrip keluarga?',
+        question: 'Bagaimana mekanisme donasi buku atau manuskrip keluarga?',
         answer:
             'Kami menyambut kurasi naskah budaya dan buku sejarah lokal. Silakan kirimkan foto naskah beserta deskripsi singkat melalui WhatsApp kurator untuk jadwal temu telaah kuratorial.',
       ),
@@ -103,7 +101,6 @@ class ProfilRepositoryImpl implements ProfilRepository {
 
   @override
   Future<void> changePassword({
-    required String currentPassword,
     required String newPassword,
   }) async {
     // Simulasi pembaruan kata sandi akun
