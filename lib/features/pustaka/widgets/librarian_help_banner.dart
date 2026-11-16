@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_app/core/theme/colors.dart';
+import 'package:mobile_app/features/profil/views/pusat_bantuan_screen.dart';
 
 /// Komponen Banner Bantuan Pustakawan
 class LibrarianHelpBanner extends StatelessWidget {
@@ -44,14 +45,22 @@ class LibrarianHelpBanner extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: onAskLibrarian ?? () {},
+            onPressed: onAskLibrarian ??
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PusatBantuanScreen(),
+                    ),
+                  );
+                },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: Text(
-              'Tanya Pustakawan',
+              'Tanyakan Pustakawan',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 9,
                 fontWeight: FontWeight.bold,

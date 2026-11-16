@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_app/core/config/api_config.dart';
 import 'package:mobile_app/features/pustaka/models/book_model.dart';
 import 'package:mobile_app/features/pustaka/models/favorite_model.dart';
@@ -19,20 +20,66 @@ abstract class PustakaRepository {
     required String borrowDate,
     required String dueDate,
     required String? token,
+    String? memberName,
+    String? memberEmail,
+    String? memberPhone,
+    String? identityNumber,
+    String? notes,
   });
   Future<void> requestLoanExtension(String loanId, String? token);
   Future<List<FavoriteBook>> getFavoriteBooks();
+  Future<bool> saveFavoriteBook(FavoriteBook book);
+  Future<bool> removeFavoriteBook(String title);
+  Future<bool> isBookFavorite(String title);
   Future<List<BookReview>> getReviews();
+  Future<Set<String>> getBorrowedBookIdentifiers();
+  Future<void> saveBorrowedBookIdentifier(String identifier);
+  Future<void> removeBorrowedBookIdentifier(String identifier);
 }
 
 /// Implementasi repository pustaka terintegrasi ke REST API backend dengan fallback data demo
 class PustakaRepositoryImpl implements PustakaRepository {
   final http.Client _client;
+  static const String _prefFavoritesKey = 'rbr_saved_favorite_books';
+  static const String _prefBorrowedBooksKey = 'rbr_borrowed_books_identifiers';
 
   PustakaRepositoryImpl({http.Client? client}) : _client = client ?? http.Client();
 
   @override
+  Future<Set<String>> getBorrowedBookIdentifiers() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_prefBorrowedBooksKey);
+      if (list != null) {
+        return list.map((e) => e.toLowerCase().trim()).toSet();
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  @override
+  Future<void> saveBorrowedBookIdentifier(String identifier) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final current = (prefs.getStringList(_prefBorrowedBooksKey) ?? []).toSet();
+      current.add(identifier.toLowerCase().trim());
+      await prefs.setStringList(_prefBorrowedBooksKey, current.toList());
+    } catch (_) {}
+  }
+
+  @override
+  Future<void> removeBorrowedBookIdentifier(String identifier) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final current = (prefs.getStringList(_prefBorrowedBooksKey) ?? []).toSet();
+      current.remove(identifier.toLowerCase().trim());
+      await prefs.setStringList(_prefBorrowedBooksKey, current.toList());
+    } catch (_) {}
+  }
+
+  @override
   Future<List<Book>> getBooks() async {
+    List<Book> books = [];
     try {
       final response = await _client
           .get(Uri.parse(ApiConfig.booksUrl))
@@ -41,7 +88,7 @@ class PustakaRepositoryImpl implements PustakaRepository {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (data.isNotEmpty) {
-          return data
+          books = data
               .map((item) => Book.fromJson(item as Map<String, dynamic>))
               .toList();
         }
@@ -49,7 +96,27 @@ class PustakaRepositoryImpl implements PustakaRepository {
     } catch (_) {
       // Fallback ke dummy books jika server offline
     }
-    return Book.dummyBooks;
+    if (books.isEmpty) {
+      books = List.from(Book.dummyBooks);
+    }
+
+    // Pastikan status default adalah TERSEDIA, kecuali jika telah dipinjam
+    final borrowed = await getBorrowedBookIdentifiers();
+    books = books.map((b) {
+      final isLocallyBorrowed = borrowed.contains(b.id.toLowerCase().trim()) ||
+          borrowed.contains(b.title.toLowerCase().trim());
+      if (isLocallyBorrowed) {
+        return b.copyWith(status: 'DIPINJAM');
+      }
+      // Jika status dari API kosong atau default, pastikan TERSEDIA
+      final s = b.status.toUpperCase();
+      if (s.isEmpty || s.contains('TERSEDIA')) {
+        return b.copyWith(status: 'TERSEDIA');
+      }
+      return b;
+    }).toList();
+
+    return books;
   }
 
   @override
@@ -97,30 +164,49 @@ class PustakaRepositoryImpl implements PustakaRepository {
     required String borrowDate,
     required String dueDate,
     required String? token,
+    String? memberName,
+    String? memberEmail,
+    String? memberPhone,
+    String? identityNumber,
+    String? notes,
   }) async {
-    if (token == null || token.isEmpty) {
-      throw Exception('Sesi login tidak ditemukan. Silakan login kembali.');
-    }
+    final payload = {
+      'bookCode': bookCode,
+      'title': title,
+      'author': author,
+      'rackLocation': rackLocation,
+      'borrowDate': borrowDate,
+      'dueDate': dueDate,
+      if (memberName != null && memberName.isNotEmpty) 'memberName': memberName,
+      if (memberEmail != null && memberEmail.isNotEmpty) 'memberEmail': memberEmail,
+      if (memberPhone != null && memberPhone.isNotEmpty) 'memberPhone': memberPhone,
+      if (identityNumber != null && identityNumber.isNotEmpty) 'identityNumber': identityNumber,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+    };
 
-    final response = await _client.post(
-      Uri.parse('${ApiConfig.baseUrl}/loans/request'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'bookCode': bookCode,
-        'title': title,
-        'author': author,
-        'rackLocation': rackLocation,
-        'borrowDate': borrowDate,
-        'dueDate': dueDate,
-      }),
-    ).timeout(const Duration(seconds: 8));
+    try {
+      final response = await _client.post(
+        Uri.parse('${ApiConfig.baseUrl}/loans/request'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 8));
 
-    final body = jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(body is Map ? body['message'] ?? 'Pengajuan peminjaman gagal.' : 'Pengajuan peminjaman gagal.');
+      final body = jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception(body is Map ? body['message'] ?? 'Pengajuan peminjaman gagal.' : 'Pengajuan peminjaman gagal.');
+      }
+      // Catat buku sebagai dipinjam secara persisten
+      if (bookCode.isNotEmpty) await saveBorrowedBookIdentifier(bookCode);
+      if (title.isNotEmpty) await saveBorrowedBookIdentifier(title);
+    } catch (e) {
+      if (e.toString().contains('Exception:')) rethrow;
+      // Jika server offline / timeout, jangan lempar error yang memblokir flow demo
+      if (bookCode.isNotEmpty) await saveBorrowedBookIdentifier(bookCode);
+      if (title.isNotEmpty) await saveBorrowedBookIdentifier(title);
+      return;
     }
   }
 
@@ -148,7 +234,66 @@ class PustakaRepositoryImpl implements PustakaRepository {
 
   @override
   Future<List<FavoriteBook>> getFavoriteBooks() async {
-    return FavoriteBook.demoFavorites;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_prefFavoritesKey);
+      List<FavoriteBook> saved = [];
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          saved = decoded.map((e) => FavoriteBook.fromJson(e as Map<String, dynamic>)).toList();
+        }
+      }
+      // Gabungkan demo favorites jika belum ada dalam list tersimpan
+      final Set<String> existingTitles = saved.map((b) => b.title.toLowerCase().trim()).toSet();
+      for (final demo in FavoriteBook.demoFavorites) {
+        if (!existingTitles.contains(demo.title.toLowerCase().trim())) {
+          saved.add(demo);
+        }
+      }
+      return saved;
+    } catch (_) {
+      return FavoriteBook.demoFavorites;
+    }
+  }
+
+  @override
+  Future<bool> saveFavoriteBook(FavoriteBook book) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final all = await getFavoriteBooks();
+      all.removeWhere((b) => b.title.toLowerCase().trim() == book.title.toLowerCase().trim());
+      all.insert(0, book);
+      final encoded = jsonEncode(all.map((e) => e.toJson()).toList());
+      await prefs.setString(_prefFavoritesKey, encoded);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> removeFavoriteBook(String title) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final all = await getFavoriteBooks();
+      all.removeWhere((b) => b.title.toLowerCase().trim() == title.toLowerCase().trim());
+      final encoded = jsonEncode(all.map((e) => e.toJson()).toList());
+      await prefs.setString(_prefFavoritesKey, encoded);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> isBookFavorite(String title) async {
+    try {
+      final all = await getFavoriteBooks();
+      return all.any((b) => b.title.toLowerCase().trim() == title.toLowerCase().trim());
+    } catch (_) {
+      return false;
+    }
   }
 
   @override

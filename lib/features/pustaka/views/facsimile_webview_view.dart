@@ -152,7 +152,12 @@ class _FacsimileWebViewViewState extends State<FacsimileWebViewView> {
         androidController.setAllowFileAccess(true);
       }
 
-      final uri = Uri.tryParse(widget.url.trim());
+      String targetUrl = widget.url.trim();
+      if (targetUrl.toLowerCase().endsWith('.pdf') && !targetUrl.contains('docs.google.com/gview')) {
+        targetUrl = 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(targetUrl)}';
+      }
+
+      final uri = Uri.tryParse(targetUrl);
       if (uri != null && uri.hasScheme) {
         controller.loadRequest(uri);
         _startLoadingTimers();

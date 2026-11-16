@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_app/features/pustaka/models/book_model.dart';
 
 /// Model data untuk koleksi buku & manuskrip favorit
 class FavoriteBook {
@@ -10,6 +11,8 @@ class FavoriteBook {
   final String shelf;
   final String desc;
   final IconData icon;
+  final String? coverImage;
+  final String? bookId;
 
   const FavoriteBook({
     required this.title,
@@ -20,7 +23,74 @@ class FavoriteBook {
     required this.shelf,
     required this.desc,
     required this.icon,
+    this.coverImage,
+    this.bookId,
   });
+
+  factory FavoriteBook.fromBook(Book book) {
+    IconData resolvedIcon = Icons.menu_book_rounded;
+    final cat = book.category.toLowerCase();
+    if (cat.contains('drama') || cat.contains('teater')) {
+      resolvedIcon = Icons.theater_comedy_rounded;
+    } else if (cat.contains('sejarah') || cat.contains('arsip') || cat.contains('babad')) {
+      resolvedIcon = Icons.history_edu_rounded;
+    } else if (cat.contains('sastra') || cat.contains('prosa') || cat.contains('esai')) {
+      resolvedIcon = Icons.auto_stories_rounded;
+    }
+
+    return FavoriteBook(
+      title: book.title,
+      author: book.author,
+      category: book.category,
+      year: book.year,
+      rating: book.rating,
+      shelf: book.shelfLocation,
+      desc: book.synopsis.isNotEmpty
+          ? book.synopsis
+          : 'Koleksi naskah literasi budaya Rumah Budaya Ratna.',
+      icon: resolvedIcon,
+      coverImage: book.coverImage,
+      bookId: book.id,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'author': author,
+        'category': category,
+        'year': year,
+        'rating': rating,
+        'shelf': shelf,
+        'desc': desc,
+        'coverImage': coverImage,
+        'bookId': bookId,
+      };
+
+  factory FavoriteBook.fromJson(Map<String, dynamic> json) {
+    return FavoriteBook(
+      title: json['title']?.toString() ?? '',
+      author: json['author']?.toString() ?? '',
+      category: json['category']?.toString() ?? 'Umum',
+      year: json['year']?.toString() ?? '2024',
+      rating: (json['rating'] as num?)?.toDouble() ?? 4.8,
+      shelf: json['shelf']?.toString() ?? 'RAK 1A',
+      desc: json['desc']?.toString() ?? '',
+      icon: Icons.menu_book_rounded,
+      coverImage: json['coverImage']?.toString(),
+      bookId: json['bookId']?.toString(),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FavoriteBook &&
+          runtimeType == other.runtimeType &&
+          (title.toLowerCase().trim() == other.title.toLowerCase().trim() ||
+              (bookId != null && bookId == other.bookId));
+
+  @override
+  int get hashCode => title.toLowerCase().trim().hashCode;
 
   static List<FavoriteBook> get demoFavorites => const [
         FavoriteBook(

@@ -3,7 +3,7 @@ class Book {
   final String title;
   final String author;
   final String coverImage;
-  final String status; // Contoh: 'Tersedia di Rak', 'Dipinjam'
+  final String status; // Default: 'TERSEDIA', berubah dinamis saat dipinjam ('DIPINJAM' / 'DISEWAKAN')
   final String shelfLocation; // Contoh: 'RAK 3A', 'RAK 2C'
   final String category;
   final String year;
@@ -20,7 +20,7 @@ class Book {
     required this.title,
     required this.author,
     required this.coverImage,
-    required this.status,
+    this.status = 'TERSEDIA',
     required this.shelfLocation,
     required this.category,
     required this.year,
@@ -35,6 +35,52 @@ class Book {
 
   String get image => coverImage;
   String get imageUrl => coverImage;
+
+  bool get isAvailable =>
+      status.toUpperCase() == 'TERSEDIA' ||
+      status.toLowerCase().contains('tersedia');
+
+  bool get isBorrowed =>
+      status.toUpperCase() == 'DIPINJAM' ||
+      status.toUpperCase() == 'DISEWAKAN' ||
+      status.toLowerCase().contains('pinjam') ||
+      status.toLowerCase().contains('sewa');
+
+  Book copyWith({
+    String? id,
+    String? title,
+    String? author,
+    String? coverImage,
+    String? status,
+    String? shelfLocation,
+    String? category,
+    String? year,
+    String? pageCount,
+    String? language,
+    String? condition,
+    String? synopsis,
+    double? rating,
+    int? reviewCount,
+    String? digitalUrl,
+  }) {
+    return Book(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      author: author ?? this.author,
+      coverImage: coverImage ?? this.coverImage,
+      status: status ?? this.status,
+      shelfLocation: shelfLocation ?? this.shelfLocation,
+      category: category ?? this.category,
+      year: year ?? this.year,
+      pageCount: pageCount ?? this.pageCount,
+      language: language ?? this.language,
+      condition: condition ?? this.condition,
+      synopsis: synopsis ?? this.synopsis,
+      rating: rating ?? this.rating,
+      reviewCount: reviewCount ?? this.reviewCount,
+      digitalUrl: digitalUrl ?? this.digitalUrl,
+    );
+  }
 
   /// Helper untuk memastikan URL/path cover buku terpetakan dengan benar (Vercel Blob / Cloud URL / Local Asset)
   static String resolveCoverImageUrl(dynamic rawImage, {String title = ''}) {
@@ -87,7 +133,9 @@ class Book {
       title: title,
       author: json['author'] ?? 'Penulis',
       coverImage: cover,
-      status: json['status'] ?? 'Tersedia di Rak',
+      status: ((json['status'] ?? json['book_status'])?.toString().trim().isNotEmpty == true)
+          ? (json['status'] ?? json['book_status']).toString().trim().toUpperCase()
+          : 'TERSEDIA',
       shelfLocation: json['shelfLocation'] ??
           json['rack_location'] ??
           json['rackLocation'] ??
@@ -122,7 +170,7 @@ class Book {
           title: 'Dokumen Jibril',
           author: 'W.S. Rendra',
           coverImage: 'assets/images/dokumen_jibril.jpg',
-          status: 'Tersedia di Rak',
+          status: 'TERSEDIA',
           shelfLocation: 'RAK 3A',
           category: 'KOLEKSI KHUSUS SASTRA KLASIK',
           year: '1978',
@@ -140,7 +188,7 @@ class Book {
           title: 'Anjing-Anjing Menyerbu Lek Zul',
           author: 'C.R. Tanujaya',
           coverImage: 'assets/images/anjing_anjing_menyerbu_lek_zul.jpg',
-          status: 'Dipinjam',
+          status: 'TERSEDIA',
           shelfLocation: 'RAK 3B',
           category: 'PROSA KONTEMPORER',
           year: '1984',
@@ -157,7 +205,7 @@ class Book {
           title: 'Laki-Laki Yang Kawin Dengan Peri',
           author: 'Eka Kurniawan',
           coverImage: 'assets/images/laki_laki_yang_kawin_dengan_peri.jpg',
-          status: 'Tersedia di Rak',
+          status: 'TERSEDIA',
           shelfLocation: 'RAK 2C',
           category: 'SASTRA REALISME MAGIS',
           year: '2015',
@@ -174,7 +222,7 @@ class Book {
           title: 'Lipstik Di Tas Doni',
           author: 'Sujiwo Tejo',
           coverImage: 'assets/images/lipstik_di_tas_doni.jpg',
-          status: 'Tersedia di Rak',
+          status: 'TERSEDIA',
           shelfLocation: 'RAK 1A',
           category: 'KOLOM & ESAI BUDAYA',
           year: '2007',

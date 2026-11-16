@@ -6,6 +6,7 @@ import 'package:mobile_app/features/pustaka/viewmodels/pustaka_viewmodel.dart';
 import 'package:mobile_app/features/pustaka/widgets/book_card_grid_item.dart';
 import 'package:mobile_app/features/pustaka/widgets/librarian_help_banner.dart';
 import 'package:mobile_app/features/pustaka/widgets/pustaka_filter_chip.dart';
+import 'package:mobile_app/features/profil/views/pusat_bantuan_screen.dart';
 
 class PustakaView extends StatefulWidget {
   final PustakaViewModel? viewModel;
@@ -208,7 +209,16 @@ class _PustakaViewState extends State<PustakaView> {
                 const SizedBox(height: 20),
 
                 // Banner Bantuan Pustakawan
-                const LibrarianHelpBanner(),
+                LibrarianHelpBanner(
+                  onAskLibrarian: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PusatBantuanScreen(),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
