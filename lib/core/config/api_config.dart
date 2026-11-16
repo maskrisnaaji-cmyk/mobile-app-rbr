@@ -32,6 +32,7 @@ class ApiConfig {
   static String get menusUrl => '$baseUrl/menus';
   static String get eventsUrl => '$baseUrl/events';
   static String get booksUrl => '$baseUrl/books';
+  static String get couponsUrl => '$baseUrl/coupons';
   static String get registerUrl => '$baseUrl/auth/register';
   static String get loginUrl => '$baseUrl/auth/login';
   static String get googleLoginUrl => '$baseUrl/auth/google-login';
@@ -39,5 +40,6 @@ class ApiConfig {
   static String get aiChatUrl => '$baseUrl/ai/chat';
   static String get paymentChargeUrl => '$baseUrl/payment/charge';
   static String get paymentNotificationUrl => '$baseUrl/payment/notification';
-  static String paymentStatusUrl(String orderId) => '$baseUrl/payment/status/$orderId';
+  static String paymentStatusUrl(String orderId) =>
+      '$baseUrl/payment/status/$orderId';
 }

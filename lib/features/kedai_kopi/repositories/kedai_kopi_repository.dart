@@ -3,12 +3,14 @@ import 'package:http/http.dart' as http;
 import 'package:mobile_app/core/config/api_config.dart';
 import 'package:mobile_app/core/services/payment_service.dart';
 import 'package:mobile_app/features/kedai_kopi/models/cart_item_model.dart';
+import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
 import 'package:mobile_app/features/kedai_kopi/models/menu_model.dart';
 
 /// Kontrak repositori untuk fitur Kedai Kopi
 abstract class KedaiKopiRepository {
   /// Mengambil daftar menu kedai kopi dari backend
   Future<List<MenuModel>> getMenus();
+  Future<List<CultureCoupon>> getCoupons();
 
   /// Mengirim pesanan meja / charge transaksi kedai
   Future<Map<String, dynamic>?> submitOrder({
@@ -36,6 +38,22 @@ class KedaiKopiRepositoryImpl implements KedaiKopiRepository {
           .toList();
     }
     throw Exception('Gagal memuat menu (HTTP ${response.statusCode})');
+  }
+
+  @override
+  Future<List<CultureCoupon>> getCoupons() async {
+    final response = await http
+        .get(Uri.parse(ApiConfig.couponsUrl))
+        .timeout(const Duration(seconds: 8));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List<dynamic>;
+      return data
+          .map((item) => CultureCoupon.fromJson(item as Map<String, dynamic>))
+          .where((coupon) => coupon.status.toLowerCase() == 'aktif')
+          .toList();
+    }
+    throw Exception('Gagal memuat kupon (HTTP ${response.statusCode})');
   }
 
   @override

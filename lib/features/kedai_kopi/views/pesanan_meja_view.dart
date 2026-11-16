@@ -9,6 +9,7 @@ import 'package:mobile_app/features/booking_payment/views/qris_payment_view.dart
 import 'package:mobile_app/features/booking_payment/views/va_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_pembayaran_view.dart';
 import 'package:mobile_app/features/kedai_kopi/viewmodels/kedai_kopi_viewmodel.dart';
+import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
 
 class PesananMejaView extends StatefulWidget {
   final List<CartItem> cartItems;
@@ -30,11 +31,15 @@ class PesananMejaView extends StatefulWidget {
 
 class _PesananMejaViewState extends State<PesananMejaView> {
   late final KedaiKopiViewModel _viewModel;
+  CultureCoupon? _selectedCoupon;
 
   @override
   void initState() {
     super.initState();
     _viewModel = widget.viewModel ?? KedaiKopiViewModel();
+    _viewModel.fetchCoupons().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   List<CartItem> get _effectiveCartItems {
@@ -66,7 +71,7 @@ class _PesananMejaViewState extends State<PesananMejaView> {
   }
 
   int get _taxFee => 0;
-  int get _discount => 0;
+  int get _discount => _selectedCoupon?.discountFor(_subtotal) ?? 0;
   int get _totalPrice => _subtotal + _taxFee - _discount;
 
   String _formatRupiah(int price) {
@@ -82,7 +87,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
           backgroundColor: AppColors.bgCanvas,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.darkText),
+            icon:
+                const Icon(Icons.arrow_back_rounded, color: AppColors.darkText),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -96,11 +102,13 @@ class _PesananMejaViewState extends State<PesananMejaView> {
           centerTitle: false,
           actions: [
             IconButton(
-              icon: const Icon(Icons.share_outlined, color: AppColors.darkText, size: 20),
+              icon: const Icon(Icons.share_outlined,
+                  color: AppColors.darkText, size: 20),
               onPressed: () {},
             ),
             IconButton(
-              icon: const Icon(Icons.person_outline_rounded, color: AppColors.darkText, size: 20),
+              icon: const Icon(Icons.person_outline_rounded,
+                  color: AppColors.darkText, size: 20),
               onPressed: () {},
             ),
           ],
@@ -131,7 +139,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                 subtotalLabel: 'Subtotal ($_totalItemsCount Item)',
                 subtotal: _formatRupiah(_subtotal),
                 taxFee: _formatRupiah(_taxFee),
-                discount: _discount > 0 ? '-${_formatRupiah(_discount)}' : 'Rp 0',
+                discount:
+                    _discount > 0 ? '-${_formatRupiah(_discount)}' : 'Rp 0',
                 totalPrice: _formatRupiah(_totalPrice),
               ),
               const SizedBox(height: 16),
@@ -169,7 +178,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               color: const Color(0xFFFED7AA),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.coffee_rounded, color: AppColors.maroon, size: 20),
+            child: const Icon(Icons.coffee_rounded,
+                color: AppColors.maroon, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -308,7 +318,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.bgCanvas,
                       borderRadius: BorderRadius.circular(8),
@@ -328,7 +339,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                 onTap: () => Navigator.pop(context),
                 borderRadius: BorderRadius.circular(4),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   child: Text(
                     'Ubah',
                     style: GoogleFonts.plusJakartaSans(
@@ -350,11 +362,14 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               final item = items[index];
               return Column(
                 children: [
-                  if (index > 0) const Divider(height: 20, color: AppColors.lightBorder),
+                  if (index > 0)
+                    const Divider(height: 20, color: AppColors.lightBorder),
                   _buildOrderItem(
                     '${item.quantity}x ${item.name}',
                     _formatRupiah(item.totalPrice),
-                    item.note.isNotEmpty ? item.note : (item.category ?? 'Pesanan Kedai'),
+                    item.note.isNotEmpty
+                        ? item.note
+                        : (item.category ?? 'Pesanan Kedai'),
                   ),
                 ],
               );
@@ -407,6 +422,7 @@ class _PesananMejaViewState extends State<PesananMejaView> {
   }
 
   Widget _buildPromoSection() {
+    final coupon = _selectedCoupon;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -422,7 +438,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.confirmation_number_outlined, color: AppColors.maroon, size: 18),
+                  const Icon(Icons.confirmation_number_outlined,
+                      color: AppColors.maroon, size: 18),
                   const SizedBox(width: 8),
                   Text(
                     'Kupon & Promo Budaya',
@@ -435,7 +452,7 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                 ],
               ),
               Text(
-                'Tersedia 1 kupon',
+                'Tersedia ${_viewModel.coupons.length} kupon',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 10,
                   color: AppColors.greyText,
@@ -444,53 +461,168 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.goldLight),
+          InkWell(
+            onTap: _showCouponPicker,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: coupon == null
+                    ? const Color(0xFFFFF7ED)
+                    : const Color(0xFFEFFAF3),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: coupon == null
+                      ? AppColors.goldLight
+                      : const Color(0xFF9AD5AE),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    coupon == null
+                        ? Icons.local_offer_outlined
+                        : Icons.check_circle,
+                    color: coupon == null
+                        ? AppColors.maroon
+                        : const Color(0xFF16803C),
+                    size: 18,
                   ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'KUPONBUDAYA',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkText,
-                        ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      coupon == null
+                          ? 'Pilih kupon budaya'
+                          : '${coupon.code} • ${coupon.description}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
                       ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.check_circle, color: AppColors.maroon, size: 16),
-                    ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: AppColors.greyText, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showCouponPicker() async {
+    final selected = await showModalBottomSheet<CultureCoupon>(
+      context: context,
+      backgroundColor: AppColors.bgCanvas,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.lightBorder,
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.goldLight,
-                  borderRadius: BorderRadius.circular(10),
+              const SizedBox(height: 18),
+              Text(
+                'Pilih Kupon Budaya',
+                style: GoogleFonts.lora(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkText,
                 ),
-                child: Text(
-                  'Diterapkan',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.maroon,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Pilih satu kupon untuk mendapatkan potongan harga.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  color: AppColors.greyText,
+                ),
+              ),
+              const SizedBox(height: 14),
+              ..._viewModel.coupons.map(
+                (coupon) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context, coupon),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(13),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.lightBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                              color: AppColors.tagBg,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: const Icon(
+                                Icons.confirmation_number_outlined,
+                                color: AppColors.maroon,
+                                size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  coupon.code,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkText,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  coupon.description,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    color: AppColors.greyText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded,
+                              color: AppColors.greyText),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
+
+    if (!mounted || selected == null) return;
+    setState(() => _selectedCoupon = selected);
   }
 
   Widget _buildPaymentSection() {
@@ -509,7 +641,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.payment_rounded, color: AppColors.maroon, size: 18),
+                  const Icon(Icons.payment_rounded,
+                      color: AppColors.maroon, size: 18),
                   const SizedBox(width: 8),
                   Text(
                     'Metode Pembayaran',
@@ -584,7 +717,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
 
           if (paymentMethod == 0 || paymentMethod == 2) {
             final isQris = paymentMethod == 0;
-            final cleanOrder = 'RBR-KEDAI-${DateTime.now().millisecondsSinceEpoch}';
+            final cleanOrder =
+                'RBR-KEDAI-${DateTime.now().millisecondsSinceEpoch}';
 
             showDialog(
               context: context,
@@ -635,8 +769,10 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                     badgeText: table,
                     totalAmount: _formatRupiah(total),
                     rawAmount: total,
-                    vaNumber: chargeResult?['va_number'] ?? '5213 1845 9403 1716',
-                    bankName: '${(chargeResult?['bank'] ?? 'BCA').toUpperCase()} Virtual Account',
+                    vaNumber:
+                        chargeResult?['va_number'] ?? '5213 1845 9403 1716',
+                    bankName:
+                        '${(chargeResult?['bank'] ?? 'BCA').toUpperCase()} Virtual Account',
                     buttonLabel: 'CEK STATUS PEMBAYARAN',
                     nextScreen: strukView,
                   ),
@@ -674,7 +810,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               ),
             ),
             const SizedBox(width: 6),
-            const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+            const Icon(Icons.arrow_forward_rounded,
+                color: Colors.white, size: 18),
           ],
         ),
       ),

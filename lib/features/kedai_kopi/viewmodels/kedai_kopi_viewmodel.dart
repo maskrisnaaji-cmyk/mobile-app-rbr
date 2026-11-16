@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/features/kedai_kopi/models/cart_item_model.dart';
+import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
 import 'package:mobile_app/features/kedai_kopi/models/menu_model.dart';
 import 'package:mobile_app/features/kedai_kopi/repositories/kedai_kopi_repository.dart';
 
@@ -19,6 +20,7 @@ class KedaiKopiViewModel extends ChangeNotifier {
 
   List<MenuModel> _allMenuList = [];
   List<MenuModel> _filteredMenuList = [];
+  List<CultureCoupon> _coupons = [];
   List<String> _categories = [
     'Semua',
     'Kopi Nusantara',
@@ -89,6 +91,7 @@ class KedaiKopiViewModel extends ChangeNotifier {
   int get selectedCategoryIndex => _selectedCategoryIndex;
   List<MenuModel> get allMenuList => _allMenuList;
   List<MenuModel> get filteredMenuList => _filteredMenuList;
+  List<CultureCoupon> get coupons => List.unmodifiable(_coupons);
   List<String> get categories => _categories;
   Map<String, int> get itemCounts => Map.unmodifiable(_itemCounts);
   int get selectedPaymentMethod => _selectedPaymentMethod;
@@ -179,6 +182,15 @@ class KedaiKopiViewModel extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> fetchCoupons() async {
+    try {
+      _coupons = await repository.getCoupons();
+      notifyListeners();
+    } catch (_) {
+      // Checkout tetap dapat berjalan tanpa kupon jika API sedang tidak tersedia.
     }
   }
 
@@ -274,7 +286,8 @@ class KedaiKopiViewModel extends ChangeNotifier {
         : 'Semua';
     _filteredMenuList = _allMenuList.where((menu) {
       final nameMatches = menu.name.toLowerCase().contains(_searchQuery);
-      final categoryMatches = menu.category.toLowerCase().contains(_searchQuery);
+      final categoryMatches =
+          menu.category.toLowerCase().contains(_searchQuery);
       final matchesSearch =
           _searchQuery.isEmpty || nameMatches || categoryMatches;
       final matchesCategory =
