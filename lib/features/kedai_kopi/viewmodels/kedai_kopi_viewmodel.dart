@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/features/kedai_kopi/models/cart_item_model.dart';
 import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
@@ -7,6 +8,7 @@ import 'package:mobile_app/features/kedai_kopi/repositories/kedai_kopi_repositor
 /// ViewModel untuk mengelola seluruh state dan logika bisnis fitur Kedai Kopi
 class KedaiKopiViewModel extends ChangeNotifier {
   final KedaiKopiRepository repository;
+  Timer? _autoRefreshTimer;
 
   KedaiKopiViewModel({KedaiKopiRepository? repository})
       : repository = repository ?? KedaiKopiRepositoryImpl();
@@ -145,7 +147,7 @@ class KedaiKopiViewModel extends ChangeNotifier {
     return items;
   }
 
-  // ── Inisialisasi ──────────────────────────────────────────────────────────
+  // ── Inisialisasi & Lifecycle ─────────────────────────────────────────────
   void init() {
     _allMenuList = List.from(_defaultMenus);
     for (var item in _defaultMenus) {
@@ -156,13 +158,35 @@ class KedaiKopiViewModel extends ChangeNotifier {
     fetchMenus();
   }
 
+  /// Memulai sinkronisasi otomatis status menu secara berkala
+  void startAutoRefresh([Duration interval = const Duration(seconds: 4)]) {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(interval, (_) {
+      fetchMenus(silent: true);
+    });
+  }
+
+  /// Menghentikan sinkronisasi otomatis
+  void stopAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = null;
+  }
+
+  @override
+  void dispose() {
+    stopAutoRefresh();
+    super.dispose();
+  }
+
   // ── Aksi & Logika Menu ────────────────────────────────────────────────────
 
-  /// Mengambil daftar menu dari API
-  Future<void> fetchMenus() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  /// Mengambil daftar menu dari API (mendukung silent refresh agar UI tidak berkedip)
+  Future<void> fetchMenus({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
 
     try {
       final menus = await repository.getMenus();
@@ -172,15 +196,22 @@ class KedaiKopiViewModel extends ChangeNotifier {
           cats.add(menu.category);
           _itemPrices[menu.name] = menu.price;
           _itemCounts.putIfAbsent(menu.name, () => 0);
+
+          // Jika status menu berubah menjadi Habis, nolkan jumlah di keranjang
+          if (!menu.isAvailable && (_itemCounts[menu.name] ?? 0) > 0) {
+            _itemCounts[menu.name] = 0;
+          }
         }
         _allMenuList = menus;
         _categories = cats.toList();
         _applyFilter();
       }
     } catch (_) {
-      // Jika backend gagal, default menus tetap dapat dipakai
+      // Jika backend gagal, default menus / data yang sudah ada tetap dipakai
     } finally {
-      _isLoading = false;
+      if (!silent) {
+        _isLoading = false;
+      }
       notifyListeners();
     }
   }
@@ -224,10 +255,24 @@ class KedaiKopiViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Menambah jumlah menu ke keranjang
+  /// Menambah jumlah menu ke keranjang (dicegah jika menu berstatus habis)
   void incrementItem(String name) {
+    final menu = _allMenuList.cast<MenuModel?>().firstWhere(
+          (m) => m?.name == name,
+          orElse: () => null,
+        );
+    // Cegah penambahan jika menu habis
+    if (menu != null && !menu.isAvailable) {
+      return;
+    }
     _itemCounts[name] = (_itemCounts[name] ?? 0) + 1;
     notifyListeners();
+  }
+
+  /// Menambahkan menu ke keranjang (hanya jika menu tersedia)
+  void addToCart(MenuModel menu) {
+    if (!menu.isAvailable) return;
+    incrementItem(menu.name);
   }
 
   /// Mengurangi jumlah menu dari keranjang
@@ -276,6 +321,34 @@ class KedaiKopiViewModel extends ChangeNotifier {
     } finally {
       _isSubmittingOrder = false;
       notifyListeners();
+    }
+  }
+
+  /// Mendaftarkan pesanan baru ke backend kedai (status: UNPAID)
+  Future<Map<String, dynamic>?> createKedaiOrder({
+    required String orderCode,
+    required String tableNumber,
+    required List<CartItem> items,
+    required int totalPrice,
+  }) async {
+    try {
+      return await repository.createKedaiOrder(
+        orderCode: orderCode,
+        tableNumber: tableNumber,
+        items: items,
+        totalPrice: totalPrice,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Mengkonfirmasi pembayaran pesanan kedai (payment_status → PAID)
+  Future<bool> confirmKedaiOrderPayment(String orderCode) async {
+    try {
+      return await repository.confirmKedaiOrderPayment(orderCode);
+    } catch (_) {
+      return false;
     }
   }
 

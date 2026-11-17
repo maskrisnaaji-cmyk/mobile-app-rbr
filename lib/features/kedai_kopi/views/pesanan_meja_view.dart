@@ -728,6 +728,15 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               ),
             );
 
+            // 1. Kirim order ke backend kedai (POST /api/kedai/orders)
+            await _viewModel.createKedaiOrder(
+              orderCode: cleanOrder,
+              tableNumber: table,
+              items: items,
+              totalPrice: total,
+            );
+
+            // 2. Buat charge transaksi (Midtrans)
             final chargeResult = await _viewModel.submitOrderTransaction(
               orderId: cleanOrder,
               grossAmount: total,
@@ -756,6 +765,7 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                     qrString: chargeResult?['qr_string'],
                     buttonLabel: 'CEK STATUS PEMBAYARAN',
                     nextScreen: strukView,
+                    kedaiOrderCode: cleanOrder,
                   ),
                 ),
               );
@@ -775,12 +785,23 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                         '${(chargeResult?['bank'] ?? 'BCA').toUpperCase()} Virtual Account',
                     buttonLabel: 'CEK STATUS PEMBAYARAN',
                     nextScreen: strukView,
+                    kedaiOrderCode: cleanOrder,
                   ),
                 ),
               );
             }
             return;
           }
+
+          if (!mounted) return;
+
+          // Daftarkan pesanan kasir / tunai ke backend (status UNPAID)
+          await _viewModel.createKedaiOrder(
+            orderCode: orderNo,
+            tableNumber: table,
+            items: items,
+            totalPrice: total,
+          );
 
           if (!mounted) return;
           Navigator.push(

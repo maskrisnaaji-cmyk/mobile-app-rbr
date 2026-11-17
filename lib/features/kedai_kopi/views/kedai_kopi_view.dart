@@ -42,6 +42,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
     super.initState();
     _viewModel = widget.viewModel ?? KedaiKopiViewModel();
     _viewModel.init();
+    _viewModel.startAutoRefresh();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _viewModel.selectedTableNumber == null) {
         _showTableSelection();
@@ -51,6 +52,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
 
   @override
   void dispose() {
+    _viewModel.stopAutoRefresh();
     _searchController.dispose();
     super.dispose();
   }
@@ -548,8 +550,8 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                                           imageColor: _colorForCategory(
                                               menu.category),
                                           count: vm.itemCounts[menu.name] ?? 0,
-                                          onAdd: () => _viewModel
-                                              .incrementItem(menu.name),
+                                          isAvailable: menu.isAvailable,
+                                          onAdd: () => _viewModel.addToCart(menu),
                                           onRemove: () => _viewModel
                                               .decrementItem(menu.name),
                                         );

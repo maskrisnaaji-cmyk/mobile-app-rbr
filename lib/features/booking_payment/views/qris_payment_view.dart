@@ -16,6 +16,7 @@ class QrisPaymentView extends StatefulWidget {
   final String buttonLabel;
   final Widget? nextScreen;
   final PaymentStatusViewModel? viewModel;
+  final String? kedaiOrderCode;
 
   const QrisPaymentView({
     super.key,
@@ -29,6 +30,7 @@ class QrisPaymentView extends StatefulWidget {
     this.buttonLabel = 'CEK STATUS PEMBAYARAN',
     this.nextScreen,
     this.viewModel,
+    this.kedaiOrderCode,
   });
 
   @override
@@ -44,11 +46,20 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
     _viewModel = widget.viewModel ?? PaymentStatusViewModel();
   }
 
+  Future<void> _confirmKedaiPaymentIfAny() async {
+    final code = widget.kedaiOrderCode;
+    if (code != null && code.isNotEmpty) {
+      await _viewModel.confirmKedaiOrderPayment(code);
+    }
+  }
+
   Future<void> _checkStatus() async {
     final isPaid = await _viewModel.checkStatus(widget.orderNumber);
     if (!mounted) return;
 
     if (isPaid) {
+      await _confirmKedaiPaymentIfAny();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Color(0xFF2E7D32),
@@ -84,6 +95,8 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
     if (!mounted) return;
 
     if (success) {
+      await _confirmKedaiPaymentIfAny();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Color(0xFF2E7D32),

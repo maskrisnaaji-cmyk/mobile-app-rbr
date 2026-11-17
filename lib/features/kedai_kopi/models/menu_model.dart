@@ -8,6 +8,7 @@ class MenuModel {
   final String imageUrl;
   final String description;
   final String status;
+  final bool isAvailable;
 
   MenuModel({
     this.id,
@@ -19,6 +20,7 @@ class MenuModel {
     String? imageUrl,
     this.description = '',
     this.status = 'Tersedia',
+    this.isAvailable = true,
   })  : priceDouble = priceDouble ?? price.toDouble(),
         imageUrl = imageUrl ?? image;
 
@@ -113,7 +115,22 @@ class MenuModel {
 
     final description =
         json['description']?.toString() ?? json['note']?.toString() ?? '';
-    final status = json['status']?.toString() ?? 'Tersedia';
+    final rawStatus = json['status']?.toString() ?? 'Tersedia';
+
+    // Parsing akurat boolean isAvailable dari response backend
+    // Memeriksa is_available, tersedia, atau fallback status != 'Habis'
+    bool isAvailable = true;
+    if (json['is_available'] != null) {
+      final val = json['is_available'];
+      isAvailable = (val == true || val == 1 || val == '1' || val == 'true');
+    } else if (json['tersedia'] != null) {
+      final val = json['tersedia'];
+      isAvailable = (val == true || val == 1 || val == '1' || val == 'true');
+    } else {
+      isAvailable = rawStatus.trim().toLowerCase() != 'habis';
+    }
+
+    final finalStatus = isAvailable ? 'Tersedia' : 'Habis';
 
     return MenuModel(
       id: json['id'],
@@ -124,7 +141,8 @@ class MenuModel {
       image: resolvedImg,
       imageUrl: resolvedImg,
       description: description,
-      status: status,
+      status: finalStatus,
+      isAvailable: isAvailable,
     );
   }
 
@@ -137,7 +155,8 @@ class MenuModel {
       'image': image,
       'imageUrl': imageUrl,
       'description': description,
-      'status': status,
+      'status': isAvailable ? 'Tersedia' : 'Habis',
+      'is_available': isAvailable,
     };
   }
 }

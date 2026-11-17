@@ -132,6 +132,21 @@ class BookingCheckoutViewModel extends ChangeNotifier {
       'is_qris': isQris,
     };
   }
+
+  /// Mendaftarkan pesanan kedai baru ke backend (POST /api/kedai/orders)
+  Future<Map<String, dynamic>?> createKedaiOrder({
+    required String orderCode,
+    required String tableNumber,
+    required List<Map<String, dynamic>> items,
+    required int totalPrice,
+  }) async {
+    return await repository.createKedaiOrder(
+      orderCode: orderCode,
+      tableNumber: tableNumber,
+      items: items,
+      totalPrice: totalPrice,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -185,6 +200,11 @@ class PaymentStatusViewModel extends ChangeNotifier {
     notifyListeners();
 
     return success;
+  }
+
+  /// Konfirmasi pelunasan pesanan kedai ke backend (PATCH /api/kedai/orders/:id/pay)
+  Future<bool> confirmKedaiOrderPayment(String orderCode) async {
+    return await repository.confirmKedaiOrderPayment(orderCode);
   }
 }
 

@@ -10,6 +10,7 @@ class MenuItemCard extends StatelessWidget {
   final int count;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
+  final bool isAvailable;
 
   const MenuItemCard({
     super.key,
@@ -20,6 +21,7 @@ class MenuItemCard extends StatelessWidget {
     required this.count,
     required this.onAdd,
     required this.onRemove,
+    this.isAvailable = true,
   });
 
   String _formatRupiah(int price) {
@@ -96,124 +98,148 @@ class MenuItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveImage = _resolvedImage;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 60,
-              height: 60,
-              child: effectiveImage.isNotEmpty
-                  ? (effectiveImage.startsWith('http://') || effectiveImage.startsWith('https://')
-                      ? Image.network(
-                          effectiveImage,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => _buildFallbackImage(),
-                        )
-                      : Image.asset(
-                          effectiveImage,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => _buildFallbackImage(),
-                        ))
-                  : _buildFallbackImage(),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _formatRupiah(price),
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.maroon,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (count == 0)
-            ElevatedButton(
-              onPressed: onAdd,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.maroon,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Opacity(
+      opacity: isAvailable ? 1.0 : 0.55,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.lightBorder),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 60,
+                height: 60,
+                child: effectiveImage.isNotEmpty
+                    ? (effectiveImage.startsWith('http://') || effectiveImage.startsWith('https://')
+                        ? Image.network(
+                            effectiveImage,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => _buildFallbackImage(),
+                          )
+                        : Image.asset(
+                            effectiveImage,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => _buildFallbackImage(),
+                          ))
+                    : _buildFallbackImage(),
               ),
-              child: Text(
-                '+ Tambah',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          else
-            Row(
-              children: [
-                InkWell(
-                  onTap: onRemove,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.lightBorder,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.remove, size: 16, color: AppColors.darkText),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    '$count',
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: AppColors.darkText,
                     ),
                   ),
-                ),
-                InkWell(
-                  onTap: onAdd,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.maroon,
-                      borderRadius: BorderRadius.circular(8),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatRupiah(price),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isAvailable ? AppColors.maroon : const Color(0xFF9CA3AF),
                     ),
-                    child: const Icon(Icons.add, size: 16, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            if (!isAvailable)
+              ElevatedButton(
+                onPressed: null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF3F4F6),
+                  disabledBackgroundColor: const Color(0xFFE5E7EB),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                child: Text(
+                  'Habis',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF9CA3AF),
                   ),
                 ),
-              ],
-            ),
-        ],
+              )
+            else if (count == 0)
+              ElevatedButton(
+                onPressed: onAdd,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.maroon,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                child: Text(
+                  '+ Tambah',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              )
+            else
+              Row(
+                children: [
+                  InkWell(
+                    onTap: onRemove,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.lightBorder,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.remove, size: 16, color: AppColors.darkText),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      '$count',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: onAdd,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.maroon,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.add, size: 16, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }

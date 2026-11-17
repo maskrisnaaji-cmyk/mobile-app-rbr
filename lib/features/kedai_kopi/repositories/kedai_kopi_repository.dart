@@ -21,6 +21,17 @@ abstract class KedaiKopiRepository {
     required String bank,
     required List<CartItem> items,
   });
+
+  /// Mendaftarkan pesanan baru ke backend kedai (status: UNPAID)
+  Future<Map<String, dynamic>?> createKedaiOrder({
+    required String orderCode,
+    required String tableNumber,
+    required List<CartItem> items,
+    required int totalPrice,
+  });
+
+  /// Mengkonfirmasi pembayaran pesanan kedai (payment_status → PAID)
+  Future<bool> confirmKedaiOrderPayment(String orderCode);
 }
 
 /// Implementasi [KedaiKopiRepository]
@@ -28,7 +39,7 @@ class KedaiKopiRepositoryImpl implements KedaiKopiRepository {
   @override
   Future<List<MenuModel>> getMenus() async {
     final response = await http
-        .get(Uri.parse(ApiConfig.menusUrl))
+        .get(Uri.parse(ApiConfig.kedaiMenusUrl))
         .timeout(const Duration(seconds: 8));
 
     if (response.statusCode == 200) {
@@ -81,5 +92,55 @@ class KedaiKopiRepositoryImpl implements KedaiKopiRepository {
               })
           .toList(),
     );
+  }
+
+  @override
+  Future<Map<String, dynamic>?> createKedaiOrder({
+    required String orderCode,
+    required String tableNumber,
+    required List<CartItem> items,
+    required int totalPrice,
+  }) async {
+    try {
+      final payload = jsonEncode({
+        'order_code': orderCode,
+        'table_number': tableNumber,
+        'items': items
+            .map((i) => {
+                  'name': i.name,
+                  'quantity': i.quantity,
+                  'price': i.price,
+                })
+            .toList(),
+        'total_price': totalPrice,
+      });
+
+      final response = await http
+          .post(
+            Uri.parse(ApiConfig.kedaiOrdersUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: payload,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<bool> confirmKedaiOrderPayment(String orderCode) async {
+    try {
+      final response = await http
+          .patch(Uri.parse(ApiConfig.kedaiOrderPayUrl(orderCode)))
+          .timeout(const Duration(seconds: 10));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 }

@@ -42,4 +42,9 @@ class ApiConfig {
   static String get paymentNotificationUrl => '$baseUrl/payment/notification';
   static String paymentStatusUrl(String orderId) =>
       '$baseUrl/payment/status/$orderId';
+
+  static String get kedaiMenusUrl => '$baseUrl/kedai/menus';
+  static String get kedaiOrdersUrl => '$baseUrl/kedai/orders';
+  static String kedaiOrderPayUrl(String orderCode) =>
+      '$baseUrl/kedai/orders/$orderCode/pay';
 }
