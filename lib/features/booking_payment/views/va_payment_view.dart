@@ -18,6 +18,10 @@ class VaPaymentView extends StatefulWidget {
   final Widget? nextScreen;
   final PaymentStatusViewModel? viewModel;
   final String? kedaiOrderCode;
+  final int? eventId;
+  final int? ticketQuantity;
+  final String? customerName;
+  final String? customerEmail;
 
   const VaPaymentView({
     super.key,
@@ -32,6 +36,10 @@ class VaPaymentView extends StatefulWidget {
     this.nextScreen,
     this.viewModel,
     this.kedaiOrderCode,
+    this.eventId,
+    this.ticketQuantity,
+    this.customerName,
+    this.customerEmail,
   });
 
   @override
@@ -47,10 +55,20 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     _viewModel = widget.viewModel ?? PaymentStatusViewModel();
   }
 
-  Future<void> _confirmKedaiPaymentIfAny() async {
+  Future<void> _confirmPaymentIfAny() async {
     final code = widget.kedaiOrderCode;
     if (code != null && code.isNotEmpty) {
       await _viewModel.confirmKedaiOrderPayment(code);
+    }
+    final evId = widget.eventId;
+    if (evId != null) {
+      await _viewModel.confirmEventBooking(
+        eventId: evId,
+        quantity: widget.ticketQuantity ?? 1,
+        customerName: widget.customerName,
+        customerEmail: widget.customerEmail,
+        orderId: widget.orderNumber,
+      );
     }
   }
 
@@ -59,7 +77,7 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     if (!mounted) return;
 
     if (isPaid) {
-      await _confirmKedaiPaymentIfAny();
+      await _confirmPaymentIfAny();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -98,7 +116,7 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     if (!mounted) return;
 
     if (success) {
-      await _confirmKedaiPaymentIfAny();
+      await _confirmPaymentIfAny();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

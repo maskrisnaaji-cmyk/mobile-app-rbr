@@ -206,6 +206,23 @@ class PaymentStatusViewModel extends ChangeNotifier {
   Future<bool> confirmKedaiOrderPayment(String orderCode) async {
     return await repository.confirmKedaiOrderPayment(orderCode);
   }
+
+  /// Konfirmasi booking tiket agenda ke backend (POST /api/events/:id/book)
+  Future<bool> confirmEventBooking({
+    required int eventId,
+    int quantity = 1,
+    String? customerName,
+    String? customerEmail,
+    String? orderId,
+  }) async {
+    return await repository.confirmEventBooking(
+      eventId: eventId,
+      quantity: quantity,
+      customerName: customerName,
+      customerEmail: customerEmail,
+      orderId: orderId,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

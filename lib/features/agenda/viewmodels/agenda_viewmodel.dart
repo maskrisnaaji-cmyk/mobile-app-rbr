@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/features/agenda/models/event_model.dart';
 import 'package:mobile_app/features/agenda/repositories/agenda_repository.dart';
@@ -5,6 +6,7 @@ import 'package:mobile_app/features/agenda/repositories/agenda_repository.dart';
 /// ViewModel untuk mengelola state dan logika bisnis pada fitur Agenda
 class AgendaViewModel extends ChangeNotifier {
   final AgendaRepository repository;
+  Timer? _autoRefreshTimer;
 
   AgendaViewModel({AgendaRepository? repository})
       : repository = repository ?? AgendaRepositoryImpl();
@@ -17,12 +19,32 @@ class AgendaViewModel extends ChangeNotifier {
   DateTime _currentMonth = DateTime(2026, 9); // Default ke September 2026 (sesuai data acara RBR)
   int? _selectedDate;
 
-  // ── Getters ──────────────────────────────────────────────────────────────
+  // ── Getters ─────────────────────────────────────────────────────────────
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   List<EventModel> get allEvents => _allEvents;
   DateTime get currentMonth => _currentMonth;
   int? get selectedDate => _selectedDate;
+
+  /// Memulai sinkronisasi otomatis status tiket dan kuota secara berkala (tiap 5–8 detik)
+  void startAutoRefresh([Duration interval = const Duration(seconds: 6)]) {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(interval, (_) {
+      fetchEvents(silent: true);
+    });
+  }
+
+  /// Menghentikan sinkronisasi otomatis
+  void stopAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = null;
+  }
+
+  @override
+  void dispose() {
+    stopAutoRefresh();
+    super.dispose();
+  }
 
   /// Event yang disaring berdasarkan bulan aktif dan tanggal yang dipilih
   List<EventModel> get filteredEvents {
@@ -58,21 +80,27 @@ class AgendaViewModel extends ChangeNotifier {
     return list;
   }
 
-  // ── Logika & Aksi Data ───────────────────────────────────────────────────
+  // ── Logika & Aksi Data ──────────────────────────────────────────────────
 
   /// Mengambil data agenda secara dinamis dari repositori
-  Future<void> fetchEvents() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> fetchEvents({bool silent = false}) async {
+    final isInitialLoad = _allEvents.isEmpty;
+    if (!silent) {
+      if (isInitialLoad) {
+        _isLoading = true;
+      }
+      _errorMessage = null;
+      notifyListeners();
+    }
 
     try {
       final events = await repository.getEvents();
       _allEvents = events;
       _isLoading = false;
+      _errorMessage = null;
 
-      // Jika ada event, pastikan bulan yang terpilih mengarah ke bulan event pertama
-      if (_allEvents.isNotEmpty) {
+      // Jika baru pertama kali / belum ada tanggal dipilih, arahkan ke bulan event pertama
+      if (_allEvents.isNotEmpty && isInitialLoad && _selectedDate == null) {
         final datesWithEvents = _allEvents
             .where((e) => e.dateTime != null)
             .map((e) => e.dateTime!)
@@ -89,7 +117,9 @@ class AgendaViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'Tidak dapat terhubung ke server backend.';
+      if (!silent && _allEvents.isEmpty) {
+        _errorMessage = 'Tidak dapat terhubung ke server backend.';
+      }
       notifyListeners();
     }
   }

@@ -959,6 +959,10 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                         qrString: chargeResult?['qr_string'],
                         buttonLabel: 'CEK STATUS PEMBAYARAN',
                         nextScreen: eTicketView,
+                        eventId: widget.eventId,
+                        ticketQuantity: _viewModel.ticketQuantity,
+                        customerName: buyerName,
+                        customerEmail: buyerEmail,
                       ),
                     ),
                   );
@@ -979,6 +983,10 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                             '${(chargeResult?['bank'] ?? 'BCA').toUpperCase()} Virtual Account',
                         buttonLabel: 'CEK STATUS PEMBAYARAN',
                         nextScreen: eTicketView,
+                        eventId: widget.eventId,
+                        ticketQuantity: _viewModel.ticketQuantity,
+                        customerName: buyerName,
+                        customerEmail: buyerEmail,
                       ),
                     ),
                   );

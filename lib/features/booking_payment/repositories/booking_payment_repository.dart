@@ -36,6 +36,15 @@ abstract class BookingPaymentRepository {
 
   /// Konfirmasi pembayaran pesanan kedai (PATCH /api/kedai/orders/:id/pay)
   Future<bool> confirmKedaiOrderPayment(String orderCode);
+
+  /// Konfirmasi booking tiket agenda ke backend (POST /api/events/:id/book)
+  Future<bool> confirmEventBooking({
+    required int eventId,
+    int quantity = 1,
+    String? customerName,
+    String? customerEmail,
+    String? orderId,
+  });
 }
 
 /// Implementasi [BookingPaymentRepository] menggunakan [PaymentService].
@@ -124,6 +133,37 @@ class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
           .patch(Uri.parse(ApiConfig.kedaiOrderPayUrl(orderCode)))
           .timeout(const Duration(seconds: 10));
       return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> confirmEventBooking({
+    required int eventId,
+    int quantity = 1,
+    String? customerName,
+    String? customerEmail,
+    String? orderId,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.eventsUrl}/$eventId/book');
+      final payload = jsonEncode({
+        'quantity': quantity,
+        if (customerName != null) 'customer_name': customerName,
+        if (customerEmail != null) 'customer_email': customerEmail,
+        if (orderId != null) 'order_id': orderId,
+      });
+
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: payload,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (_) {
       return false;
     }

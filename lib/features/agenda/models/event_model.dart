@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 class EventModel {
   final dynamic id;
   final String title;
@@ -11,12 +13,17 @@ class EventModel {
   final String formattedPrice;
   final int quota;
   final int sold;
+  final int bookedCount;
+  final bool isAvailable;
   final int remainingSeats;
   final String seats;
   final String status;
   final String image;
   final String bannerImage;
   final String? imageFallback;
+
+  /// Status apakah tiket agenda telah habis / penuh
+  bool get isSoldOut => quota > 0 ? bookedCount >= quota : !isAvailable;
 
   EventModel({
     this.id,
@@ -31,17 +38,27 @@ class EventModel {
     String? formattedPrice,
     required this.quota,
     required this.sold,
+    int? bookedCount,
+    bool? isAvailable,
     int? remainingSeats,
     String? seats,
     this.status = 'Aktif',
     required this.image,
     String? bannerImage,
     this.imageFallback,
-  })  : priceDouble = priceDouble ?? price.toDouble(),
+  })  : bookedCount = bookedCount ?? sold,
+        isAvailable = isAvailable ??
+            (quota > 0
+                ? (bookedCount ?? sold) < quota
+                : (status != 'Tiket Penuh' && status != 'Penuh')),
+        priceDouble = priceDouble ?? price.toDouble(),
         formattedPrice = formattedPrice ?? formatRupiah(price),
-        remainingSeats = remainingSeats ?? (quota - sold),
+        remainingSeats = remainingSeats ??
+            math.max(0, quota - (bookedCount ?? sold)),
         seats = seats ??
-            (sold >= quota ? 'Tiket Penuh' : 'Sisa ${quota - sold} Kursi'),
+            ((quota > 0 ? (bookedCount ?? sold) >= quota : !(isAvailable ?? true))
+                ? 'Tiket Penuh'
+                : 'Sisa ${math.max(0, quota - (bookedCount ?? sold))} Kursi'),
         bannerImage = bannerImage ?? image;
 
   /// Format angka integer ke representasi Rupiah (atau 'Gratis' jika 0)
@@ -249,8 +266,23 @@ class EventModel {
     final formatted = formatRupiah(priceInt);
 
     final quota = int.tryParse(json['quota']?.toString() ?? '') ?? 50;
-    final sold = int.tryParse(json['sold']?.toString() ?? '') ?? 0;
-    final status = json['status']?.toString() ?? 'Aktif';
+    final bookedCount = int.tryParse(json['booked_count']?.toString() ?? '') ??
+        (int.tryParse(json['sold']?.toString() ?? '') ?? 0);
+    final sold = bookedCount;
+    final status = json['status']?.toString() ?? 'Tiket Tersedia';
+
+    final rawIsAvailable = json['is_available'];
+    final bool isAvailable;
+    if (quota > 0) {
+      isAvailable = bookedCount < quota;
+    } else if (rawIsAvailable is bool) {
+      isAvailable = rawIsAvailable;
+    } else if (rawIsAvailable != null) {
+      isAvailable = rawIsAvailable.toString().toLowerCase() == 'true' ||
+          rawIsAvailable.toString() == '1';
+    } else {
+      isAvailable = status != 'Tiket Penuh' && status != 'Penuh';
+    }
 
     // Memetakan field image dan banner_image
     final rawImage = json['image'];
@@ -276,6 +308,8 @@ class EventModel {
       formattedPrice: formatted,
       quota: quota,
       sold: sold,
+      bookedCount: bookedCount,
+      isAvailable: isAvailable,
       status: status,
       image: resolvedImage,
       bannerImage: resolvedImage,
@@ -294,6 +328,8 @@ class EventModel {
       'price': price,
       'quota': quota,
       'sold': sold,
+      'booked_count': bookedCount,
+      'is_available': isAvailable,
       'status': status,
       'image': image,
       'banner_image': bannerImage,

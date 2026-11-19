@@ -48,6 +48,16 @@ class _AgendaViewState extends State<AgendaView> {
     super.initState();
     _viewModel = widget.viewModel ?? AgendaViewModel();
     _viewModel.fetchEvents();
+    _viewModel.startAutoRefresh(const Duration(seconds: 6));
+  }
+
+  @override
+  void dispose() {
+    _viewModel.stopAutoRefresh();
+    if (widget.viewModel == null) {
+      _viewModel.dispose();
+    }
+    super.dispose();
   }
 
   Color _colorForCategory(String category) {
@@ -352,14 +362,15 @@ class _AgendaViewState extends State<AgendaView> {
                 const SizedBox(height: 16),
 
                 // ── DAFTAR EVENT DINAMIS DARI BACKEND ──
-                if (_viewModel.isLoading)
+                if (_viewModel.isLoading && _viewModel.allEvents.isEmpty)
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 60),
                       child: CircularProgressIndicator(color: AppColors.maroon),
                     ),
                   )
-                else if (_viewModel.errorMessage != null)
+                else if (_viewModel.errorMessage != null &&
+                    _viewModel.allEvents.isEmpty)
                   ApiErrorWidget(
                     message: _viewModel.errorMessage,
                     onRetry: _viewModel.fetchEvents,
@@ -395,6 +406,7 @@ class _AgendaViewState extends State<AgendaView> {
                     return Column(
                       children: [
                         AgendaCard(
+                          eventId: event.id,
                           category: event.category,
                           time: event.time,
                           seats: event.seats,
@@ -404,6 +416,7 @@ class _AgendaViewState extends State<AgendaView> {
                           imageColor: _colorForCategory(event.category),
                           image: event.image,
                           imageFallback: event.imageFallback,
+                          isSoldOut: event.isSoldOut,
                         ),
                         const SizedBox(height: 16),
                       ],

@@ -5,6 +5,7 @@ import 'package:mobile_app/features/booking_payment/views/booking_checkout_view.
 
 /// Komponen kartu item acara yang diekstrak dari halaman agenda
 class AgendaCard extends StatelessWidget {
+  final dynamic eventId;
   final String category;
   final String time;
   final String seats;
@@ -14,9 +15,12 @@ class AgendaCard extends StatelessWidget {
   final Color imageColor;
   final String? image;
   final String? imageFallback;
+  final bool isSoldOut;
+  final VoidCallback? onBook;
 
   const AgendaCard({
     super.key,
+    this.eventId,
     required this.category,
     required this.time,
     required this.seats,
@@ -26,6 +30,8 @@ class AgendaCard extends StatelessWidget {
     required this.imageColor,
     this.image,
     this.imageFallback,
+    this.isSoldOut = false,
+    this.onBook,
   });
 
   @override
@@ -143,13 +149,13 @@ class AgendaCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: seats.contains('Penuh')
+                      color: (isSoldOut || seats.contains('Penuh'))
                           ? Colors.red.shade900
                           : Colors.black54,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      seats,
+                      isSoldOut ? 'Tiket Penuh' : seats,
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 8.5,
@@ -209,32 +215,49 @@ class AgendaCard extends StatelessWidget {
                       ],
                     ),
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BookingCheckoutView(
-                              eventTitle: title,
-                              category: category,
-                              time: time,
-                              location: location,
-                              basePrice: price,
-                              eventImage: image,
-                              eventImageFallback: imageFallback,
-                            ),
-                          ),
-                        );
-                      },
+                      onPressed: isSoldOut
+                          ? null
+                          : () {
+                              if (onBook != null) {
+                                onBook!();
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BookingCheckoutView(
+                                      eventId: eventId is int
+                                          ? eventId
+                                          : int.tryParse(
+                                              eventId?.toString() ?? ''),
+                                      eventTitle: title,
+                                      category: category,
+                                      time: time,
+                                      location: location,
+                                      basePrice: price,
+                                      eventImage: image,
+                                      eventImageFallback: imageFallback,
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.maroon,
-                        foregroundColor: Colors.white,
+                        backgroundColor: isSoldOut
+                            ? Colors.grey.shade400
+                            : AppColors.maroon,
+                        foregroundColor:
+                            isSoldOut ? Colors.grey.shade600 : Colors.white,
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        disabledForegroundColor: Colors.grey.shade600,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: Text('PESAN TIKET',
-                          style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10.5, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        isSoldOut ? 'TIKET PENUH' : 'PESAN TIKET',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10.5, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
                 ),
