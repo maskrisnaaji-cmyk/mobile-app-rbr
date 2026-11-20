@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/features/kedai_kopi/models/cart_item_model.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
@@ -32,6 +35,7 @@ class PesananMejaView extends StatefulWidget {
 class _PesananMejaViewState extends State<PesananMejaView> {
   late final KedaiKopiViewModel _viewModel;
   CultureCoupon? _selectedCoupon;
+  bool _isCurrentUserVerified = false;
 
   @override
   void initState() {
@@ -40,6 +44,21 @@ class _PesananMejaViewState extends State<PesananMejaView> {
     _viewModel.fetchCoupons().then((_) {
       if (mounted) setState(() {});
     });
+    _loadUserVerificationStatus();
+  }
+
+  Future<void> _loadUserVerificationStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('user');
+      if (userJson != null && mounted) {
+        final userMap = jsonDecode(userJson) as Map<String, dynamic>;
+        final isVerified = userMap['is_verified'] == 1 ||
+            userMap['is_verified'] == true ||
+            userMap['is_verified'] == '1';
+        setState(() => _isCurrentUserVerified = isVerified);
+      }
+    } catch (_) {}
   }
 
   List<CartItem> get _effectiveCartItems {
@@ -518,111 +537,260 @@ class _PesananMejaViewState extends State<PesananMejaView> {
   Future<void> _showCouponPicker() async {
     final selected = await showModalBottomSheet<CultureCoupon>(
       context: context,
-      backgroundColor: AppColors.bgCanvas,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.lightBorder,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Pilih Kupon Budaya',
-                style: GoogleFonts.lora(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkText,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Pilih satu kupon untuk mendapatkan potongan harga.',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  color: AppColors.greyText,
-                ),
-              ),
-              const SizedBox(height: 14),
-              ..._viewModel.coupons.map(
-                (coupon) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: InkWell(
-                    onTap: () => Navigator.pop(context, coupon),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.all(13),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.lightBorder),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(9),
-                            decoration: BoxDecoration(
-                              color: AppColors.tagBg,
-                              borderRadius: BorderRadius.circular(9),
-                            ),
-                            child: const Icon(
-                                Icons.confirmation_number_outlined,
-                                color: AppColors.maroon,
-                                size: 20),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  coupon.code,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.darkText,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  coupon.description,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    color: AppColors.greyText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.chevron_right_rounded,
-                              color: AppColors.greyText),
-                        ],
-                      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.65,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.lightBorder,
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 18),
+                Text(
+                  'Pilih Kupon Budaya',
+                  style: GoogleFonts.lora(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Pilih satu kupon untuk mendapatkan potongan harga.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: AppColors.greyText,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Flexible(
+                  child: _viewModel.coupons.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Text(
+                              'Belum ada kupon promo aktif.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: AppColors.greyText,
+                              ),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _viewModel.coupons.length,
+                          itemBuilder: (context, index) {
+                            final coupon = _viewModel.coupons[index];
+                            final isDisabled = coupon.isVerifiedOnly &&
+                                !(_isCurrentUserVerified ||
+                                    UserSession.instance.isVerified);
+                            final isSelected =
+                                _selectedCoupon?.code == coupon.code;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Opacity(
+                                opacity: isDisabled ? 0.5 : 1.0,
+                                child: InkWell(
+                                  onTap: isDisabled
+                                      ? null
+                                      : () => Navigator.pop(context, coupon),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(13),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? AppColors.maroon
+                                            : AppColors.lightBorder,
+                                        width: isSelected ? 1.5 : 1.0,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(9),
+                                          decoration: BoxDecoration(
+                                            color: isDisabled
+                                                ? const Color(0xFFF5F5F5)
+                                                : AppColors.tagBg,
+                                            borderRadius:
+                                                BorderRadius.circular(9),
+                                          ),
+                                          child: Icon(
+                                            isDisabled
+                                                ? Icons.lock_outline_rounded
+                                                : Icons
+                                                    .confirmation_number_outlined,
+                                            color: isDisabled
+                                                ? AppColors.greyText
+                                                : AppColors.maroon,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    coupon.code,
+                                                    style: GoogleFonts
+                                                        .plusJakartaSans(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: isDisabled
+                                                          ? AppColors.greyText
+                                                          : AppColors.darkText,
+                                                    ),
+                                                  ),
+                                                  if (coupon
+                                                      .discountLabel.isNotEmpty) ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: AppColors.maroon
+                                                            .withValues(
+                                                                alpha: 0.08),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(5),
+                                                      ),
+                                                      child: Text(
+                                                        coupon.discountLabel,
+                                                        style: GoogleFonts
+                                                            .plusJakartaSans(
+                                                          fontSize: 9,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color:
+                                                              AppColors.maroon,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                              const SizedBox(height: 3),
+                                              Text(
+                                                coupon.description,
+                                                style: GoogleFonts
+                                                    .plusJakartaSans(
+                                                  fontSize: 10,
+                                                  color: AppColors.greyText,
+                                                ),
+                                              ),
+                                              if (coupon.isVerifiedOnly) ...[
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .verified_user_outlined,
+                                                      size: 11,
+                                                      color: isDisabled
+                                                          ? AppColors.greyText
+                                                          : const Color(
+                                                              0xFF047857),
+                                                    ),
+                                                    const SizedBox(width: 3),
+                                                    Text(
+                                                      'Khusus Member Terverifikasi',
+                                                      style: GoogleFonts
+                                                          .plusJakartaSans(
+                                                        fontSize: 9,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: isDisabled
+                                                            ? AppColors.greyText
+                                                            : const Color(
+                                                                0xFF047857),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        Icon(
+                                          isDisabled
+                                              ? Icons.block_rounded
+                                              : Icons.chevron_right_rounded,
+                                          color: AppColors.greyText,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                if (_selectedCoupon != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context, null);
+                        setState(() => _selectedCoupon = null);
+                      },
+                      child: Center(
+                        child: Text(
+                          'Batalkan pilihan kupon',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.maroon,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
     );
 
-    if (!mounted || selected == null) return;
-    setState(() => _selectedCoupon = selected);
+    if (!mounted) return;
+    if (selected != null) {
+      setState(() => _selectedCoupon = selected);
+    }
   }
 
   Widget _buildPaymentSection() {
@@ -739,17 +907,42 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             // 2. Buat charge transaksi (Midtrans)
             final chargeResult = await _viewModel.submitOrderTransaction(
               orderId: cleanOrder,
-              grossAmount: total,
+              grossAmount: _subtotal,
               customerName: 'Pelanggan $table',
               paymentType: isQris ? 'qris' : 'bank_transfer',
               bank: 'bca',
               items: items,
+              couponCode: _selectedCoupon?.code,
+              userId: UserSession.instance.userId,
             );
 
             if (!mounted) return;
             Navigator.pop(context); // Tutup loading dialog
 
+            // Tangani kegagalan charge / validasi kupon
+            if (chargeResult?['error'] == true) {
+              showDialog(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Pembayaran Gagal'),
+                  content: Text(
+                    chargeResult?['message'] as String? ??
+                        'Terjadi kesalahan saat memproses pembayaran.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+              return;
+            }
+
             final finalOrderId = chargeResult?['order_id'] ?? cleanOrder;
+            final paidAmount =
+                (chargeResult?['gross_amount'] as num?)?.toInt() ?? total;
 
             if (isQris) {
               Navigator.push(
@@ -759,8 +952,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                     title: 'Pesanan Meja',
                     orderNumber: finalOrderId,
                     badgeText: '$table • Dine-in',
-                    totalAmount: _formatRupiah(total),
-                    rawAmount: total,
+                    totalAmount: _formatRupiah(paidAmount),
+                    rawAmount: paidAmount,
                     qrUrl: chargeResult?['qr_url'],
                     qrString: chargeResult?['qr_string'],
                     buttonLabel: 'CEK STATUS PEMBAYARAN',
@@ -777,8 +970,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                     title: 'Pesanan Meja',
                     orderNumber: finalOrderId,
                     badgeText: table,
-                    totalAmount: _formatRupiah(total),
-                    rawAmount: total,
+                    totalAmount: _formatRupiah(paidAmount),
+                    rawAmount: paidAmount,
                     vaNumber:
                         chargeResult?['va_number'] ?? '5213 1845 9403 1716',
                     bankName:

@@ -16,6 +16,8 @@ abstract class BookingPaymentRepository {
     String orderType,
     int? eventId,
     List<Map<String, dynamic>>? items,
+    String? couponCode,
+    dynamic userId,
   });
 
   Future<Map<String, dynamic>?> checkPaymentStatus(String orderId);
@@ -61,6 +63,8 @@ class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
     String orderType = 'ticket',
     int? eventId,
     List<Map<String, dynamic>>? items,
+    String? couponCode,
+    dynamic userId,
   }) {
     return PaymentService.createCharge(
       orderId: orderId,
@@ -73,6 +77,8 @@ class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
       orderType: orderType,
       eventId: eventId,
       items: items,
+      couponCode: couponCode,
+      userId: userId,
     );
   }
 

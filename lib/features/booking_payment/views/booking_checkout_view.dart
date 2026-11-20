@@ -1,11 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
 import 'package:mobile_app/features/booking_payment/views/qris_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/va_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_tiket_view.dart';
 import 'package:mobile_app/features/booking_payment/viewmodels/booking_payment_viewmodel.dart';
+import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
 
 const Color _paymentEspresso = Color(0xFF2C1810);
 const Color _paymentTerracotta = Color(0xFF8B2B1B);
@@ -50,6 +54,15 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
 
+  // --- Kupon Promo ---
+  List<CultureCoupon> _coupons = [];
+  CultureCoupon? _selectedCoupon;
+  bool _isCurrentUserVerified = false;
+
+  int get _discount =>
+      _selectedCoupon?.discountFor(_viewModel.totalAmount) ?? 0;
+  int get _finalTotal => _viewModel.totalAmount - _discount;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +70,29 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     _nameController = TextEditingController(text: 'Budi Santoso');
     _emailController = TextEditingController(text: 'budi.santoso@gmail.com');
     _phoneController = TextEditingController(text: '0812-3456-7890');
+    _loadCoupons();
+    _loadUserVerifiedStatus();
+  }
+
+  Future<void> _loadCoupons() async {
+    try {
+      final fetched = await CultureCoupon.fetchAll();
+      if (mounted) setState(() => _coupons = fetched);
+    } catch (_) {}
+  }
+
+  Future<void> _loadUserVerifiedStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('user');
+      if (userJson != null && mounted) {
+        final userMap = jsonDecode(userJson) as Map<String, dynamic>;
+        final isVerified = userMap['is_verified'] == 1 ||
+            userMap['is_verified'] == true ||
+            userMap['is_verified'] == '1';
+        setState(() => _isCurrentUserVerified = isVerified);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -115,6 +151,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                     _buildTicketQuantitySection(),
                     const SizedBox(height: 16),
                     _buildBookerFormSection(),
+                    const SizedBox(height: 16),
+                    _buildCouponSection(),
                     const SizedBox(height: 16),
                     _buildPaymentMethodSection(),
                     const SizedBox(height: 16),
@@ -599,6 +637,363 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     );
   }
 
+  // --- Widget: Kupon & Promo ---
+  Widget _buildCouponSection() {
+    final coupon = _selectedCoupon;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.confirmation_number_outlined,
+                  color: AppColors.maroon, size: 17),
+              const SizedBox(width: 8),
+              Text(
+                'KUPON & PROMO',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                  color: AppColors.textMain,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: _showCouponPickerSheet,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.bgCanvas,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: coupon != null ? AppColors.maroon : AppColors.border,
+                  width: coupon != null ? 1.5 : 1.0,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    coupon != null
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.local_offer_outlined,
+                    color: coupon != null
+                        ? AppColors.maroon
+                        : AppColors.textMuted,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: coupon != null
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                coupon.code,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.maroon,
+                                ),
+                              ),
+                              Text(
+                                coupon.description,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            _coupons.isEmpty
+                                ? 'Memuat kupon...'
+                                : 'Pilih kupon promo',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (coupon != null) ...[
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: () => setState(() => _selectedCoupon = null),
+              child: Center(
+                child: Text(
+                  'Batalkan pilihan kupon',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.maroon,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showCouponPickerSheet() async {
+    final selected = await showModalBottomSheet<CultureCoupon>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.65,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(top: 10, bottom: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0E0E0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Pilih Kupon Budaya',
+                  style: GoogleFonts.lora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textMain,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: _coupons.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text('Belum ada kupon tersedia.'),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
+                        itemCount: _coupons.length,
+                        itemBuilder: (_, index) {
+                          final coupon = _coupons[index];
+                          final isDisabled = coupon.isVerifiedOnly &&
+                              !(_isCurrentUserVerified ||
+                                  UserSession.instance.isVerified);
+                          final isSelected =
+                              _selectedCoupon?.code == coupon.code;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Opacity(
+                              opacity: isDisabled ? 0.5 : 1.0,
+                              child: InkWell(
+                                onTap: isDisabled
+                                    ? null
+                                    : () => Navigator.pop(ctx, coupon),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.maroon
+                                          : AppColors.border,
+                                      width: isSelected ? 1.5 : 1.0,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(9),
+                                        decoration: BoxDecoration(
+                                          color: isDisabled
+                                              ? const Color(0xFFF5F5F5)
+                                              : AppColors.tagBg,
+                                          borderRadius:
+                                              BorderRadius.circular(9),
+                                        ),
+                                        child: Icon(
+                                          isDisabled
+                                              ? Icons.lock_outline_rounded
+                                              : Icons
+                                                  .confirmation_number_outlined,
+                                          color: isDisabled
+                                              ? AppColors.greyText
+                                              : AppColors.maroon,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  coupon.code,
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isDisabled
+                                                        ? AppColors.greyText
+                                                        : AppColors.textMain,
+                                                  ),
+                                                ),
+                                                if (coupon
+                                                    .discountLabel.isNotEmpty) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.maroon
+                                                          .withValues(
+                                                              alpha: 0.08),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              5),
+                                                    ),
+                                                    child: Text(
+                                                      coupon.discountLabel,
+                                                      style: GoogleFonts
+                                                          .plusJakartaSans(
+                                                        fontSize: 9,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: AppColors.maroon,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              coupon.description,
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                fontSize: 10,
+                                                color: AppColors.textMuted,
+                                              ),
+                                            ),
+                                            if (coupon.isVerifiedOnly) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons
+                                                        .verified_user_outlined,
+                                                    size: 11,
+                                                    color: isDisabled
+                                                        ? AppColors.greyText
+                                                        : const Color(
+                                                            0xFF047857),
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                    'Khusus Member Terverifikasi',
+                                                    style: GoogleFonts
+                                                        .plusJakartaSans(
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: isDisabled
+                                                          ? AppColors.greyText
+                                                          : const Color(
+                                                              0xFF047857),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        isDisabled
+                                            ? Icons.block_rounded
+                                            : Icons.chevron_right_rounded,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              if (_selectedCoupon != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 12),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx, null);
+                      setState(() => _selectedCoupon = null);
+                    },
+                    child: Center(
+                      child: Text(
+                        'Batalkan pilihan kupon',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.maroon,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (selected != null) setState(() => _selectedCoupon = selected);
+  }
+
   Widget _buildFormField({
     required TextEditingController controller,
     required String label,
@@ -836,6 +1231,12 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
             _viewModel.formatRupiah(_viewModel.totalAmount),
           ),
           _buildPriceRow('Biaya Admin Platform', 'Gratis (Rp 0)'),
+          if (_discount > 0)
+            _buildPriceRow(
+              'Diskon Kupon (${_selectedCoupon?.code ?? ""})',
+              '- ${_viewModel.formatRupiah(_discount)}',
+              valueColor: const Color(0xFF047857),
+            ),
           const Divider(color: AppColors.border, height: 18),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -849,7 +1250,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                 ),
               ),
               Text(
-                _viewModel.formatRupiah(_viewModel.totalAmount),
+                _viewModel.formatRupiah(_finalTotal),
                 style: GoogleFonts.lora(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -863,7 +1264,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     );
   }
 
-  Widget _buildPriceRow(String label, String value) {
+  Widget _buildPriceRow(String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -876,7 +1277,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
               style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textMain)),
+                  color: valueColor ?? AppColors.textMain)),
         ],
       ),
     );
@@ -896,25 +1297,6 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                 final buyerEmail = _emailController.text.trim();
                 final buyerPhone = _phoneController.text.trim();
 
-                final eTicketView = StrukTiketView(
-                  bookingId:
-                      'RBR-TKT-${DateTime.now().millisecondsSinceEpoch}',
-                  eventTitle: widget.eventTitle,
-                  category: widget.category,
-                  eventTime: widget.time,
-                  eventLocation: widget.location,
-                  buyerName: buyerName,
-                  buyerEmail: buyerEmail,
-                  buyerPhone: buyerPhone,
-                  ticketType: _viewModel.selectedTicketType == 0
-                      ? 'Presale'
-                      : 'Reguler',
-                  ticketCount: _viewModel.ticketQuantity,
-                  totalPrice:
-                      _viewModel.formatRupiah(_viewModel.totalAmount),
-                  paymentMethod: _viewModel.selectedPaymentMethod.label,
-                );
-
                 if (!mounted) return;
                 showDialog(
                   context: context,
@@ -931,6 +1313,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                   customerPhone: buyerPhone,
                   eventTitle: widget.eventTitle,
                   eventId: widget.eventId,
+                  couponCode: _selectedCoupon?.code,
+                  userId: UserSession.instance.userId,
                 );
 
                 if (!mounted) return;
@@ -938,11 +1322,54 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
 
                 final chargeResult =
                     result?['charge_result'] as Map<String, dynamic>?;
+
+                // Tangani kegagalan charge / validasi kupon
+                if (chargeResult?['error'] == true) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Pembayaran Gagal'),
+                      content: Text(
+                        chargeResult?['message'] as String? ??
+                            'Terjadi kesalahan saat memproses pembayaran tiket.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return;
+                }
+
                 final finalOrderId =
                     result?['order_id'] as String? ?? '';
                 final isQris = result?['is_qris'] as bool? ?? true;
                 final badgeText =
                     '${_viewModel.ticketQuantity} x ${_viewModel.selectedTicketType == 0 ? "Presale" : "Reguler"}';
+                final paidAmount =
+                    (chargeResult?['gross_amount'] as num?)?.toInt() ??
+                        _finalTotal;
+
+                final eTicketView = StrukTiketView(
+                  bookingId:
+                      'RBR-TKT-${DateTime.now().millisecondsSinceEpoch}',
+                  eventTitle: widget.eventTitle,
+                  category: widget.category,
+                  eventTime: widget.time,
+                  eventLocation: widget.location,
+                  buyerName: buyerName,
+                  buyerEmail: buyerEmail,
+                  buyerPhone: buyerPhone,
+                  ticketType: _viewModel.selectedTicketType == 0
+                      ? 'Presale'
+                      : 'Reguler',
+                  ticketCount: _viewModel.ticketQuantity,
+                  totalPrice: _viewModel.formatRupiah(paidAmount),
+                  paymentMethod: _viewModel.selectedPaymentMethod.label,
+                );
 
                 if (isQris) {
                   Navigator.push(
@@ -952,9 +1379,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                         title: 'Instruksi Pembayaran QRIS',
                         orderNumber: finalOrderId,
                         badgeText: badgeText,
-                        totalAmount: _viewModel
-                            .formatRupiah(_viewModel.totalAmount),
-                        rawAmount: _viewModel.totalAmount,
+                        totalAmount: _viewModel.formatRupiah(paidAmount),
+                        rawAmount: paidAmount,
                         qrUrl: chargeResult?['qr_url'],
                         qrString: chargeResult?['qr_string'],
                         buttonLabel: 'CEK STATUS PEMBAYARAN',
@@ -974,9 +1400,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                         title: 'Instruksi Pembayaran VA',
                         orderNumber: finalOrderId,
                         badgeText: badgeText,
-                        totalAmount: _viewModel
-                            .formatRupiah(_viewModel.totalAmount),
-                        rawAmount: _viewModel.totalAmount,
+                        totalAmount: _viewModel.formatRupiah(paidAmount),
+                        rawAmount: paidAmount,
                         vaNumber: chargeResult?['va_number'] ??
                             '5213 1845 9403 1716',
                         bankName:

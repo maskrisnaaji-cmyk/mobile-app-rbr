@@ -20,6 +20,8 @@ abstract class KedaiKopiRepository {
     required String paymentType,
     required String bank,
     required List<CartItem> items,
+    String? couponCode,
+    dynamic userId,
   });
 
   /// Mendaftarkan pesanan baru ke backend kedai (status: UNPAID)
@@ -75,6 +77,8 @@ class KedaiKopiRepositoryImpl implements KedaiKopiRepository {
     required String paymentType,
     required String bank,
     required List<CartItem> items,
+    String? couponCode,
+    dynamic userId,
   }) async {
     return await PaymentService.createCharge(
       orderId: orderId,
@@ -83,6 +87,8 @@ class KedaiKopiRepositoryImpl implements KedaiKopiRepository {
       paymentType: paymentType,
       bank: bank,
       orderType: 'kedai',
+      couponCode: couponCode,
+      userId: userId,
       items: items
           .map((i) => {
                 'id': i.name,

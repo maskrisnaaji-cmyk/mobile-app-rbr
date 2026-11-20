@@ -23,6 +23,8 @@ class UserSession extends ChangeNotifier {
   String _initials = 'RA';
   String? _photoUrl;
   String? _token;
+  dynamic _userId;
+  bool _isVerified = false;
   bool _isLoggedIn = false;
   bool _isInitialized = false;
 
@@ -31,6 +33,8 @@ class UserSession extends ChangeNotifier {
   String get initials => _initials;
   String? get photoUrl => _photoUrl;
   String? get token => _token;
+  dynamic get userId => _userId;
+  bool get isVerified => _isVerified;
   bool get isLoggedIn => _isLoggedIn;
   bool get isInitialized => _isInitialized;
 
@@ -87,11 +91,21 @@ class UserSession extends ChangeNotifier {
       String? resolvedName = savedName;
       String? resolvedEmail = savedEmail;
       String? resolvedPhotoUrl = savedPhotoUrl;
+      dynamic resolvedUserId;
+      bool resolvedIsVerified = false;
 
       if (userStr != null) {
         try {
           final userMap = jsonDecode(userStr);
           if (userMap is Map) {
+            if (userMap['id'] != null) {
+              resolvedUserId = userMap['id'];
+            }
+            if (userMap['is_verified'] != null) {
+              resolvedIsVerified = userMap['is_verified'] == 1 ||
+                  userMap['is_verified'] == true ||
+                  userMap['is_verified'] == '1';
+            }
             if ((resolvedName == null || resolvedName.trim().isEmpty) &&
                 userMap['name'] != null) {
               resolvedName = userMap['name'].toString();
@@ -118,6 +132,8 @@ class UserSession extends ChangeNotifier {
       if (resolvedPhotoUrl != null && resolvedPhotoUrl.trim().isNotEmpty) {
         _photoUrl = resolvedPhotoUrl.trim();
       }
+      _userId = resolvedUserId;
+      _isVerified = resolvedIsVerified;
       _token = savedToken;
       _isLoggedIn = savedToken != null || savedName != null;
       _isInitialized = true;
@@ -148,6 +164,14 @@ class UserSession extends ChangeNotifier {
         rawUser?['picture']?.toString();
     if (resolvedPhotoUrl != null && resolvedPhotoUrl.trim().isNotEmpty) {
       _photoUrl = resolvedPhotoUrl.trim();
+    }
+    if (rawUser != null) {
+      if (rawUser['id'] != null) _userId = rawUser['id'];
+      if (rawUser['is_verified'] != null) {
+        _isVerified = rawUser['is_verified'] == 1 ||
+            rawUser['is_verified'] == true ||
+            rawUser['is_verified'] == '1';
+      }
     }
     _isLoggedIn = true;
     notifyListeners();
@@ -229,6 +253,8 @@ class UserSession extends ChangeNotifier {
     _initials = 'RA';
     _photoUrl = null;
     _token = null;
+    _userId = null;
+    _isVerified = false;
     _isLoggedIn = false;
     notifyListeners();
 

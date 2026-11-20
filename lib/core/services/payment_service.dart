@@ -15,6 +15,8 @@ class PaymentService {
     String orderType = 'kedai',  // 'kedai' or 'ticket'
     int? eventId,
     List<Map<String, dynamic>>? items,
+    String? couponCode,
+    dynamic userId,
   }) async {
     try {
       final url = Uri.parse(ApiConfig.paymentChargeUrl);
@@ -29,6 +31,9 @@ class PaymentService {
         'order_type': orderType,
         if (eventId != null) 'event_id': eventId,
         if (items != null) 'items': items,
+        if (couponCode != null && couponCode.isNotEmpty)
+          'coupon_code': couponCode,
+        if (userId != null) 'user_id': userId,
       };
 
       final response = await http
@@ -39,10 +44,17 @@ class PaymentService {
           )
           .timeout(const Duration(seconds: 15));
 
+      final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
         if (data['success'] == true && data['data'] != null) {
           return data['data'];
+        }
+      } else {
+        if (data is Map<String, dynamic> && data['success'] == false) {
+          return {
+            'error': true,
+            'message': data['message'] ?? 'Pembayaran gagal diproses',
+          };
         }
       }
       return null;

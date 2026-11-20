@@ -96,6 +96,8 @@ class BookingCheckoutViewModel extends ChangeNotifier {
     required String customerPhone,
     required String eventTitle,
     int? eventId,
+    String? couponCode,
+    dynamic userId,
   }) async {
     _isSubmitting = true;
     notifyListeners();
@@ -121,6 +123,8 @@ class BookingCheckoutViewModel extends ChangeNotifier {
           'quantity': _ticketQuantity,
         }
       ],
+      couponCode: (couponCode != null && couponCode.isNotEmpty) ? couponCode : null,
+      userId: userId,
     );
 
     _isSubmitting = false;

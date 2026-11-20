@@ -305,6 +305,8 @@ class KedaiKopiViewModel extends ChangeNotifier {
     required String paymentType,
     required String bank,
     required List<CartItem> items,
+    String? couponCode,
+    dynamic userId,
   }) async {
     _isSubmittingOrder = true;
     notifyListeners();
@@ -316,6 +318,8 @@ class KedaiKopiViewModel extends ChangeNotifier {
         paymentType: paymentType,
         bank: bank,
         items: items,
+        couponCode: couponCode,
+        userId: userId,
       );
       return result;
     } finally {
