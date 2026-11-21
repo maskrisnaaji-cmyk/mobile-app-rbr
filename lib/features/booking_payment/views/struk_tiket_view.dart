@@ -114,46 +114,61 @@ class StrukTiketView extends StatelessWidget {
     );
   }
 
+  bool get _isCash =>
+      paymentMethod.toLowerCase().contains('kasir') ||
+      paymentMethod.toLowerCase().contains('tunai') ||
+      paymentMethod.toLowerCase().contains('loket');
+
   // --- Widget: Success Header Badge ---
   Widget _buildSuccessHeader() {
+    final statusColor = _isCash ? const Color(0xFFD97706) : const Color(0xFF10B981);
+    final statusBgColor = _isCash
+        ? const Color(0xFFD97706).withValues(alpha: 0.12)
+        : const Color(0xFF10B981).withValues(alpha: 0.1);
+    final textBadgeColor = _isCash ? const Color(0xFFB45309) : const Color(0xFF047857);
+
     return Column(
       children: [
         Container(
           width: 58,
           height: 58,
           decoration: BoxDecoration(
-            color: const Color(0xFF10B981), // Emerald green
+            color: statusColor,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF10B981).withValues(alpha: 0.28),
+                color: statusColor.withValues(alpha: 0.28),
                 blurRadius: 16,
                 spreadRadius: 4,
               ),
             ],
           ),
-          child: const Icon(Icons.check_rounded, color: Colors.white, size: 34),
+          child: Icon(
+            _isCash ? Icons.storefront_rounded : Icons.check_rounded,
+            color: Colors.white,
+            size: 34,
+          ),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: const Color(0xFF10B981).withValues(alpha: 0.1),
+            color: statusBgColor,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            'TRANSAKSI TERVERIFIKASI',
+            _isCash ? 'PESANAN TIKET DIBUAT (LOKET)' : 'TRANSAKSI TERVERIFIKASI',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.2,
-              color: const Color(0xFF047857),
+              color: textBadgeColor,
             ),
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Pembayaran Berhasil',
+          _isCash ? 'Pesanan Tiket Dibuat' : 'Pembayaran Berhasil',
           style: GoogleFonts.lora(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -162,7 +177,9 @@ class StrukTiketView extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'E-tiket resmi telah terbit dan dikirimkan otomatis ke email Anda.',
+          _isCash
+              ? 'Silakan tunjukkan kode booking ini dan bayar tunai di loket tiket / meja kasir sebelum acara.'
+              : 'E-tiket resmi telah terbit dan dikirimkan otomatis ke email Anda.',
           textAlign: TextAlign.center,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 11,
@@ -401,20 +418,30 @@ class StrukTiketView extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                        color: _isCash
+                            ? const Color(0xFFFEF3C7)
+                            : const Color(0xFF10B981).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle_rounded,
-                              color: Color(0xFF047857), size: 14),
+                          Icon(
+                              _isCash
+                                  ? Icons.access_time_rounded
+                                  : Icons.check_circle_rounded,
+                              color: _isCash
+                                  ? const Color(0xFFB45309)
+                                  : const Color(0xFF047857),
+                              size: 14),
                           const SizedBox(width: 4),
                           Text(
-                            'LUNAS',
+                            _isCash ? 'BELUM LUNAS (LOKET)' : 'LUNAS',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF047857),
+                              color: _isCash
+                                  ? const Color(0xFFB45309)
+                                  : const Color(0xFF047857),
                             ),
                           ),
                         ],

@@ -403,10 +403,13 @@ class _AgendaViewState extends State<AgendaView> {
                   )
                 else
                   ...events.map((event) {
+                    final int? eventId = event.id is int
+                        ? event.id as int
+                        : int.tryParse(event.id?.toString() ?? '');
                     return Column(
                       children: [
                         AgendaCard(
-                          eventId: event.id,
+                          eventId: eventId,
                           category: event.category,
                           time: event.time,
                           seats: event.seats,

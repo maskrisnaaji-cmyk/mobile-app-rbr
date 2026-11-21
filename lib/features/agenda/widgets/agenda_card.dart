@@ -15,8 +15,7 @@ class AgendaCard extends StatelessWidget {
   final Color imageColor;
   final String? image;
   final String? imageFallback;
-  final bool isSoldOut;
-  final VoidCallback? onBook;
+  final int? eventId;
 
   const AgendaCard({
     super.key,
@@ -30,8 +29,7 @@ class AgendaCard extends StatelessWidget {
     required this.imageColor,
     this.image,
     this.imageFallback,
-    this.isSoldOut = false,
-    this.onBook,
+    this.eventId,
   });
 
   @override
@@ -215,32 +213,23 @@ class AgendaCard extends StatelessWidget {
                       ],
                     ),
                     ElevatedButton(
-                      onPressed: isSoldOut
-                          ? null
-                          : () {
-                              if (onBook != null) {
-                                onBook!();
-                              } else {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => BookingCheckoutView(
-                                      eventId: eventId is int
-                                          ? eventId
-                                          : int.tryParse(
-                                              eventId?.toString() ?? ''),
-                                      eventTitle: title,
-                                      category: category,
-                                      time: time,
-                                      location: location,
-                                      basePrice: price,
-                                      eventImage: image,
-                                      eventImageFallback: imageFallback,
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BookingCheckoutView(
+                              eventId: eventId,
+                              eventTitle: title,
+                              category: category,
+                              time: time,
+                              location: location,
+                              basePrice: price,
+                              eventImage: image,
+                              eventImageFallback: imageFallback,
+                            ),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isSoldOut
                             ? Colors.grey.shade400

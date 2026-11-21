@@ -5,16 +5,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
+import 'package:mobile_app/features/agenda/widgets/presale_tier_card.dart';
 import 'package:mobile_app/features/booking_payment/views/qris_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/va_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_tiket_view.dart';
+import 'package:mobile_app/features/booking_payment/widgets/payment_option_card.dart';
 import 'package:mobile_app/features/booking_payment/viewmodels/booking_payment_viewmodel.dart';
 import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
 
-const Color _paymentEspresso = Color(0xFF2C1810);
 const Color _paymentTerracotta = Color(0xFF8B2B1B);
-const Color _paymentSoftTint = Color(0xFFFFFDFB);
-const Color _paymentMuted = Color(0xFF7A6E67);
 
 class BookingCheckoutView extends StatefulWidget {
   final String eventTitle;
@@ -70,6 +69,13 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     _nameController = TextEditingController(text: 'Budi Santoso');
     _emailController = TextEditingController(text: 'budi.santoso@gmail.com');
     _phoneController = TextEditingController(text: '0812-3456-7890');
+
+    // Jika eventId ada, coba load presale tiers
+    if (widget.eventId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _viewModel.loadPresaleTiers(widget.eventId!);
+      });
+    }
     _loadCoupons();
     _loadUserVerifiedStatus();
   }
@@ -316,6 +322,67 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
 
   // --- Widget: Pilihan Jenis Tiket ---
   Widget _buildTicketTypeSection() {
+    // --- Presale mode: tampilkan tier presale dinamis ---
+    if (_viewModel.isPresaleMode || _viewModel.isLoadingPresale) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'PILIHAN JENIS TIKET',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.maroon.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'PRESALE',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.maroon,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Loading spinner
+            if (_viewModel.isLoadingPresale)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: CircularProgressIndicator(color: AppColors.maroon),
+                ),
+              )
+            else
+              _buildPresaleTierList(),
+          ],
+        ),
+      );
+    }
+
+    // --- Mode normal: tampilkan card tiket statis ---
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -380,6 +447,78 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Menampilkan list tier presale secara inline.
+  Widget _buildPresaleTierList() {
+    final tiers = _viewModel.presaleTiers;
+
+    if (tiers.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text(
+            'Belum ada data tier presale',
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 12, color: AppColors.textMuted),
+          ),
+        ),
+      );
+    }
+
+    final allSoldOut =
+        tiers.every((t) => t.isSoldout || !t.isActive);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Banner semua sold out
+        if (allSoldOut)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDC2626).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: const Color(0xFFDC2626).withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    color: Color(0xFFDC2626), size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Semua kuota presale habis — Tiket tidak tersedia',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFDC2626),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Daftar PresaleTierCard
+        ...List.generate(tiers.length, (i) {
+          final tier = tiers[i];
+          return Padding(
+            padding: EdgeInsets.only(bottom: i < tiers.length - 1 ? 10 : 0),
+            child: PresaleTierCard(
+              tier: tier,
+              isSelected: _viewModel.selectedPresaleTier?.id == tier.id,
+              onTap: (tier.isCurrentActive && !tier.isSoldout)
+                  ? () => _viewModel.selectPresaleTier(tier)
+                  : null,
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -1053,153 +1192,76 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     );
   }
 
-  // --- Widget: Metode Pembayaran ---
+  // --- Widget: Metode Pembayaran (Disamakan Total dengan Modul Kedai Kopi) ---
   Widget _buildPaymentMethodSection() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'METODE PEMBAYARAN',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.8,
-                color: _paymentEspresso,
-              ),
-            ),
-            Text(
-              'Pilih salah satu',
-              style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10, color: _paymentMuted),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        for (final method in CheckoutPaymentMethod.values) ...[
-          _buildPaymentMethodOption(method),
-          if (method != CheckoutPaymentMethod.values.last)
-            const SizedBox(height: 8),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildPaymentMethodOption(CheckoutPaymentMethod method) {
-    final isSelected = _viewModel.selectedPaymentMethod == method;
-    final icon = method == CheckoutPaymentMethod.qris
-        ? Icons.qr_code_2_rounded
-        : Icons.account_balance_rounded;
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      child: InkWell(
-        onTap: () => _viewModel.selectPaymentMethod(method),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isSelected ? _paymentSoftTint : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? _paymentTerracotta : AppColors.border,
-              width: isSelected ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.025),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.lightBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _paymentTerracotta.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: _paymentTerracotta, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            method.label,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: _paymentEspresso,
-                            ),
-                          ),
-                        ),
-                        if (method.badge case final badge?) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE5F4E8),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              badge,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF39734D),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+              Row(
+                children: [
+                  const Icon(Icons.payment_rounded,
+                      color: AppColors.maroon, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Metode Pembayaran',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkText,
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      method.description,
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 9, color: _paymentMuted),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color:
-                        isSelected ? _paymentTerracotta : _paymentMuted,
-                    width: 1.5,
                   ),
+                ],
+              ),
+              Text(
+                'Pilih Salah Satu',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  color: AppColors.greyText,
                 ),
-                child: isSelected
-                    ? Center(
-                        child: Container(
-                          width: 9,
-                          height: 9,
-                          decoration: const BoxDecoration(
-                            color: _paymentTerracotta,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      )
-                    : null,
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          PaymentOptionCard(
+            title: 'QRIS Nasional',
+            badge: 'INSTAN',
+            subtitle: 'BCA, GoPay, OVO, ShopeePay, Dana, LinkAja',
+            isSelected:
+                _viewModel.selectedPaymentMethod == CheckoutPaymentMethod.qris,
+            onTap: () =>
+                _viewModel.selectPaymentMethod(CheckoutPaymentMethod.qris),
+          ),
+          const SizedBox(height: 8),
+          PaymentOptionCard(
+            title: 'Bayar di Kasir (Tunai)',
+            badge: 'Loket Tiket',
+            subtitle: 'Bayar langsung di loket tiket / meja kasir setelah memesan',
+            isSelected:
+                _viewModel.selectedPaymentMethod == CheckoutPaymentMethod.cash,
+            onTap: () =>
+                _viewModel.selectPaymentMethod(CheckoutPaymentMethod.cash),
+          ),
+          const SizedBox(height: 8),
+          PaymentOptionCard(
+            title: 'Transfer Bank (Virtual Account)',
+            badge: 'VA 24 JAM',
+            subtitle: 'BCA, Mandiri, BNI, BRI, Permata',
+            isSelected: _viewModel.selectedPaymentMethod ==
+                CheckoutPaymentMethod.bankTransfer,
+            onTap: () => _viewModel
+                .selectPaymentMethod(CheckoutPaymentMethod.bankTransfer),
+          ),
+        ],
       ),
     );
   }
@@ -1227,7 +1289,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           ),
           const SizedBox(height: 12),
           _buildPriceRow(
-            '${_viewModel.ticketQuantity} x ${_viewModel.selectedTicketType == 0 ? "Tiket Presale" : "Tiket Reguler"}',
+            '${_viewModel.ticketQuantity} x ${_viewModel.isPresaleMode && _viewModel.selectedPresaleTier != null ? _viewModel.selectedPresaleTier!.tierName : (_viewModel.selectedTicketType == 0 ? "Tiket Presale" : "Tiket Reguler")}',
             _viewModel.formatRupiah(_viewModel.totalAmount),
           ),
           _buildPriceRow('Biaya Admin Platform', 'Gratis (Rp 0)'),
@@ -1297,6 +1359,30 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                 final buyerEmail = _emailController.text.trim();
                 final buyerPhone = _phoneController.text.trim();
 
+                final ticketTypeName = _viewModel.isPresaleMode &&
+                        _viewModel.selectedPresaleTier != null
+                    ? _viewModel.selectedPresaleTier!.tierName
+                    : (_viewModel.selectedTicketType == 0
+                        ? 'Presale'
+                        : 'Reguler');
+
+                final eTicketView = StrukTiketView(
+                  bookingId:
+                      'RBR-TKT-${DateTime.now().millisecondsSinceEpoch}',
+                  eventTitle: widget.eventTitle,
+                  category: widget.category,
+                  eventTime: widget.time,
+                  eventLocation: widget.location,
+                  buyerName: buyerName,
+                  buyerEmail: buyerEmail,
+                  buyerPhone: buyerPhone,
+                  ticketType: ticketTypeName,
+                  ticketCount: _viewModel.ticketQuantity,
+                  totalPrice:
+                      _viewModel.formatRupiah(_viewModel.totalAmount),
+                  paymentMethod: _viewModel.selectedPaymentMethod.label,
+                );
+
                 if (!mounted) return;
                 showDialog(
                   context: context,
@@ -1319,6 +1405,21 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
 
                 if (!mounted) return;
                 Navigator.pop(context);
+
+                if (result != null && result['quota_exceeded'] == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: const Color(0xFFDC2626),
+                      content: Text(
+                        result['error']?.toString() ??
+                            'Kuota presale telah habis. Sistem telah mengalihkan ke tier berikutnya.',
+                        style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                  );
+                  return;
+                }
 
                 final chargeResult =
                     result?['charge_result'] as Map<String, dynamic>?;
@@ -1347,6 +1448,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                 final finalOrderId =
                     result?['order_id'] as String? ?? '';
                 final isQris = result?['is_qris'] as bool? ?? true;
+                final isCash = result?['is_cash'] as bool? ?? false;
                 final badgeText =
                     '${_viewModel.ticketQuantity} x ${_viewModel.selectedTicketType == 0 ? "Presale" : "Reguler"}';
                 final paidAmount =
@@ -1371,7 +1473,14 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                   paymentMethod: _viewModel.selectedPaymentMethod.label,
                 );
 
-                if (isQris) {
+                if (isCash) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => eTicketView,
+                    ),
+                  );
+                } else if (isQris) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1427,15 +1536,15 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'LANJUT KE PEMBAYARAN',
+              'KONFIRMASI BAYAR',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
-                letterSpacing: 0.8,
+                letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             const Icon(Icons.arrow_forward_rounded,
                 color: Colors.white, size: 18),
           ],

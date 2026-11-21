@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:mobile_app/features/agenda/models/presale_tier_model.dart';
+import 'package:mobile_app/features/agenda/repositories/presale_repository.dart';
 import 'package:mobile_app/features/booking_payment/models/payment_model.dart';
 import 'package:mobile_app/features/booking_payment/repositories/booking_payment_repository.dart';
 
@@ -7,16 +9,22 @@ import 'package:mobile_app/features/booking_payment/repositories/booking_payment
 // Mengelola state untuk halaman checkout tiket agenda.
 // ---------------------------------------------------------------------------
 
-/// Enum metode pembayaran pada checkout tiket.
+/// Enum metode pembayaran pada checkout tiket (disamakan seragam dengan modul Kedai Kopi).
 enum CheckoutPaymentMethod {
   qris(
     label: 'QRIS Nasional',
-    description: 'GoPay, OVO, DANA, ShopeePay, & m-Banking',
+    description: 'BCA, GoPay, OVO, ShopeePay, Dana, LinkAja',
     badge: 'INSTAN',
   ),
+  cash(
+    label: 'Bayar di Kasir (Tunai)',
+    description: 'Bayar langsung di loket tiket / meja kasir setelah memesan',
+    badge: 'Loket Tiket',
+  ),
   bankTransfer(
-    label: 'Transfer Bank VA',
-    description: 'BCA, Mandiri, BNI, BRI (Verifikasi Otomatis)',
+    label: 'Transfer Bank (Virtual Account)',
+    description: 'BCA, Mandiri, BNI, BRI, Permata',
+    badge: 'VA 24 JAM',
   );
 
   const CheckoutPaymentMethod({
@@ -32,9 +40,13 @@ enum CheckoutPaymentMethod {
 
 class BookingCheckoutViewModel extends ChangeNotifier {
   final BookingPaymentRepository repository;
+  final PresaleRepository presaleRepository;
 
-  BookingCheckoutViewModel({BookingPaymentRepository? repository})
-      : repository = repository ?? BookingPaymentRepositoryImpl();
+  BookingCheckoutViewModel({
+    BookingPaymentRepository? repository,
+    PresaleRepository? presaleRepository,
+  })  : repository = repository ?? BookingPaymentRepositoryImpl(),
+        presaleRepository = presaleRepository ?? PresaleRepositoryImpl();
 
   final int presalePrice = 25000;
   final int regulerPrice = 35000;
@@ -51,8 +63,24 @@ class BookingCheckoutViewModel extends ChangeNotifier {
   bool _isSubmitting = false;
   bool get isSubmitting => _isSubmitting;
 
-  int get currentUnitPrice =>
-      _selectedTicketType == 0 ? presalePrice : regulerPrice;
+  // --- Presale fields ---
+  List<PresaleTierModel> _presaleTiers = [];
+  PresaleTierModel? _selectedPresaleTier;
+  bool _isPresaleMode = false;
+  bool _isLoadingPresale = false;
+
+  List<PresaleTierModel> get presaleTiers => _presaleTiers;
+  PresaleTierModel? get selectedPresaleTier => _selectedPresaleTier;
+  bool get isPresaleMode => _isPresaleMode;
+  bool get isLoadingPresale => _isLoadingPresale;
+
+  int get currentUnitPrice {
+    if (_isPresaleMode && _selectedPresaleTier != null) {
+      return _selectedPresaleTier!.price;
+    }
+    return _selectedTicketType == 0 ? presalePrice : regulerPrice;
+  }
+
   int get totalAmount => currentUnitPrice * _ticketQuantity;
 
   String formatRupiah(int amount) {
@@ -90,6 +118,38 @@ class BookingCheckoutViewModel extends ChangeNotifier {
     }
   }
 
+  /// Memuat daftar tier presale untuk event tertentu.
+  /// Jika berhasil dan ada tier, aktifkan presale mode.
+  Future<void> loadPresaleTiers(int eventId) async {
+    _isLoadingPresale = true;
+    notifyListeners();
+
+    try {
+      final tiers = await presaleRepository.getPresaleTiers(eventId);
+      _presaleTiers = tiers;
+      _isPresaleMode = tiers.isNotEmpty;
+
+      // Auto-select tier yang sedang aktif jika ada
+      final activeOnes =
+          tiers.where((t) => t.isCurrentActive && !t.isSoldout).toList();
+      if (activeOnes.isNotEmpty) {
+        _selectedPresaleTier = activeOnes.first;
+      }
+    } catch (_) {
+      _presaleTiers = [];
+      _isPresaleMode = false;
+    } finally {
+      _isLoadingPresale = false;
+      notifyListeners();
+    }
+  }
+
+  /// Memilih tier presale yang diinginkan pengguna.
+  void selectPresaleTier(PresaleTierModel tier) {
+    _selectedPresaleTier = tier;
+    notifyListeners();
+  }
+
   Future<Map<String, dynamic>?> submitCheckout({
     required String customerName,
     required String customerEmail,
@@ -104,6 +164,33 @@ class BookingCheckoutViewModel extends ChangeNotifier {
 
     final orderId = 'RBR-TKT-${DateTime.now().millisecondsSinceEpoch}';
     final isQris = _selectedPaymentMethod == CheckoutPaymentMethod.qris;
+    final isCash = _selectedPaymentMethod == CheckoutPaymentMethod.cash;
+
+    final paymentTypeString = isQris
+        ? 'qris'
+        : (isCash ? 'cash' : 'bank_transfer');
+
+    if (_isPresaleMode && _selectedPresaleTier != null) {
+      final sellRes = await presaleRepository.sellTickets(
+        _selectedPresaleTier!.id,
+        _ticketQuantity,
+      );
+      if (sellRes.containsKey('error') && sellRes['status'] == 409) {
+        if (eventId != null) {
+          await loadPresaleTiers(eventId);
+        }
+        _isSubmitting = false;
+        notifyListeners();
+        return {
+          'error': sellRes['error'] ?? 'Kuota presale telah habis.',
+          'quota_exceeded': true,
+        };
+      }
+    }
+
+    final ticketItemName = _isPresaleMode && _selectedPresaleTier != null
+        ? 'Tiket ${_selectedPresaleTier!.tierName}: $eventTitle'
+        : 'Tiket: $eventTitle';
 
     final result = await repository.createCharge(
       orderId: orderId,
@@ -111,14 +198,14 @@ class BookingCheckoutViewModel extends ChangeNotifier {
       customerName: customerName,
       customerEmail: customerEmail,
       customerPhone: customerPhone,
-      paymentType: isQris ? 'qris' : 'bank_transfer',
-      bank: 'bca',
+      paymentType: paymentTypeString,
+      bank: isCash ? 'cash' : 'bca',
       orderType: 'ticket',
       eventId: eventId,
       items: [
         {
           'id': eventId?.toString() ?? 'TKT',
-          'name': 'Tiket: $eventTitle',
+          'name': ticketItemName,
           'price': totalAmount ~/ _ticketQuantity,
           'quantity': _ticketQuantity,
         }
@@ -134,6 +221,7 @@ class BookingCheckoutViewModel extends ChangeNotifier {
       'charge_result': result,
       'order_id': result?['order_id'] ?? orderId,
       'is_qris': isQris,
+      'is_cash': isCash,
     };
   }
 
