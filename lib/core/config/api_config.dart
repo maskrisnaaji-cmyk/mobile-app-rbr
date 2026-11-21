@@ -31,6 +31,7 @@ class ApiConfig {
 
   static String get menusUrl => '$baseUrl/menus';
   static String get eventsUrl => '$baseUrl/events';
+  static String get workshopProposalUrl => '$baseUrl/events/workshop-proposal';
   static String get booksUrl => '$baseUrl/books';
   static String get couponsUrl => '$baseUrl/coupons';
   static String get registerUrl => '$baseUrl/auth/register';

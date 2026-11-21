@@ -15,7 +15,7 @@ class AgendaCard extends StatelessWidget {
   final Color imageColor;
   final String? image;
   final String? imageFallback;
-  final int? eventId;
+  final bool isSoldOut;
 
   const AgendaCard({
     super.key,
@@ -29,7 +29,7 @@ class AgendaCard extends StatelessWidget {
     required this.imageColor,
     this.image,
     this.imageFallback,
-    this.eventId,
+    this.isSoldOut = false,
   });
 
   @override
@@ -214,6 +214,29 @@ class AgendaCard extends StatelessWidget {
                     ),
                     ElevatedButton(
                       onPressed: () {
+                        if (isSoldOut) {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: const Color(0xFFDC2626),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              content: Text(
+                                'Tiket sudah habis atau Sold Out',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                          return;
+                        }
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -234,16 +257,13 @@ class AgendaCard extends StatelessWidget {
                         backgroundColor: isSoldOut
                             ? Colors.grey.shade400
                             : AppColors.maroon,
-                        foregroundColor:
-                            isSoldOut ? Colors.grey.shade600 : Colors.white,
-                        disabledBackgroundColor: Colors.grey.shade300,
-                        disabledForegroundColor: Colors.grey.shade600,
+                        foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
                       ),
                       child: Text(
-                        isSoldOut ? 'TIKET PENUH' : 'PESAN TIKET',
+                        isSoldOut ? 'SOLD OUT' : 'PESAN TIKET',
                         style: GoogleFonts.plusJakartaSans(
                             fontSize: 10.5, fontWeight: FontWeight.bold),
                       ),

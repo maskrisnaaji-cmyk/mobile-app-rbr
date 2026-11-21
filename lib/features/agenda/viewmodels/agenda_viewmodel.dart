@@ -49,6 +49,13 @@ class AgendaViewModel extends ChangeNotifier {
   /// Event yang disaring berdasarkan bulan aktif dan tanggal yang dipilih
   List<EventModel> get filteredEvents {
     return _allEvents.where((event) {
+      // Saring lokakarya/acara yang masih berstatus 'Menunggu Persetujuan' atau 'Ditolak'
+      if (event.status.toLowerCase().contains('menunggu') ||
+          event.status.toLowerCase() == 'pending' ||
+          event.status.toLowerCase() == 'ditolak') {
+        return false;
+      }
+
       final dt = event.dateTime;
       if (dt == null) return false;
 
@@ -149,5 +156,37 @@ class AgendaViewModel extends ChangeNotifier {
   void selectDate(int? date) {
     _selectedDate = date;
     notifyListeners();
+  }
+
+  /// Mengajukan lokakarya/workshop baru oleh user
+  Future<Map<String, dynamic>> submitWorkshopProposal({
+    required String title,
+    required String organizerName,
+    required String organizerContact,
+    String? organizerEmail,
+    String category = 'Lokakarya',
+    required String date,
+    required String time,
+    required String location,
+    int price = 0,
+    int quota = 25,
+    String? description,
+    String? image,
+  }) async {
+    final result = await repository.submitWorkshopProposal(
+      title: title,
+      organizerName: organizerName,
+      organizerContact: organizerContact,
+      organizerEmail: organizerEmail,
+      category: category,
+      date: date,
+      time: time,
+      location: location,
+      price: price,
+      quota: quota,
+      description: description,
+      image: image,
+    );
+    return result;
   }
 }

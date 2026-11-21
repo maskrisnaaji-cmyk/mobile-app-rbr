@@ -5,6 +5,7 @@ import 'package:mobile_app/core/widgets/user_avatar_widget.dart';
 import 'package:mobile_app/core/widgets/api_error_widget.dart';
 import 'package:mobile_app/features/agenda/viewmodels/agenda_viewmodel.dart';
 import 'package:mobile_app/features/agenda/widgets/agenda_card.dart';
+import 'package:mobile_app/features/agenda/views/pengajuan_lokakarya_view.dart';
 
 class AgendaView extends StatefulWidget {
   final AgendaViewModel? viewModel;
@@ -426,46 +427,76 @@ class _AgendaViewState extends State<AgendaView> {
                     );
                   }),
 
-                // Bottom CTA Banner
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.goldLight,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.handshake_outlined,
-                        color: AppColors.gold,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Ingin Mengadakan Lokakarya?',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Buka kelas seni atau diskusi budaya bersama komunitas Rumah Ratna.',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 9,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
+                // Bottom CTA Banner (Arahkan ke Pengajuan Lokakarya)
+                InkWell(
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PengajuanLokakaryaView(
+                          viewModel: _viewModel,
                         ),
                       ),
-                    ],
+                    );
+                    _viewModel.fetchEvents();
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.goldLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.handshake_outlined,
+                          color: AppColors.gold,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Ingin Mengadakan Lokakarya?',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Buka kelas seni atau diskusi budaya bersama komunitas Rumah Ratna.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.maroon,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'AJUKAN',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

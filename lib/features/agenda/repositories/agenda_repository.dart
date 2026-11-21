@@ -16,6 +16,22 @@ abstract class AgendaRepository {
     String? customerEmail,
     String? orderId,
   });
+
+  /// Mengajukan lokakarya / workshop baru oleh user
+  Future<Map<String, dynamic>> submitWorkshopProposal({
+    required String title,
+    required String organizerName,
+    required String organizerContact,
+    String? organizerEmail,
+    String category = 'Lokakarya',
+    required String date,
+    required String time,
+    required String location,
+    int price = 0,
+    int quota = 25,
+    String? description,
+    String? image,
+  });
 }
 
 /// Implementasi [AgendaRepository] yang berkomunikasi via HTTP ke backend
@@ -67,6 +83,50 @@ class AgendaRepositoryImpl implements AgendaRepository {
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (_) {
       return false;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> submitWorkshopProposal({
+    required String title,
+    required String organizerName,
+    required String organizerContact,
+    String? organizerEmail,
+    String category = 'Lokakarya',
+    required String date,
+    required String time,
+    required String location,
+    int price = 0,
+    int quota = 25,
+    String? description,
+    String? image,
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse(ApiConfig.workshopProposalUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'title': title,
+            'organizer_name': organizerName,
+            'organizer_contact': organizerContact,
+            'organizer_email': organizerEmail ?? '',
+            'category': category,
+            'date': date,
+            'time': time,
+            'location': location,
+            'price': price,
+            'quota': quota,
+            'description': description ?? '',
+            'image': image ?? '',
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final err = jsonDecode(response.body);
+      throw Exception(err['message'] ?? 'Gagal mengajukan lokakarya');
     }
   }
 }

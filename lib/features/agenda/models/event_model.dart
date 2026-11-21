@@ -21,9 +21,19 @@ class EventModel {
   final String image;
   final String bannerImage;
   final String? imageFallback;
+  final bool allSoldOut;
+  final String? currentTierName;
+  final String? organizerName;
+  final String? organizerContact;
+  final String? organizerEmail;
+  final String? description;
 
-  /// Status apakah tiket agenda telah habis / penuh
-  bool get isSoldOut => quota > 0 ? bookedCount >= quota : !isAvailable;
+  /// Status apakah tiket agenda telah habis / penuh (dari presale tiers atau kuota umum)
+  bool get isSoldOut =>
+      allSoldOut ||
+      (quota > 0 ? bookedCount >= quota : !isAvailable) ||
+      status == 'Tiket Penuh' ||
+      status == 'Penuh';
 
   EventModel({
     this.id,
@@ -46,17 +56,28 @@ class EventModel {
     required this.image,
     String? bannerImage,
     this.imageFallback,
+    this.allSoldOut = false,
+    this.currentTierName,
+    this.organizerName,
+    this.organizerContact,
+    this.organizerEmail,
+    this.description,
   })  : bookedCount = bookedCount ?? sold,
         isAvailable = isAvailable ??
-            (quota > 0
-                ? (bookedCount ?? sold) < quota
-                : (status != 'Tiket Penuh' && status != 'Penuh')),
+            (allSoldOut
+                ? false
+                : (quota > 0
+                    ? (bookedCount ?? sold) < quota
+                    : (status != 'Tiket Penuh' && status != 'Penuh'))),
         priceDouble = priceDouble ?? price.toDouble(),
         formattedPrice = formattedPrice ?? formatRupiah(price),
         remainingSeats = remainingSeats ??
             math.max(0, quota - (bookedCount ?? sold)),
         seats = seats ??
-            ((quota > 0 ? (bookedCount ?? sold) >= quota : !(isAvailable ?? true))
+            ((allSoldOut ||
+                    (quota > 0
+                        ? (bookedCount ?? sold) >= quota
+                        : !(isAvailable ?? true)))
                 ? 'Tiket Penuh'
                 : 'Sisa ${math.max(0, quota - (bookedCount ?? sold))} Kursi'),
         bannerImage = bannerImage ?? image;
@@ -271,9 +292,23 @@ class EventModel {
     final sold = bookedCount;
     final status = json['status']?.toString() ?? 'Tiket Tersedia';
 
+    final rawAllSoldOut = json['all_soldout'] ??
+        json['is_soldout'] ??
+        json['allSoldOut'] ??
+        json['is_sold_out'];
+    final bool parsedAllSoldOut = rawAllSoldOut == true ||
+        rawAllSoldOut.toString() == '1' ||
+        rawAllSoldOut.toString().toLowerCase() == 'true';
+    final currentTier = json['current_tier_name']?.toString() ??
+        (json['active_tier'] is Map
+            ? json['active_tier']['tier_name']?.toString()
+            : null);
+
     final rawIsAvailable = json['is_available'];
     final bool isAvailable;
-    if (quota > 0) {
+    if (parsedAllSoldOut) {
+      isAvailable = false;
+    } else if (quota > 0) {
       isAvailable = bookedCount < quota;
     } else if (rawIsAvailable is bool) {
       isAvailable = rawIsAvailable;
@@ -314,6 +349,12 @@ class EventModel {
       image: resolvedImage,
       bannerImage: resolvedImage,
       imageFallback: fallback,
+      allSoldOut: parsedAllSoldOut,
+      currentTierName: currentTier,
+      organizerName: json['organizer_name']?.toString(),
+      organizerContact: json['organizer_contact']?.toString(),
+      organizerEmail: json['organizer_email']?.toString(),
+      description: json['description']?.toString(),
     );
   }
 
@@ -330,6 +371,8 @@ class EventModel {
       'sold': sold,
       'booked_count': bookedCount,
       'is_available': isAvailable,
+      'all_soldout': allSoldOut,
+      'current_tier_name': currentTierName,
       'status': status,
       'image': image,
       'banner_image': bannerImage,

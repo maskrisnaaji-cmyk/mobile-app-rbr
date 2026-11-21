@@ -1366,23 +1366,6 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                         ? 'Presale'
                         : 'Reguler');
 
-                final eTicketView = StrukTiketView(
-                  bookingId:
-                      'RBR-TKT-${DateTime.now().millisecondsSinceEpoch}',
-                  eventTitle: widget.eventTitle,
-                  category: widget.category,
-                  eventTime: widget.time,
-                  eventLocation: widget.location,
-                  buyerName: buyerName,
-                  buyerEmail: buyerEmail,
-                  buyerPhone: buyerPhone,
-                  ticketType: ticketTypeName,
-                  ticketCount: _viewModel.ticketQuantity,
-                  totalPrice:
-                      _viewModel.formatRupiah(_viewModel.totalAmount),
-                  paymentMethod: _viewModel.selectedPaymentMethod.label,
-                );
-
                 if (!mounted) return;
                 showDialog(
                   context: context,
@@ -1465,9 +1448,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                   buyerName: buyerName,
                   buyerEmail: buyerEmail,
                   buyerPhone: buyerPhone,
-                  ticketType: _viewModel.selectedTicketType == 0
-                      ? 'Presale'
-                      : 'Reguler',
+                  ticketType: ticketTypeName,
                   ticketCount: _viewModel.ticketQuantity,
                   totalPrice: _viewModel.formatRupiah(paidAmount),
                   paymentMethod: _viewModel.selectedPaymentMethod.label,
