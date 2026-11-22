@@ -670,8 +670,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                                                           : AppColors.darkText,
                                                     ),
                                                   ),
-                                                  if (coupon
-                                                      .discountLabel.isNotEmpty) ...[
+                                                  if (coupon.discountLabel
+                                                      .isNotEmpty) ...[
                                                     const SizedBox(width: 6),
                                                     Container(
                                                       padding: const EdgeInsets
@@ -705,8 +705,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                                               const SizedBox(height: 3),
                                               Text(
                                                 coupon.description,
-                                                style: GoogleFonts
-                                                    .plusJakartaSans(
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
                                                   fontSize: 10,
                                                   color: AppColors.greyText,
                                                 ),
@@ -897,17 +897,28 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             );
 
             // 1. Kirim order ke backend kedai (POST /api/kedai/orders)
-            await _viewModel.createKedaiOrder(
+            final createdOrder = await _viewModel.createKedaiOrder(
               orderCode: cleanOrder,
               tableNumber: table,
               items: items,
               totalPrice: total,
             );
 
+            if (createdOrder == null) {
+              if (!mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content:
+                        Text('Pesanan gagal dikirim ke kedai. Coba lagi.')),
+              );
+              return;
+            }
+
             // 2. Buat charge transaksi (Midtrans)
             final chargeResult = await _viewModel.submitOrderTransaction(
               orderId: cleanOrder,
-              grossAmount: _subtotal,
+              grossAmount: total,
               customerName: 'Pelanggan $table',
               paymentType: isQris ? 'qris' : 'bank_transfer',
               bank: 'bca',
@@ -989,7 +1000,7 @@ class _PesananMejaViewState extends State<PesananMejaView> {
           if (!mounted) return;
 
           // Daftarkan pesanan kasir / tunai ke backend (status UNPAID)
-          await _viewModel.createKedaiOrder(
+          final createdOrder = await _viewModel.createKedaiOrder(
             orderCode: orderNo,
             tableNumber: table,
             items: items,
@@ -997,6 +1008,13 @@ class _PesananMejaViewState extends State<PesananMejaView> {
           );
 
           if (!mounted) return;
+          if (createdOrder == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Pesanan gagal dikirim ke kedai. Coba lagi.')),
+            );
+            return;
+          }
           Navigator.push(
             context,
             MaterialPageRoute(
