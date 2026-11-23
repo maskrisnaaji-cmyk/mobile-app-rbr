@@ -255,6 +255,15 @@ class PaymentStatusViewModel extends ChangeNotifier {
   bool _isChecking = false;
   bool get isChecking => _isChecking;
 
+  bool _isExpired = false;
+  bool get isExpired => _isExpired;
+
+  DateTime? _expiredAt;
+  DateTime? get expiredAt => _expiredAt;
+
+  Map<String, dynamic>? _lastStatusData;
+  Map<String, dynamic>? get lastStatusData => _lastStatusData;
+
   /// Cek status pembayaran via backend.
   /// Mengembalikan true jika pembayaran sudah settlement/paid.
   Future<bool> checkStatus(String orderId) async {
@@ -262,12 +271,20 @@ class PaymentStatusViewModel extends ChangeNotifier {
     notifyListeners();
 
     final statusData = await repository.checkPaymentStatus(orderId);
+    _lastStatusData = statusData;
 
     _isChecking = false;
-    notifyListeners();
 
     final txStatus =
         (statusData?['transaction_status'] ?? '').toString().toLowerCase();
+    _isExpired = statusData?['is_expired'] == true || txStatus == 'expire';
+
+    if (statusData?['expired_at'] != null) {
+      _expiredAt = DateTime.tryParse(statusData!['expired_at'].toString());
+    }
+
+    notifyListeners();
+
     return statusData?['is_paid'] == true ||
         txStatus == 'settlement' ||
         txStatus == 'paid';

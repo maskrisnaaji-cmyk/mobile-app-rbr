@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,6 +23,8 @@ class VaPaymentView extends StatefulWidget {
   final int? ticketQuantity;
   final String? customerName;
   final String? customerEmail;
+  final DateTime? createdAt;
+  final DateTime? expiredAt;
 
   const VaPaymentView({
     super.key,
@@ -40,6 +43,8 @@ class VaPaymentView extends StatefulWidget {
     this.ticketQuantity,
     this.customerName,
     this.customerEmail,
+    this.createdAt,
+    this.expiredAt,
   });
 
   @override
@@ -48,11 +53,57 @@ class VaPaymentView extends StatefulWidget {
 
 class _VaPaymentViewState extends State<VaPaymentView> {
   late final PaymentStatusViewModel _viewModel;
+  Timer? _countdownTimer;
+  late DateTime _effectiveExpiredAt;
+  Duration _remainingDuration = const Duration(minutes: 30);
+  bool _isExpired = false;
 
   @override
   void initState() {
     super.initState();
     _viewModel = widget.viewModel ?? PaymentStatusViewModel();
+    _initExpiryAndTimer();
+  }
+
+  void _initExpiryAndTimer() {
+    if (widget.expiredAt != null) {
+      _effectiveExpiredAt = widget.expiredAt!;
+    } else if (widget.createdAt != null) {
+      _effectiveExpiredAt =
+          widget.createdAt!.add(const Duration(minutes: 30));
+    } else {
+      _effectiveExpiredAt =
+          DateTime.now().add(const Duration(minutes: 30));
+    }
+
+    _updateRemainingTime();
+
+    if (!_isExpired) {
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() {
+          _updateRemainingTime();
+        });
+      });
+    }
+  }
+
+  void _updateRemainingTime() {
+    final now = DateTime.now();
+    if (now.isAfter(_effectiveExpiredAt)) {
+      _remainingDuration = Duration.zero;
+      _isExpired = true;
+      _countdownTimer?.cancel();
+    } else {
+      _remainingDuration = _effectiveExpiredAt.difference(now);
+      _isExpired = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _confirmPaymentIfAny() async {
@@ -73,6 +124,17 @@ class _VaPaymentViewState extends State<VaPaymentView> {
   }
 
   Future<void> _checkStatus() async {
+    if (_isExpired || _viewModel.isExpired) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFDC2626),
+          content: Text(
+              'Waktu pembayaran sudah habis (Expired). Silakan buat pesanan baru.'),
+        ),
+      );
+      return;
+    }
+
     final isPaid = await _viewModel.checkStatus(widget.orderNumber);
     if (!mounted) return;
 
@@ -96,6 +158,20 @@ class _VaPaymentViewState extends State<VaPaymentView> {
           ),
         );
       });
+    } else if (_viewModel.isExpired) {
+      setState(() {
+        _isExpired = true;
+        _remainingDuration = Duration.zero;
+        _countdownTimer?.cancel();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFDC2626),
+          content: Text(
+              'Transaksi telah kedaluwarsa. Silakan lakukan pemesanan ulang.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -108,6 +184,8 @@ class _VaPaymentViewState extends State<VaPaymentView> {
   }
 
   Future<void> _simulateSettlement() async {
+    if (_isExpired || _viewModel.isExpired) return;
+
     final success = await _viewModel.simulateSettlement(
       orderId: widget.orderNumber,
       grossAmount: widget.rawAmount ?? 35000,
@@ -142,6 +220,8 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
+        final bool isExpiredNow = _isExpired || _viewModel.isExpired;
+
         return MobileFrame(
           child: Scaffold(
             backgroundColor: AppColors.bgCanvas,
@@ -181,15 +261,15 @@ class _VaPaymentViewState extends State<VaPaymentView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildTimerCard(),
+                  _buildTimerCard(isExpiredNow),
                   const SizedBox(height: 14),
                   _buildMerchantInfoCard(),
                   const SizedBox(height: 14),
-                  _buildVaDetailsCard(context),
+                  _buildVaDetailsCard(context, isExpiredNow),
                   const SizedBox(height: 16),
                   _buildInstructionsSection(context),
                   const SizedBox(height: 20),
-                  _buildActionButtons(context),
+                  _buildActionButtons(context, isExpiredNow),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -200,7 +280,41 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     );
   }
 
-  Widget _buildTimerCard() {
+  Widget _buildTimerCard(bool isExpiredNow) {
+    if (isExpiredNow) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFCA5A5)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                color: Color(0xFFDC2626), size: 18),
+            const SizedBox(width: 8),
+            Text(
+              'WAKTU PEMBAYARAN KEDALUWARSA (00:00)',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFFDC2626),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(_remainingDuration.inMinutes.remainder(60));
+    final seconds = twoDigits(_remainingDuration.inSeconds.remainder(60));
+    final hours = _remainingDuration.inHours;
+    final timeStr =
+        hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -224,7 +338,7 @@ class _VaPaymentViewState extends State<VaPaymentView> {
             ),
           ),
           Text(
-            '23:59:46',
+            timeStr,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               fontWeight: FontWeight.w900,
@@ -328,13 +442,17 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     );
   }
 
-  Widget _buildVaDetailsCard(BuildContext context) {
+  Widget _buildVaDetailsCard(BuildContext context, bool isExpiredNow) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        border: Border.all(
+          color: isExpiredNow
+              ? const Color(0xFFFCA5A5)
+              : AppColors.lightBorder,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -352,23 +470,33 @@ class _VaPaymentViewState extends State<VaPaymentView> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00388A).withValues(alpha: 0.1),
+                  color: isExpiredNow
+                      ? const Color(0xFF9CA3AF).withValues(alpha: 0.1)
+                      : const Color(0xFF00388A).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: const Color(0xFF00388A).withValues(alpha: 0.3)),
+                    color: isExpiredNow
+                        ? const Color(0xFF9CA3AF).withValues(alpha: 0.3)
+                        : const Color(0xFF00388A).withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.account_balance,
-                        color: Color(0xFF00388A), size: 14),
+                    Icon(Icons.account_balance,
+                        color: isExpiredNow
+                            ? const Color(0xFF6B7280)
+                            : const Color(0xFF00388A),
+                        size: 14),
                     const SizedBox(width: 6),
                     Text(
                       widget.bankName,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF00388A),
+                        color: isExpiredNow
+                            ? const Color(0xFF6B7280)
+                            : const Color(0xFF00388A),
                       ),
                     ),
                   ],
@@ -379,15 +507,19 @@ class _VaPaymentViewState extends State<VaPaymentView> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  color: isExpiredNow
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                      : const Color(0xFF10B981).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  'Verifikasi Otomatis',
+                  isExpiredNow ? 'Kedaluwarsa' : 'Verifikasi Otomatis',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF047857),
+                    color: isExpiredNow
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFF047857),
                   ),
                 ),
               ),
@@ -407,9 +539,13 @@ class _VaPaymentViewState extends State<VaPaymentView> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.bgCanvas,
+              color: isExpiredNow ? const Color(0xFFF9FAFB) : AppColors.bgCanvas,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.lightBorder),
+              border: Border.all(
+                color: isExpiredNow
+                    ? const Color(0xFFE5E7EB)
+                    : AppColors.lightBorder,
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -421,46 +557,61 @@ class _VaPaymentViewState extends State<VaPaymentView> {
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.1,
-                      color: AppColors.darkText,
+                      color: isExpiredNow
+                          ? const Color(0xFF9CA3AF)
+                          : AppColors.darkText,
+                      decoration: isExpiredNow
+                          ? TextDecoration.lineThrough
+                          : null,
                     ),
                   ),
                 ),
                 InkWell(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(
-                        text: widget.vaNumber.replaceAll(' ', '')));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Nomor Virtual Account disalin ke papan klip!',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 12),
-                        ),
-                        backgroundColor: AppColors.darkText,
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onTap: isExpiredNow
+                      ? null
+                      : () {
+                          Clipboard.setData(ClipboardData(
+                              text: widget.vaNumber.replaceAll(' ', '')));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Nomor Virtual Account disalin ke papan klip!',
+                                style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12),
+                              ),
+                              backgroundColor: AppColors.darkText,
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppColors.maroon,
+                      color: isExpiredNow
+                          ? const Color(0xFFD1D5DB)
+                          : AppColors.maroon,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.copy_rounded,
-                            color: Colors.white, size: 13),
+                        Icon(Icons.copy_rounded,
+                            color: isExpiredNow
+                                ? const Color(0xFF6B7280)
+                                : Colors.white,
+                            size: 13),
                         const SizedBox(width: 4),
                         Text(
                           'SALIN',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: isExpiredNow
+                                ? const Color(0xFF6B7280)
+                                : Colors.white,
                           ),
                         ),
                       ],
@@ -474,15 +625,26 @@ class _VaPaymentViewState extends State<VaPaymentView> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.info_outline_rounded,
-                  color: AppColors.greyText, size: 14),
+              Icon(
+                isExpiredNow
+                    ? Icons.error_outline_rounded
+                    : Icons.info_outline_rounded,
+                color: isExpiredNow
+                    ? const Color(0xFFDC2626)
+                    : AppColors.greyText,
+                size: 14,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Proses verifikasi instan kurang dari 1 menit setelah transfer berhasil.',
+                  isExpiredNow
+                      ? 'Waktu pembayaran telah kedaluwarsa. Nomor VA di atas sudah dinonaktifkan.'
+                      : 'Proses verifikasi instan kurang dari 1 menit setelah transfer berhasil.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
-                    color: AppColors.greyText,
+                    color: isExpiredNow
+                        ? const Color(0xFFDC2626)
+                        : AppColors.greyText,
                     height: 1.3,
                   ),
                 ),
@@ -611,19 +773,23 @@ class _VaPaymentViewState extends State<VaPaymentView> {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, bool isExpiredNow) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
           height: 52,
           child: ElevatedButton(
-            onPressed: _viewModel.isChecking ? null : _checkStatus,
+            onPressed:
+                (isExpiredNow || _viewModel.isChecking) ? null : _checkStatus,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B1D2F),
+              backgroundColor: isExpiredNow
+                  ? const Color(0xFF9CA3AF)
+                  : const Color(0xFF6B1D2F),
+              disabledBackgroundColor: const Color(0xFFE5E7EB),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
-              elevation: 2,
+              elevation: isExpiredNow ? 0 : 2,
             ),
             child: _viewModel.isChecking
                 ? const SizedBox(
@@ -635,15 +801,26 @@ class _VaPaymentViewState extends State<VaPaymentView> {
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.check_circle_outline,
-                          color: Colors.white, size: 20),
+                      Icon(
+                        isExpiredNow
+                            ? Icons.cancel_outlined
+                            : Icons.check_circle_outline,
+                        color: isExpiredNow
+                            ? const Color(0xFF9CA3AF)
+                            : Colors.white,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
-                        widget.buttonLabel,
+                        isExpiredNow
+                            ? 'PEMBAYARAN KEDALUWARSA'
+                            : widget.buttonLabel,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: isExpiredNow
+                              ? const Color(0xFF9CA3AF)
+                              : Colors.white,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -657,28 +834,29 @@ class _VaPaymentViewState extends State<VaPaymentView> {
           style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 8)),
           child: Text(
-            'Ubah Metode Pembayaran',
+            isExpiredNow ? 'Kembali & Pesan Ulang' : 'Ubah Metode Pembayaran',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.greyText,
+              color: isExpiredNow ? AppColors.maroon : AppColors.greyText,
             ),
           ),
         ),
-        Center(
-          child: TextButton(
-            onPressed: _viewModel.isChecking ? null : _simulateSettlement,
-            child: Text(
-              '⚡ Simulasi Lunas (Demo Sandbox)',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.greyText.withValues(alpha: 0.8),
-                decoration: TextDecoration.underline,
+        if (!isExpiredNow)
+          Center(
+            child: TextButton(
+              onPressed: _viewModel.isChecking ? null : _simulateSettlement,
+              child: Text(
+                '⚡ Simulasi Lunas (Demo Sandbox)',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.greyText.withValues(alpha: 0.8),
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }

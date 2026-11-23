@@ -36,7 +36,7 @@ class KedaiKopiViewModel extends ChangeNotifier {
   final Map<String, int> _itemPrices = {};
 
   // ── State Transaksi Pembayaran ────────────────────────────────────────────
-  int _selectedPaymentMethod = 0; // 0: QRIS, 1: Tunai Kasir, 2: Transfer Bank
+  int _selectedPaymentMethod = 0; // 0: QRIS, 1: Bayar di Kasir (Tunai)
   bool _isSubmittingOrder = false;
 
   // ── Menu Fallback Default ─────────────────────────────────────────────────
@@ -303,7 +303,7 @@ class KedaiKopiViewModel extends ChangeNotifier {
     required int grossAmount,
     required String customerName,
     required String paymentType,
-    required String bank,
+    String bank = '',
     required List<CartItem> items,
     String? couponCode,
     dynamic userId,

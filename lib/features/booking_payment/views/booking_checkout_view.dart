@@ -1462,6 +1462,14 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                     ),
                   );
                 } else if (isQris) {
+                  DateTime? createdAt;
+                  DateTime? expiredAt;
+                  if (chargeResult?['created_at'] != null) {
+                    createdAt = DateTime.tryParse(chargeResult!['created_at'].toString());
+                  }
+                  if (chargeResult?['expired_at'] != null) {
+                    expiredAt = DateTime.tryParse(chargeResult!['expired_at'].toString());
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1479,10 +1487,20 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                         ticketQuantity: _viewModel.ticketQuantity,
                         customerName: buyerName,
                         customerEmail: buyerEmail,
+                        createdAt: createdAt,
+                        expiredAt: expiredAt,
                       ),
                     ),
                   );
                 } else {
+                  DateTime? createdAt;
+                  DateTime? expiredAt;
+                  if (chargeResult?['created_at'] != null) {
+                    createdAt = DateTime.tryParse(chargeResult!['created_at'].toString());
+                  }
+                  if (chargeResult?['expired_at'] != null) {
+                    expiredAt = DateTime.tryParse(chargeResult!['expired_at'].toString());
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1502,6 +1520,8 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                         ticketQuantity: _viewModel.ticketQuantity,
                         customerName: buyerName,
                         customerEmail: buyerEmail,
+                        createdAt: createdAt,
+                        expiredAt: expiredAt,
                       ),
                     ),
                   );

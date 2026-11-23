@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_app/core/theme/colors.dart';
@@ -21,6 +22,8 @@ class QrisPaymentView extends StatefulWidget {
   final int? ticketQuantity;
   final String? customerName;
   final String? customerEmail;
+  final DateTime? createdAt;
+  final DateTime? expiredAt;
 
   const QrisPaymentView({
     super.key,
@@ -39,6 +42,8 @@ class QrisPaymentView extends StatefulWidget {
     this.ticketQuantity,
     this.customerName,
     this.customerEmail,
+    this.createdAt,
+    this.expiredAt,
   });
 
   @override
@@ -47,11 +52,57 @@ class QrisPaymentView extends StatefulWidget {
 
 class _QrisPaymentViewState extends State<QrisPaymentView> {
   late final PaymentStatusViewModel _viewModel;
+  Timer? _countdownTimer;
+  late DateTime _effectiveExpiredAt;
+  Duration _remainingDuration = const Duration(minutes: 30);
+  bool _isExpired = false;
 
   @override
   void initState() {
     super.initState();
     _viewModel = widget.viewModel ?? PaymentStatusViewModel();
+    _initExpiryAndTimer();
+  }
+
+  void _initExpiryAndTimer() {
+    if (widget.expiredAt != null) {
+      _effectiveExpiredAt = widget.expiredAt!;
+    } else if (widget.createdAt != null) {
+      _effectiveExpiredAt =
+          widget.createdAt!.add(const Duration(minutes: 30));
+    } else {
+      _effectiveExpiredAt =
+          DateTime.now().add(const Duration(minutes: 30));
+    }
+
+    _updateRemainingTime();
+
+    if (!_isExpired) {
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() {
+          _updateRemainingTime();
+        });
+      });
+    }
+  }
+
+  void _updateRemainingTime() {
+    final now = DateTime.now();
+    if (now.isAfter(_effectiveExpiredAt)) {
+      _remainingDuration = Duration.zero;
+      _isExpired = true;
+      _countdownTimer?.cancel();
+    } else {
+      _remainingDuration = _effectiveExpiredAt.difference(now);
+      _isExpired = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _confirmPaymentIfAny() async {
@@ -72,6 +123,16 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
   }
 
   Future<void> _checkStatus() async {
+    if (_isExpired || _viewModel.isExpired) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFDC2626),
+          content: Text('Waktu pembayaran sudah habis (Expired). Silakan buat pesanan baru.'),
+        ),
+      );
+      return;
+    }
+
     final isPaid = await _viewModel.checkStatus(widget.orderNumber);
     if (!mounted) return;
 
@@ -94,6 +155,19 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
           ),
         );
       });
+    } else if (_viewModel.isExpired) {
+      setState(() {
+        _isExpired = true;
+        _remainingDuration = Duration.zero;
+        _countdownTimer?.cancel();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFDC2626),
+          content: Text('Transaksi telah kedaluwarsa. Silakan lakukan pemesanan ulang.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -105,6 +179,8 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
   }
 
   Future<void> _simulateSettlement() async {
+    if (_isExpired || _viewModel.isExpired) return;
+
     final success = await _viewModel.simulateSettlement(
       orderId: widget.orderNumber,
       grossAmount: widget.rawAmount ?? 35000,
@@ -139,6 +215,8 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
+        final bool isExpiredNow = _isExpired || _viewModel.isExpired;
+
         return MobileFrame(
           child: Scaffold(
             backgroundColor: AppColors.bgCanvas,
@@ -178,13 +256,13 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildTimerCard(),
+                  _buildTimerCard(isExpiredNow),
                   const SizedBox(height: 14),
                   _buildMerchantInfoCard(),
                   const SizedBox(height: 14),
-                  _buildQrisCard(context),
+                  _buildQrisCard(context, isExpiredNow),
                   const SizedBox(height: 20),
-                  _buildActionButtons(context),
+                  _buildActionButtons(context, isExpiredNow),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -195,7 +273,40 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
     );
   }
 
-  Widget _buildTimerCard() {
+  Widget _buildTimerCard(bool isExpiredNow) {
+    if (isExpiredNow) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFCA5A5)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                color: Color(0xFFDC2626), size: 18),
+            const SizedBox(width: 8),
+            Text(
+              'WAKTU PEMBAYARAN KEDALUWARSA (00:00)',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFFDC2626),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(_remainingDuration.inMinutes.remainder(60));
+    final seconds = twoDigits(_remainingDuration.inSeconds.remainder(60));
+    final hours = _remainingDuration.inHours;
+    final timeStr = hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -218,7 +329,7 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
             ),
           ),
           Text(
-            '14:59',
+            timeStr,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -324,7 +435,7 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
     );
   }
 
-  Widget _buildQrisCard(BuildContext context) {
+  Widget _buildQrisCard(BuildContext context, bool isExpiredNow) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -348,7 +459,9 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626),
+                  color: isExpiredNow
+                      ? const Color(0xFF9CA3AF)
+                      : const Color(0xFFDC2626),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -374,7 +487,9 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E3A8A),
+                  color: isExpiredNow
+                      ? const Color(0xFF6B7280)
+                      : const Color(0xFF1E3A8A),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -394,7 +509,12 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.lightBorder, width: 1.5),
+              border: Border.all(
+                color: isExpiredNow
+                    ? const Color(0xFFFCA5A5)
+                    : AppColors.lightBorder,
+                width: 1.5,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
@@ -403,19 +523,63 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
                 ),
               ],
             ),
-            child: SizedBox(
-              width: 210,
-              height: 210,
-              child: (widget.qrUrl != null && widget.qrUrl!.isNotEmpty)
-                  ? Image.network(
-                      widget.qrUrl!,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Opacity(
+                    opacity: isExpiredNow ? 0.2 : 1.0,
+                    child: SizedBox(
                       width: 210,
                       height: 210,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) =>
-                          CustomPaint(painter: _QrisPainter()),
-                    )
-                  : CustomPaint(painter: _QrisPainter()),
+                      child: (widget.qrUrl != null && widget.qrUrl!.isNotEmpty)
+                          ? Image.network(
+                              widget.qrUrl!,
+                              width: 210,
+                              height: 210,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) =>
+                                  CustomPaint(painter: _QrisPainter()),
+                            )
+                          : CustomPaint(painter: _QrisPainter()),
+                    ),
+                  ),
+                  if (isExpiredNow)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.block_rounded,
+                              color: Colors.white, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'KEDALUWARSA',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -425,15 +589,23 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.8,
-              color: AppColors.darkText,
+              color: isExpiredNow ? AppColors.greyText : AppColors.darkText,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Pindai QR ini melalui aplikasi m-Banking atau E-Wallet',
+            isExpiredNow
+                ? 'Kode QR telah kedaluwarsa dan tidak dapat dipindai lagi.'
+                : 'Pindai QR ini melalui aplikasi m-Banking atau E-Wallet',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(
-                fontSize: 11, color: AppColors.greyText),
+              fontSize: 11,
+              color: isExpiredNow
+                  ? const Color(0xFFDC2626)
+                  : AppColors.greyText,
+              fontWeight:
+                  isExpiredNow ? FontWeight.w600 : FontWeight.normal,
+            ),
           ),
           const SizedBox(height: 16),
           const Divider(color: AppColors.lightBorder, height: 1),
@@ -484,19 +656,22 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, bool isExpiredNow) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
           height: 52,
           child: ElevatedButton(
-            onPressed: _viewModel.isChecking ? null : _checkStatus,
+            onPressed: (isExpiredNow || _viewModel.isChecking) ? null : _checkStatus,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B1D2F),
+              backgroundColor: isExpiredNow
+                  ? const Color(0xFF9CA3AF)
+                  : const Color(0xFF6B1D2F),
+              disabledBackgroundColor: const Color(0xFFE5E7EB),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
-              elevation: 2,
+              elevation: isExpiredNow ? 0 : 2,
             ),
             child: _viewModel.isChecking
                 ? const SizedBox(
@@ -508,15 +683,24 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.check_circle_outline,
-                          color: Colors.white, size: 20),
+                      Icon(
+                        isExpiredNow
+                            ? Icons.cancel_outlined
+                            : Icons.check_circle_outline,
+                        color: isExpiredNow ? const Color(0xFF9CA3AF) : Colors.white,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
-                        widget.buttonLabel,
+                        isExpiredNow
+                            ? 'PEMBAYARAN KEDALUWARSA'
+                            : widget.buttonLabel,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: isExpiredNow
+                              ? const Color(0xFF9CA3AF)
+                              : Colors.white,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -528,29 +712,42 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
         SizedBox(
           height: 46,
           child: OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Kode QR QRIS berhasil disimpan ke galeri!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            icon: const Icon(Icons.download_rounded,
-                color: AppColors.maroon, size: 18),
+            onPressed: isExpiredNow
+                ? null
+                : () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text('Kode QR QRIS berhasil disimpan ke galeri!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+            icon: Icon(
+              Icons.download_rounded,
+              color: isExpiredNow ? const Color(0xFF9CA3AF) : AppColors.maroon,
+              size: 18,
+            ),
             label: Text(
               'Unduh Kode QR',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.maroon,
+                color: isExpiredNow
+                    ? const Color(0xFF9CA3AF)
+                    : AppColors.maroon,
               ),
             ),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.maroon, width: 1.2),
+              side: BorderSide(
+                color: isExpiredNow
+                    ? const Color(0xFFD1D5DB)
+                    : AppColors.maroon,
+                width: 1.2,
+              ),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
-              backgroundColor: Colors.white,
+              backgroundColor: isExpiredNow ? const Color(0xFFF9FAFB) : Colors.white,
             ),
           ),
         ),
@@ -560,28 +757,31 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
           style:
               TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 8)),
           child: Text(
-            'Ubah Metode Pembayaran',
+            isExpiredNow
+                ? 'Kembali & Pesan Ulang'
+                : 'Ubah Metode Pembayaran',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.greyText,
+              color: isExpiredNow ? AppColors.maroon : AppColors.greyText,
             ),
           ),
         ),
-        Center(
-          child: TextButton(
-            onPressed: _viewModel.isChecking ? null : _simulateSettlement,
-            child: Text(
-              '⚡ Simulasi Lunas (Demo Sandbox)',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.greyText.withValues(alpha: 0.8),
-                decoration: TextDecoration.underline,
+        if (!isExpiredNow)
+          Center(
+            child: TextButton(
+              onPressed: _viewModel.isChecking ? null : _simulateSettlement,
+              child: Text(
+                '⚡ Simulasi Lunas (Demo Sandbox)',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.greyText.withValues(alpha: 0.8),
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
