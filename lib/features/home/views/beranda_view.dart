@@ -137,7 +137,7 @@ class _BerandaViewState extends State<BerandaView> {
               HomeQuoteCard(
                 quote: _viewModel.quote.isNotEmpty
                     ? _viewModel.quote
-                    : 'Membaca adalah merawat ingatan, berbudaya adalah merawat martabat.',
+                    : ' Selalu terbuka berbagi makanan, tempat tinggal, atau bantuan kepada siapa saja dengan prinsip kesederhanaan.',
               ),
             ],
           ),

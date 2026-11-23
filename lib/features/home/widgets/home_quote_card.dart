@@ -8,7 +8,7 @@ class HomeQuoteCard extends StatelessWidget {
 
   const HomeQuoteCard({
     super.key,
-    this.quote = 'Membaca adalah merawat ingatan, berbudaya adalah merawat martabat.',
+    this.quote = ' Selalu terbuka berbagi makanan, tempat tinggal, atau bantuan kepada siapa saja dengan prinsip kesederhanaan.',
   });
 
   @override
@@ -21,14 +21,28 @@ class HomeQuoteCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
       ),
-      child: Text(
-        quote,
-        textAlign: TextAlign.center,
-        style: GoogleFonts.lora(
-          fontSize: 11,
-          fontStyle: FontStyle.italic,
-          color: AppColors.textMain,
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            quote,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.lora(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: AppColors.textMain,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '- Ratna Indraswari Ibrahim',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.lora(
+              fontSize: 10,
+              color: AppColors.textMain,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -61,6 +61,6 @@ class HomeRepositoryImpl implements HomeRepository {
 
   @override
   Future<String> getQuote() async {
-    return 'Membaca adalah merawat ingatan, berbudaya adalah merawat martabat.';
+    return ' Selalu terbuka berbagi makanan, tempat tinggal, atau bantuan kepada siapa saja dengan prinsip kesederhanaan.';
   }
 }
