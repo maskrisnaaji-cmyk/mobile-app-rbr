@@ -7,8 +7,15 @@ import 'package:mobile_app/features/pustaka/widgets/pustaka_filter_chip.dart';
 
 class KatalogView extends StatefulWidget {
   final PustakaViewModel? viewModel;
+  final bool autoFocus;
+  final String? initialQuery;
 
-  const KatalogView({super.key, this.viewModel});
+  const KatalogView({
+    super.key,
+    this.viewModel,
+    this.autoFocus = false,
+    this.initialQuery,
+  });
 
   @override
   State<KatalogView> createState() => _KatalogViewState();
@@ -22,6 +29,12 @@ class _KatalogViewState extends State<KatalogView> {
   void initState() {
     super.initState();
     _viewModel = widget.viewModel ?? PustakaViewModel();
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _searchController.text = widget.initialQuery!;
+      _viewModel.filterBooks(widget.initialQuery!);
+    } else if (_viewModel.searchQuery.isNotEmpty) {
+      _searchController.text = _viewModel.searchQuery;
+    }
   }
 
   @override
@@ -75,6 +88,9 @@ class _KatalogViewState extends State<KatalogView> {
                           ),
                           child: TextField(
                             controller: _searchController,
+                            autofocus: widget.autoFocus,
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: (val) => _viewModel.filterBooks(val),
                             onChanged: (val) => _viewModel.filterBooks(val),
                             style: GoogleFonts.plusJakartaSans(fontSize: 12),
                             decoration: InputDecoration(

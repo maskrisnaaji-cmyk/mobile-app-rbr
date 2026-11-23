@@ -365,8 +365,10 @@ class KedaiKopiViewModel extends ChangeNotifier {
       final nameMatches = menu.name.toLowerCase().contains(_searchQuery);
       final categoryMatches =
           menu.category.toLowerCase().contains(_searchQuery);
+      final descMatches =
+          menu.description.toLowerCase().contains(_searchQuery);
       final matchesSearch =
-          _searchQuery.isEmpty || nameMatches || categoryMatches;
+          _searchQuery.isEmpty || nameMatches || categoryMatches || descMatches;
       final matchesCategory =
           selectedCat == 'Semua' || menu.category == selectedCat;
       return matchesSearch && matchesCategory;

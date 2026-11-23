@@ -10,6 +10,7 @@ class HomeHeaderBar extends StatelessWidget {
   final VoidCallback? onProfileTap;
   final VoidCallback? onSearchTap;
   final VoidCallback? onNotificationTap;
+  final int notificationCount;
 
   const HomeHeaderBar({
     super.key,
@@ -18,6 +19,7 @@ class HomeHeaderBar extends StatelessWidget {
     this.onProfileTap,
     this.onSearchTap,
     this.onNotificationTap,
+    this.notificationCount = 0,
   });
 
   @override
@@ -94,9 +96,37 @@ class HomeHeaderBar extends StatelessWidget {
               onPressed: onSearchTap ?? () {},
               icon: const Icon(Icons.search, size: 20, color: AppColors.textMain),
             ),
-            IconButton(
-              onPressed: onNotificationTap ?? () {},
-              icon: const Icon(Icons.notifications_none, size: 20, color: AppColors.textMain),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  onPressed: onNotificationTap ?? () {},
+                  icon: const Icon(Icons.notifications_none, size: 20, color: AppColors.textMain),
+                ),
+                if (notificationCount > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: AppColors.maroon,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Center(
+                        child: Text(
+                          notificationCount > 99 ? '99+' : '$notificationCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),

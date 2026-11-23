@@ -7,6 +7,8 @@ import 'package:mobile_app/features/pustaka/widgets/book_card_grid_item.dart';
 import 'package:mobile_app/features/pustaka/widgets/librarian_help_banner.dart';
 import 'package:mobile_app/features/pustaka/widgets/pustaka_filter_chip.dart';
 import 'package:mobile_app/features/profil/views/pusat_bantuan_screen.dart';
+import 'package:mobile_app/features/notification/viewmodels/notification_viewmodel.dart';
+import 'package:mobile_app/features/notification/views/notification_view.dart';
 
 class PustakaView extends StatefulWidget {
   final PustakaViewModel? viewModel;
@@ -26,6 +28,9 @@ class _PustakaViewState extends State<PustakaView> {
   void initState() {
     super.initState();
     _viewModel = widget.viewModel ?? PustakaViewModel();
+    if (_viewModel.searchQuery.isNotEmpty) {
+      _searchController.text = _viewModel.searchQuery;
+    }
   }
 
   @override
@@ -83,9 +88,54 @@ class _PustakaViewState extends State<PustakaView> {
                           onPressed: () => _searchFocusNode.requestFocus(),
                           icon: const Icon(Icons.search, color: AppColors.textMain),
                         ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.notifications_none, color: AppColors.textMain),
+                        ListenableBuilder(
+                          listenable: NotificationViewModel.instance,
+                          builder: (context, _) {
+                            final unread = NotificationViewModel.instance.unreadCount;
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                IconButton(
+                                  onPressed: () async {
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const NotificationView(),
+                                      ),
+                                    );
+                                    NotificationViewModel.instance.fetchNotifications();
+                                  },
+                                  icon: const Icon(Icons.notifications_none, color: AppColors.textMain),
+                                ),
+                                if (unread > 0)
+                                  Positioned(
+                                    right: 6,
+                                    top: 6,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.maroon,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 16,
+                                        minHeight: 16,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          unread > 99 ? '99+' : '$unread',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(width: 4),
                         const UserAvatarWidget(radius: 13),
@@ -124,6 +174,8 @@ class _PustakaViewState extends State<PustakaView> {
                 TextField(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (value) => _viewModel.filterBooks(value),
                   onChanged: (value) => _viewModel.filterBooks(value),
                   style: GoogleFonts.plusJakartaSans(fontSize: 12),
                   decoration: InputDecoration(

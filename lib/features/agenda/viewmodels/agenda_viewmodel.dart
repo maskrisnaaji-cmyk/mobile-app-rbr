@@ -18,6 +18,7 @@ class AgendaViewModel extends ChangeNotifier {
   // Filter Bulan & Tanggal
   DateTime _currentMonth = DateTime(2026, 9); // Default ke September 2026 (sesuai data acara RBR)
   int? _selectedDate;
+  String _searchQuery = '';
 
   // ── Getters ─────────────────────────────────────────────────────────────
   bool get isLoading => _isLoading;
@@ -25,6 +26,19 @@ class AgendaViewModel extends ChangeNotifier {
   List<EventModel> get allEvents => _allEvents;
   DateTime get currentMonth => _currentMonth;
   int? get selectedDate => _selectedDate;
+  String get searchQuery => _searchQuery;
+
+  /// Memperbarui query pencarian acara
+  void updateSearch(String query) {
+    _searchQuery = query.toLowerCase().trim();
+    notifyListeners();
+  }
+
+  /// Menghapus query pencarian acara
+  void clearSearch() {
+    _searchQuery = '';
+    notifyListeners();
+  }
 
   /// Memulai sinkronisasi otomatis status tiket dan kuota secara berkala (tiap 5–8 detik)
   void startAutoRefresh([Duration interval = const Duration(seconds: 6)]) {
@@ -58,6 +72,18 @@ class AgendaViewModel extends ChangeNotifier {
 
       final dt = event.dateTime;
       if (dt == null) return false;
+
+      // Filter Pencarian Query (jika ada)
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery;
+        final matchTitle = event.title.toLowerCase().contains(q);
+        final matchDesc = event.description?.toLowerCase().contains(q) ?? false;
+        final matchCategory = event.category.toLowerCase().contains(q);
+        final matchLocation = event.location.toLowerCase().contains(q);
+        if (!matchTitle && !matchDesc && !matchCategory && !matchLocation) {
+          return false;
+        }
+      }
 
       // Filter Bulan & Tahun
       final matchMonth =

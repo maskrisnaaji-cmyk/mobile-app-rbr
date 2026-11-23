@@ -5,6 +5,8 @@ import 'package:mobile_app/core/widgets/user_avatar_widget.dart';
 import 'package:mobile_app/features/kedai_kopi/viewmodels/kedai_kopi_viewmodel.dart';
 import 'package:mobile_app/features/kedai_kopi/views/pesanan_meja_view.dart';
 import 'package:mobile_app/features/kedai_kopi/widgets/menu_item_card.dart';
+import 'package:mobile_app/features/notification/viewmodels/notification_viewmodel.dart';
+import 'package:mobile_app/features/notification/views/notification_view.dart';
 
 class _CoffeeTable {
   final int number;
@@ -25,6 +27,7 @@ class KedaiKopiView extends StatefulWidget {
 class _KedaiKopiViewState extends State<KedaiKopiView> {
   late final KedaiKopiViewModel _viewModel;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   static const List<_CoffeeTable> _tables = [
     _CoffeeTable(number: 1, isOccupied: false),
@@ -54,6 +57,7 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
   void dispose() {
     _viewModel.stopAutoRefresh();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -290,13 +294,59 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                               IconButton(
                                 icon: const Icon(Icons.search_rounded,
                                     color: AppColors.darkText),
-                                onPressed: () {},
+                                tooltip: 'Cari menu',
+                                onPressed: () => _searchFocusNode.requestFocus(),
                               ),
-                              IconButton(
-                                icon: const Icon(
-                                    Icons.notifications_none_rounded,
-                                    color: AppColors.darkText),
-                                onPressed: () {},
+                              ListenableBuilder(
+                                listenable: NotificationViewModel.instance,
+                                builder: (context, _) {
+                                  final unread = NotificationViewModel.instance.unreadCount;
+                                  return Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.notifications_none_rounded,
+                                            color: AppColors.darkText),
+                                        onPressed: () async {
+                                          await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => const NotificationView(),
+                                            ),
+                                          );
+                                          NotificationViewModel.instance.fetchNotifications();
+                                        },
+                                      ),
+                                      if (unread > 0)
+                                        Positioned(
+                                          right: 6,
+                                          top: 6,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(2),
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.maroon,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            constraints: const BoxConstraints(
+                                              minWidth: 16,
+                                              minHeight: 16,
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                unread > 99 ? '99+' : '$unread',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
                               ),
                               const SizedBox(width: 4),
                               const UserAvatarWidget(radius: 13),
@@ -393,6 +443,9 @@ class _KedaiKopiViewState extends State<KedaiKopiView> {
                         ),
                         child: TextField(
                           controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: _viewModel.updateSearch,
                           onChanged: _viewModel.updateSearch,
                           decoration: InputDecoration(
                             icon: const Icon(Icons.search_rounded,

@@ -12,6 +12,7 @@ import 'package:mobile_app/features/booking_payment/views/qris_payment_view.dart
 import 'package:mobile_app/features/booking_payment/views/struk_pembayaran_view.dart';
 import 'package:mobile_app/features/kedai_kopi/viewmodels/kedai_kopi_viewmodel.dart';
 import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
+import 'package:mobile_app/features/notification/viewmodels/notification_viewmodel.dart';
 
 class PesananMejaView extends StatefulWidget {
   final List<CartItem> cartItems;
@@ -894,6 +895,7 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               items: items,
               totalPrice: total,
             );
+            NotificationViewModel.instance.fetchNotifications();
 
             if (createdOrder == null) {
               if (!mounted) return;
@@ -997,6 +999,7 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             items: items,
             totalPrice: total,
           );
+          NotificationViewModel.instance.fetchNotifications();
 
           // 2. Catat transaksi kasir (POST /api/payment/charge dengan payment_type: 'cash')
           await _viewModel.submitOrderTransaction(

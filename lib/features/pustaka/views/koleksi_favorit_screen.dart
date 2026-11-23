@@ -19,12 +19,21 @@ class _KoleksiFavoritScreenState extends State<KoleksiFavoritScreen> {
   late final PustakaViewModel _viewModel;
   int _selectedFilter = 0;
   final List<String> _filters = ['Semua (14)', 'Naskah Drama', 'Manuskrip & Arsip', 'Prosa Budaya'];
+  bool _isSearchOpen = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _viewModel = widget.viewModel ?? PustakaViewModel();
     _viewModel.fetchFavorites();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -37,11 +46,20 @@ class _KoleksiFavoritScreenState extends State<KoleksiFavoritScreen> {
             : FavoriteBook.demoFavorites;
 
         final filteredList = favorites.where((item) {
-          if (_selectedFilter == 0) return true;
-          if (_selectedFilter == 1) return item.category == 'Naskah Drama';
-          if (_selectedFilter == 2) return item.category == 'Manuskrip & Arsip';
-          if (_selectedFilter == 3) return item.category == 'Prosa Budaya';
-          return true;
+          final matchCategory = _selectedFilter == 0
+              ? true
+              : _selectedFilter == 1
+              ? item.category == 'Naskah Drama'
+              : _selectedFilter == 2
+              ? item.category == 'Manuskrip & Arsip'
+              : item.category == 'Prosa Budaya';
+
+          final matchSearch = _searchQuery.isEmpty ||
+              item.title.toLowerCase().contains(_searchQuery) ||
+              item.shelf.toLowerCase().contains(_searchQuery) ||
+              item.category.toLowerCase().contains(_searchQuery);
+
+          return matchCategory && matchSearch;
         }).toList();
 
         return MobileFrame(
@@ -65,8 +83,20 @@ class _KoleksiFavoritScreenState extends State<KoleksiFavoritScreen> {
               centerTitle: false,
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.search_rounded, color: AppColors.textMain),
-                  onPressed: () {},
+                  icon: Icon(
+                    _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
+                    color: AppColors.textMain,
+                  ),
+                  tooltip: _isSearchOpen ? 'Tutup pencarian' : 'Cari koleksi favorit',
+                  onPressed: () {
+                    setState(() {
+                      _isSearchOpen = !_isSearchOpen;
+                      if (!_isSearchOpen) {
+                        _searchController.clear();
+                        _searchQuery = '';
+                      }
+                    });
+                  },
                 ),
                 const Padding(
                   padding: EdgeInsets.only(right: 14),
@@ -80,6 +110,45 @@ class _KoleksiFavoritScreenState extends State<KoleksiFavoritScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Search Input Bar jika aktif
+                  if (_isSearchOpen) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.lightBorder),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        textInputAction: TextInputAction.search,
+                        onChanged: (val) =>
+                            setState(() => _searchQuery = val.toLowerCase().trim()),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12),
+                        decoration: InputDecoration(
+                          hintText: 'Cari judul, shelf, atau kategori...',
+                          hintStyle: GoogleFonts.plusJakartaSans(
+                              fontSize: 11, color: AppColors.textMuted),
+                          prefixIcon: const Icon(Icons.search,
+                              size: 18, color: AppColors.textMuted),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 16),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10, horizontal: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+
                   // Filter Kategori
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -115,7 +184,28 @@ class _KoleksiFavoritScreenState extends State<KoleksiFavoritScreen> {
                   const SizedBox(height: 16),
 
                   // Daftar Favorit
-                  ...filteredList.map((item) => _buildFavoriteItem(item)),
+                  if (filteredList.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.search_off_rounded,
+                                size: 44, color: Colors.grey.shade400),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Koleksi favorit tidak ditemukan',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ...filteredList.map((item) => _buildFavoriteItem(item)),
                 ],
               ),
             ),

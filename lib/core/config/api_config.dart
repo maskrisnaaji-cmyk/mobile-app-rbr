@@ -48,4 +48,9 @@ class ApiConfig {
   static String get kedaiOrdersUrl => '$baseUrl/kedai/orders';
   static String kedaiOrderPayUrl(String orderCode) =>
       '$baseUrl/kedai/orders/$orderCode/pay';
+
+  static String get notificationsUrl => '$baseUrl/notifications';
+  static String get notificationsReadAllUrl => '$baseUrl/notifications/read-all';
+  static String notificationReadUrl(dynamic id) => '$baseUrl/notifications/$id/read';
+  static String get notificationsSimulateUrl => '$baseUrl/notifications/simulate';
 }

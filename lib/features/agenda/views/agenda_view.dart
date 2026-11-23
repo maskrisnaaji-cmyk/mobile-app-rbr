@@ -18,6 +18,8 @@ class AgendaView extends StatefulWidget {
 
 class _AgendaViewState extends State<AgendaView> {
   late final AgendaViewModel _viewModel;
+  bool _isSearchOpen = false;
+  final TextEditingController _searchController = TextEditingController();
 
   static const List<String> _monthNames = [
     'Januari',
@@ -54,6 +56,7 @@ class _AgendaViewState extends State<AgendaView> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _viewModel.stopAutoRefresh();
     if (widget.viewModel == null) {
       _viewModel.dispose();
@@ -135,6 +138,26 @@ class _AgendaViewState extends State<AgendaView> {
                     ),
                     Row(
                       children: [
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _isSearchOpen = !_isSearchOpen;
+                              if (!_isSearchOpen) {
+                                _searchController.clear();
+                                _viewModel.clearSearch();
+                              }
+                            });
+                          },
+                          tooltip: _isSearchOpen
+                              ? 'Tutup pencarian'
+                              : 'Cari acara / workshop',
+                          icon: Icon(
+                            _isSearchOpen
+                                ? Icons.close_rounded
+                                : Icons.search_rounded,
+                            color: AppColors.textMain,
+                          ),
+                        ),
                         IconButton(
                           onPressed: _viewModel.fetchEvents,
                           tooltip: 'Muat ulang data',

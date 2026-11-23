@@ -154,13 +154,14 @@ class PustakaViewModel extends ChangeNotifier {
       final titleMatches = book.title.toLowerCase().contains(query);
       final authorMatches = book.author.toLowerCase().contains(query);
       final categoryMatches = book.category.toLowerCase().contains(query);
+      final descMatches = book.synopsis?.toLowerCase().contains(query) ?? false;
 
       final isCategorySelected = _selectedCategory == 'Semua' ||
           book.category == _selectedCategory ||
           book.category.toLowerCase().contains(_selectedCategory.toLowerCase()) ||
           (_selectedCategory == 'Seni & Budaya' && book.category.toLowerCase().contains('budaya'));
 
-      return (titleMatches || authorMatches || categoryMatches) && isCategorySelected;
+      return (titleMatches || authorMatches || categoryMatches || descMatches) && isCategorySelected;
     }).toList();
   }
 

@@ -48,3 +48,20 @@ class HomeBannerData {
     required this.imageAsset,
   });
 }
+
+/// Model data hasil pencarian fitur & konten Beranda
+class HomeSearchResult {
+  final String title;
+  final String subtitle;
+  final String category;
+  final IconData icon;
+  final int targetTab;
+
+  const HomeSearchResult({
+    required this.title,
+    required this.subtitle,
+    required this.category,
+    required this.icon,
+    required this.targetTab,
+  });
+}
