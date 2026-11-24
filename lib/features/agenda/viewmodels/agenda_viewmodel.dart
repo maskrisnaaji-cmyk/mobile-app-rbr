@@ -71,7 +71,16 @@ class AgendaViewModel extends ChangeNotifier {
       }
 
       final dt = event.dateTime;
-      if (dt == null) return false;
+      if (dt == null) {
+        if (_selectedDate != null) return false;
+        if (_searchQuery.isNotEmpty) {
+          final q = _searchQuery;
+          return event.title.toLowerCase().contains(q) ||
+              (event.description?.toLowerCase().contains(q) ?? false) ||
+              event.category.toLowerCase().contains(q);
+        }
+        return true;
+      }
 
       // Filter Pencarian Query (jika ada)
       if (_searchQuery.isNotEmpty) {

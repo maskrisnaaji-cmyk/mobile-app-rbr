@@ -444,6 +444,7 @@ class _AgendaViewState extends State<AgendaView> {
                           image: event.image,
                           imageFallback: event.imageFallback,
                           isSoldOut: event.isSoldOut,
+                          currentTierName: event.currentTierName,
                         ),
                         const SizedBox(height: 16),
                       ],

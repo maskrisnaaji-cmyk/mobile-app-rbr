@@ -43,11 +43,28 @@ class AgendaRepositoryImpl implements AgendaRepository {
           Uri.parse(ApiConfig.eventsUrl),
           headers: {'Cache-Control': 'no-cache'},
         )
-        .timeout(const Duration(seconds: 8));
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data
+      final dynamic decoded = jsonDecode(response.body);
+      final List<dynamic> list;
+      if (decoded is List) {
+        list = decoded;
+      } else if (decoded is Map<String, dynamic>) {
+        if (decoded['data'] is List) {
+          list = decoded['data'] as List;
+        } else if (decoded['events'] is List) {
+          list = decoded['events'] as List;
+        } else if (decoded['value'] is List) {
+          list = decoded['value'] as List;
+        } else {
+          list = [];
+        }
+      } else {
+        list = [];
+      }
+
+      return list
           .map((item) => EventModel.fromJson(item as Map<String, dynamic>))
           .toList();
     } else {

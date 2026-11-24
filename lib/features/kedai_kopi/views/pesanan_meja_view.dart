@@ -9,6 +9,7 @@ import 'package:mobile_app/core/widgets/mobile_frame.dart';
 import 'package:mobile_app/features/booking_payment/widgets/payment_option_card.dart';
 import 'package:mobile_app/features/booking_payment/widgets/price_summary_card.dart';
 import 'package:mobile_app/features/booking_payment/views/qris_payment_view.dart';
+import 'package:mobile_app/features/booking_payment/views/va_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_pembayaran_view.dart';
 import 'package:mobile_app/features/kedai_kopi/viewmodels/kedai_kopi_viewmodel.dart';
 import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
@@ -847,6 +848,14 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             isSelected: _viewModel.selectedPaymentMethod == 1,
             onTap: () => _viewModel.selectPaymentMethod(1),
           ),
+          const SizedBox(height: 8),
+          PaymentOptionCard(
+            title: 'Transfer Bank (Virtual Account)',
+            badge: 'VA 24 JAM',
+            subtitle: 'BCA, Mandiri, BNI, BRI, Permata',
+            isSelected: _viewModel.selectedPaymentMethod == 2,
+            onTap: () => _viewModel.selectPaymentMethod(2),
+          ),
         ],
       ),
     );
@@ -863,6 +872,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
           final orderNo = widget.orderNumber;
           final table = widget.tableName;
           final paymentMethod = _viewModel.selectedPaymentMethod;
+          final isQris = paymentMethod == 0;
+          final isVa = paymentMethod == 2;
 
           final strukView = StrukPembayaranView(
             orderNumber: orderNo,
@@ -870,13 +881,13 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             cartItems: items,
             subtotal: _subtotal,
             totalPrice: total,
-            paymentMethod: paymentMethod == 0
+            paymentMethod: isQris
                 ? 'QRIS (INSTAN)'
-                : 'Bayar di Kasir (Tunai)',
+                : (isVa ? 'Transfer Bank (VA)' : 'Bayar di Kasir (Tunai)'),
           );
 
-          if (paymentMethod == 0) {
-            // ── Alur Pembayaran QRIS Nasional (Midtrans Sandbox) ────────────
+          if (isQris || isVa) {
+            // ── Alur Pembayaran Midtrans Sandbox (QRIS & Virtual Account) ────
             final cleanOrder =
                 'RBR-KEDAI-${DateTime.now().millisecondsSinceEpoch}';
 
@@ -908,12 +919,12 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               return;
             }
 
-            // 2. Buat charge transaksi QRIS (Midtrans Sandbox)
+            // 2. Buat charge transaksi (Midtrans Sandbox: QRIS atau Bank Transfer VA)
             final chargeResult = await _viewModel.submitOrderTransaction(
               orderId: cleanOrder,
               grossAmount: total,
               customerName: 'Pelanggan $table',
-              paymentType: 'qris',
+              paymentType: isQris ? 'qris' : 'bank_transfer',
               bank: 'bca',
               items: items,
               couponCode: _selectedCoupon?.code,
@@ -959,25 +970,49 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                   DateTime.tryParse(chargeResult!['expired_at'].toString());
             }
 
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => QrisPaymentView(
-                  title: 'Pesanan Meja',
-                  orderNumber: finalOrderId,
-                  badgeText: '$table • Dine-in',
-                  totalAmount: _formatRupiah(paidAmount),
-                  rawAmount: paidAmount,
-                  qrUrl: chargeResult?['qr_url'],
-                  qrString: chargeResult?['qr_string'],
-                  buttonLabel: 'CEK STATUS PEMBAYARAN',
-                  nextScreen: strukView,
-                  kedaiOrderCode: cleanOrder,
-                  createdAt: createdAt,
-                  expiredAt: expiredAt,
+            if (isQris) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => QrisPaymentView(
+                    title: 'Pesanan Meja',
+                    orderNumber: finalOrderId,
+                    badgeText: '$table • Dine-in',
+                    totalAmount: _formatRupiah(paidAmount),
+                    rawAmount: paidAmount,
+                    qrUrl: chargeResult?['qr_url'],
+                    qrString: chargeResult?['qr_string'],
+                    buttonLabel: 'CEK STATUS PEMBAYARAN',
+                    nextScreen: strukView,
+                    kedaiOrderCode: cleanOrder,
+                    createdAt: createdAt,
+                    expiredAt: expiredAt,
+                  ),
                 ),
-              ),
-            );
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => VaPaymentView(
+                    title: 'Pesanan Meja',
+                    orderNumber: finalOrderId,
+                    badgeText: '$table • Dine-in',
+                    totalAmount: _formatRupiah(paidAmount),
+                    rawAmount: paidAmount,
+                    vaNumber: chargeResult?['va_number'] ??
+                        '8830 9042 1817 000',
+                    bankName:
+                        '${(chargeResult?['bank'] ?? 'BCA').toUpperCase()} Virtual Account',
+                    buttonLabel: 'CEK STATUS PEMBAYARAN',
+                    nextScreen: strukView,
+                    kedaiOrderCode: cleanOrder,
+                    createdAt: createdAt,
+                    expiredAt: expiredAt,
+                  ),
+                ),
+              );
+            }
             return;
           }
 

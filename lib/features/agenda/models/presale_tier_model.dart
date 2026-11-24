@@ -45,20 +45,38 @@ class PresaleTierModel {
     return (sold / quota).clamp(0.0, 1.0);
   }
 
+  static bool _parseBool(dynamic val, [bool fallback = false]) {
+    if (val == null) return fallback;
+    if (val is bool) return val;
+    if (val is num) return val == 1;
+    final s = val.toString().toLowerCase().trim();
+    return s == '1' || s == 'true';
+  }
+
+  static int _parseInt(dynamic val, [int fallback = 0]) {
+    if (val == null) return fallback;
+    if (val is num) return val.toInt();
+    return int.tryParse(val.toString().trim()) ?? fallback;
+  }
+
   factory PresaleTierModel.fromJson(Map<String, dynamic> json) {
-    final soldVal = (json['sold'] as num?)?.toInt() ?? 0;
-    final quotaVal = (json['quota'] as num?)?.toInt() ?? 0;
+    final soldVal = _parseInt(json['sold']);
+    final quotaVal = _parseInt(json['quota']);
+    final bool isSoldoutVal = json['is_soldout'] != null
+        ? _parseBool(json['is_soldout'])
+        : (quotaVal > 0 && soldVal >= quotaVal);
+
     return PresaleTierModel(
-      id: (json['id'] as num).toInt(),
-      eventId: (json['event_id'] as num).toInt(),
-      tierName: json['tier_name'] as String? ?? '',
-      tierOrder: (json['tier_order'] as num?)?.toInt() ?? 0,
-      price: (json['price'] as num?)?.toInt() ?? 0,
+      id: _parseInt(json['id']),
+      eventId: _parseInt(json['event_id']),
+      tierName: json['tier_name']?.toString() ?? '',
+      tierOrder: _parseInt(json['tier_order'], 1),
+      price: _parseInt(json['price']),
       quota: quotaVal,
       sold: soldVal,
-      isActive: json['is_active'] as bool? ?? false,
-      isSoldout: json['is_soldout'] as bool? ?? (soldVal >= quotaVal),
-      isCurrentActive: json['is_current_active'] as bool? ?? false,
+      isActive: _parseBool(json['is_active'], true),
+      isSoldout: isSoldoutVal,
+      isCurrentActive: _parseBool(json['is_current_active']),
     );
   }
 

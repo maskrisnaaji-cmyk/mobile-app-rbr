@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:mobile_app/features/agenda/models/presale_tier_model.dart';
 
 class EventModel {
   final dynamic id;
@@ -23,6 +24,7 @@ class EventModel {
   final String? imageFallback;
   final bool allSoldOut;
   final String? currentTierName;
+  final List<PresaleTierModel> presaleTiers;
   final String? organizerName;
   final String? organizerContact;
   final String? organizerEmail;
@@ -58,6 +60,7 @@ class EventModel {
     this.imageFallback,
     this.allSoldOut = false,
     this.currentTierName,
+    this.presaleTiers = const [],
     this.organizerName,
     this.organizerContact,
     this.organizerEmail,
@@ -292,17 +295,41 @@ class EventModel {
     final sold = bookedCount;
     final status = json['status']?.toString() ?? 'Tiket Tersedia';
 
+    List<PresaleTierModel> parsedTiers = const [];
+    if (json['presale_tiers'] is List) {
+      try {
+        parsedTiers = (json['presale_tiers'] as List)
+            .map((t) => PresaleTierModel.fromJson(t as Map<String, dynamic>))
+            .toList();
+      } catch (_) {}
+    }
+
     final rawAllSoldOut = json['all_soldout'] ??
         json['is_soldout'] ??
         json['allSoldOut'] ??
         json['is_sold_out'];
-    final bool parsedAllSoldOut = rawAllSoldOut == true ||
+    bool parsedAllSoldOut = rawAllSoldOut == true ||
         rawAllSoldOut.toString() == '1' ||
         rawAllSoldOut.toString().toLowerCase() == 'true';
-    final currentTier = json['current_tier_name']?.toString() ??
+
+    if (!parsedAllSoldOut && parsedTiers.isNotEmpty) {
+      final activeTiers = parsedTiers.where((t) => t.isActive);
+      if (activeTiers.isNotEmpty && activeTiers.every((t) => t.isSoldout)) {
+        parsedAllSoldOut = true;
+      }
+    }
+
+    String? currentTier = json['current_tier_name']?.toString() ??
         (json['active_tier'] is Map
             ? json['active_tier']['tier_name']?.toString()
             : null);
+
+    if (currentTier == null && parsedTiers.isNotEmpty) {
+      final activeUnsold = parsedTiers.where((t) => t.isActive && !t.isSoldout).toList();
+      if (activeUnsold.isNotEmpty) {
+        currentTier = activeUnsold.first.tierName;
+      }
+    }
 
     final rawIsAvailable = json['is_available'];
     final bool isAvailable;
@@ -351,6 +378,7 @@ class EventModel {
       imageFallback: fallback,
       allSoldOut: parsedAllSoldOut,
       currentTierName: currentTier,
+      presaleTiers: parsedTiers,
       organizerName: json['organizer_name']?.toString(),
       organizerContact: json['organizer_contact']?.toString(),
       organizerEmail: json['organizer_email']?.toString(),

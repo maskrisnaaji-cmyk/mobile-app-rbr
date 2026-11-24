@@ -16,6 +16,7 @@ class AgendaCard extends StatelessWidget {
   final String? image;
   final String? imageFallback;
   final bool isSoldOut;
+  final String? currentTierName;
 
   const AgendaCard({
     super.key,
@@ -30,6 +31,7 @@ class AgendaCard extends StatelessWidget {
     this.image,
     this.imageFallback,
     this.isSoldOut = false,
+    this.currentTierName,
   });
 
   @override
@@ -109,19 +111,42 @@ class AgendaCard extends StatelessWidget {
                 Positioned(
                   top: 10,
                   left: 10,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6)),
-                    child: Text(
-                      category,
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.maroon),
-                    ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6)),
+                        child: Text(
+                          category,
+                          style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.maroon),
+                        ),
+                      ),
+                      if (currentTierName != null && currentTierName!.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            currentTierName!.toUpperCase(),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 Positioned(
