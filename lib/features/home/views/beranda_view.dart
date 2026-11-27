@@ -26,7 +26,7 @@ class BerandaView extends StatefulWidget {
   State<BerandaView> createState() => _BerandaViewState();
 }
 
-class _BerandaViewState extends State<BerandaView> {
+class _BerandaViewState extends State<BerandaView> with WidgetsBindingObserver {
   late final HomeViewModel _viewModel;
   final NotificationViewModel _notificationViewModel = NotificationViewModel.instance;
   final TextEditingController _searchController = TextEditingController();
@@ -35,12 +35,21 @@ class _BerandaViewState extends State<BerandaView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _viewModel = widget.viewModel ?? AppInjection.createHomeViewModel();
     _notificationViewModel.fetchNotifications();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _notificationViewModel.fetchNotifications();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_app/core/config/api_config.dart';
+import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/features/pustaka/models/book_model.dart';
 import 'package:mobile_app/features/pustaka/models/favorite_model.dart';
 import 'package:mobile_app/features/pustaka/models/loan_model.dart';
@@ -170,7 +171,11 @@ class PustakaRepositoryImpl implements PustakaRepository {
     String? identityNumber,
     String? notes,
   }) async {
+    final resolvedToken =
+        (token != null && token.isNotEmpty) ? token : UserSession.instance.token;
+    final userId = UserSession.instance.userId;
     final payload = {
+      if (userId != null) 'user_id': userId,
       'bookCode': bookCode,
       'title': title,
       'author': author,
@@ -189,7 +194,8 @@ class PustakaRepositoryImpl implements PustakaRepository {
         Uri.parse('${ApiConfig.baseUrl}/loans/request'),
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (resolvedToken != null && resolvedToken.isNotEmpty)
+            'Authorization': 'Bearer $resolvedToken',
         },
         body: jsonEncode(payload),
       ).timeout(const Duration(seconds: 8));

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mobile_app/core/config/api_config.dart';
 import 'package:mobile_app/core/services/payment_service.dart';
+import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/features/kedai_kopi/models/cart_item_model.dart';
 import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
 import 'package:mobile_app/features/kedai_kopi/models/menu_model.dart';
@@ -108,9 +109,12 @@ class KedaiKopiRepositoryImpl implements KedaiKopiRepository {
     required int totalPrice,
   }) async {
     try {
+      final userId = UserSession.instance.userId;
+      final token = UserSession.instance.token;
       final payload = jsonEncode({
         'order_code': orderCode,
         'table_number': tableNumber,
+        if (userId != null) 'user_id': userId,
         'items': items
             .map((i) => {
                   'name': i.name,
@@ -124,7 +128,11 @@ class KedaiKopiRepositoryImpl implements KedaiKopiRepository {
       final response = await http
           .post(
             Uri.parse(ApiConfig.kedaiOrdersUrl),
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+            },
             body: payload,
           )
           .timeout(const Duration(seconds: 10));
@@ -141,8 +149,15 @@ class KedaiKopiRepositoryImpl implements KedaiKopiRepository {
   @override
   Future<bool> confirmKedaiOrderPayment(String orderCode) async {
     try {
+      final token = UserSession.instance.token;
       final response = await http
-          .patch(Uri.parse(ApiConfig.kedaiOrderPayUrl(orderCode)))
+          .patch(
+            Uri.parse(ApiConfig.kedaiOrderPayUrl(orderCode)),
+            headers: {
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+            },
+          )
           .timeout(const Duration(seconds: 10));
       return response.statusCode == 200;
     } catch (_) {

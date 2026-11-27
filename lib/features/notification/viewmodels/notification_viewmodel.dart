@@ -22,24 +22,30 @@ class NotificationViewModel extends ChangeNotifier {
   String get selectedFilter => _selectedFilter;
 
   List<AppNotificationModel> get filteredNotifications {
-    if (_selectedFilter == 'Pesanan') {
-      return _notifications.where((n) => n.type == 'order').toList();
+    if (_selectedFilter == 'Pembayaran') {
+      return _notifications.where((n) {
+        final t = n.type.toLowerCase();
+        final title = n.title.toLowerCase();
+        return t.contains('payment') ||
+            t.contains('order') ||
+            title.contains('pembayaran') ||
+            title.contains('pesanan');
+      }).toList();
+    }
+    if (_selectedFilter == 'Aktivitas') {
+      return _notifications.where((n) {
+        final t = n.type.toLowerCase();
+        return t.contains('event') ||
+            t.contains('activity') ||
+            t.contains('general') ||
+            t.contains('agenda') ||
+            t.contains('pustaka');
+      }).toList();
     }
     if (_selectedFilter == 'Belum Dibaca') {
       return _notifications.where((n) => !n.isRead).toList();
     }
     return _notifications;
-  }
-
-  /// Mengambil notifikasi pesanan aktif terbaru yang belum selesai (untuk ringkasan status)
-  AppNotificationModel? get latestActiveOrderNotification {
-    try {
-      final activeOrders = _notifications.where((n) => n.type == 'order').toList();
-      if (activeOrders.isNotEmpty) {
-        return activeOrders.first;
-      }
-    } catch (_) {}
-    return null;
   }
 
   void setFilter(String filter) {
@@ -83,77 +89,5 @@ class NotificationViewModel extends ChangeNotifier {
     _unreadCount = 0;
     notifyListeners();
     await _repository.markAllAsRead();
-  }
-
-  /// Mensimulasikan progres status pesanan berikutnya:
-  /// Dibuat -> Diproses -> Diantar -> Selesai
-  Future<void> simulateNextStep({String? orderId, String? tableNumber}) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final newNotif = await _repository.simulateProgression(
-        orderId: orderId,
-        tableNumber: tableNumber,
-      );
-
-      if (newNotif != null) {
-        _notifications.insert(0, newNotif);
-        _unreadCount++;
-      } else {
-        // Fallback simulasi offline di state lokal
-        final latest = latestActiveOrderNotification;
-        final currentStep = latest?.stepIndex ?? 3;
-        final nextStep = (currentStep + 1) % 4;
-
-        String nextStatusTitle;
-        String nextStatusMessage;
-        String nextStatusLabel;
-
-        final ord = orderId ?? latest?.orderId ?? 'RBR-1042';
-        final tbl = tableNumber ?? 'Meja 04';
-
-        switch (nextStep) {
-          case 0:
-            nextStatusLabel = 'Pesanan Dibuat';
-            nextStatusTitle = 'Pesanan Baru Dibuat';
-            nextStatusMessage = 'Pesanan #$ord ($tbl) berhasil dibuat dan menunggu konfirmasi kasir/barista.';
-            break;
-          case 1:
-            nextStatusLabel = 'Sedang Diproses';
-            nextStatusTitle = 'Pesanan Sedang Diproses';
-            nextStatusMessage = 'Pesanan #$ord ($tbl) sedang diracik oleh Barista kami dengan teliti.';
-            break;
-          case 2:
-            nextStatusLabel = 'Dalam Pengantaran';
-            nextStatusTitle = 'Pesanan Dalam Pengantaran';
-            nextStatusMessage = 'Pesanan #$ord sedang diantarkan oleh staf menuju $tbl.';
-            break;
-          case 3:
-          default:
-            nextStatusLabel = 'Selesai';
-            nextStatusTitle = 'Pesanan Selesai';
-            nextStatusMessage = 'Pesanan #$ord telah selesai diantar ke $tbl. Selamat menikmati sajian Rumah Budaya Ratna!';
-            break;
-        }
-
-        final simulatedNotif = AppNotificationModel(
-          id: DateTime.now().millisecondsSinceEpoch,
-          orderId: ord,
-          title: nextStatusTitle,
-          message: nextStatusMessage,
-          type: 'order',
-          orderStatus: nextStatusLabel,
-          isRead: false,
-          createdAt: DateTime.now(),
-        );
-
-        _notifications.insert(0, simulatedNotif);
-        _unreadCount++;
-      }
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 }

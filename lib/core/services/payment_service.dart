@@ -1,8 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mobile_app/core/config/api_config.dart';
+import 'package:mobile_app/core/services/user_session.dart';
 
 class PaymentService {
+  static Map<String, String> _jsonHeaders() {
+    final token = UserSession.instance.token;
+    return {
+      'Content-Type': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
+
   /// Memanggil endpoint POST /api/payment/charge via Midtrans Core API
   static Future<Map<String, dynamic>?> createCharge({
     required String orderId,
@@ -33,13 +42,14 @@ class PaymentService {
         if (items != null) 'items': items,
         if (couponCode != null && couponCode.isNotEmpty)
           'coupon_code': couponCode,
-        if (userId != null) 'user_id': userId,
+        if ((userId ?? UserSession.instance.userId) != null)
+          'user_id': userId ?? UserSession.instance.userId,
       };
 
       final response = await http
           .post(
             url,
-            headers: {'Content-Type': 'application/json'},
+            headers: _jsonHeaders(),
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 15));

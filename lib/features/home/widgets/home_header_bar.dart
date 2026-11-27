@@ -92,10 +92,6 @@ class HomeHeaderBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            IconButton(
-              onPressed: onSearchTap ?? () {},
-              icon: const Icon(Icons.search, size: 20, color: AppColors.textMain),
-            ),
             Stack(
               clipBehavior: Clip.none,
               children: [

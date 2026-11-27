@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mobile_app/core/config/api_config.dart';
 import 'package:mobile_app/core/services/payment_service.dart';
+import 'package:mobile_app/core/services/user_session.dart';
 
 /// Abstract interface untuk operasi pembayaran.
 abstract class BookingPaymentRepository {
@@ -108,9 +109,12 @@ class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
     required int totalPrice,
   }) async {
     try {
+      final userId = UserSession.instance.userId;
+      final token = UserSession.instance.token;
       final payload = jsonEncode({
         'order_code': orderCode,
         'table_number': tableNumber,
+        if (userId != null) 'user_id': userId,
         'items': items,
         'total_price': totalPrice,
       });
@@ -118,7 +122,11 @@ class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
       final response = await http
           .post(
             Uri.parse(ApiConfig.kedaiOrdersUrl),
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+            },
             body: payload,
           )
           .timeout(const Duration(seconds: 10));
@@ -135,8 +143,15 @@ class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
   @override
   Future<bool> confirmKedaiOrderPayment(String orderCode) async {
     try {
+      final token = UserSession.instance.token;
       final response = await http
-          .patch(Uri.parse(ApiConfig.kedaiOrderPayUrl(orderCode)))
+          .patch(
+            Uri.parse(ApiConfig.kedaiOrderPayUrl(orderCode)),
+            headers: {
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+            },
+          )
           .timeout(const Duration(seconds: 10));
       return response.statusCode == 200;
     } catch (_) {
@@ -153,9 +168,12 @@ class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
     String? orderId,
   }) async {
     try {
+      final userId = UserSession.instance.userId;
+      final token = UserSession.instance.token;
       final url = Uri.parse('${ApiConfig.eventsUrl}/$eventId/book');
       final payload = jsonEncode({
         'quantity': quantity,
+        if (userId != null) 'user_id': userId,
         if (customerName != null) 'customer_name': customerName,
         if (customerEmail != null) 'customer_email': customerEmail,
         if (orderId != null) 'order_id': orderId,
@@ -164,7 +182,11 @@ class BookingPaymentRepositoryImpl implements BookingPaymentRepository {
       final response = await http
           .post(
             url,
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+            },
             body: payload,
           )
           .timeout(const Duration(seconds: 10));

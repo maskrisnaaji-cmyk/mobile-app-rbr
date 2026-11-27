@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mobile_app/core/config/api_config.dart';
+import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/features/agenda/models/event_model.dart';
 
 /// Kontrak repositori untuk mengambil data agenda / acara
@@ -81,9 +82,12 @@ class AgendaRepositoryImpl implements AgendaRepository {
     String? orderId,
   }) async {
     try {
+      final userId = UserSession.instance.userId;
+      final token = UserSession.instance.token;
       final url = Uri.parse('${ApiConfig.eventsUrl}/$eventId/book');
       final payload = {
         'quantity': quantity,
+        if (userId != null) 'user_id': userId,
         if (customerName != null) 'customer_name': customerName,
         if (customerEmail != null) 'customer_email': customerEmail,
         if (orderId != null) 'order_id': orderId,
@@ -92,7 +96,11 @@ class AgendaRepositoryImpl implements AgendaRepository {
       final response = await http
           .post(
             url,
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+            },
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 10));
@@ -118,11 +126,18 @@ class AgendaRepositoryImpl implements AgendaRepository {
     String? description,
     String? image,
   }) async {
+    final userId = UserSession.instance.userId;
+    final token = UserSession.instance.token;
     final response = await http
         .post(
           Uri.parse(ApiConfig.workshopProposalUrl),
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+          },
           body: jsonEncode({
+            if (userId != null) 'user_id': userId,
             'title': title,
             'organizer_name': organizerName,
             'organizer_contact': organizerContact,
