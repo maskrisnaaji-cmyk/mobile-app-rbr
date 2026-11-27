@@ -38,6 +38,8 @@ class ApiConfig {
   static String get loginUrl => '$baseUrl/auth/login';
   static String get googleLoginUrl => '$baseUrl/auth/google-login';
   static String get forgotPasswordUrl => '$baseUrl/auth/forgot-password';
+  static String get verifyResetAccountUrl => '$baseUrl/auth/verify-reset-account';
+  static String get resetPasswordDirectUrl => '$baseUrl/auth/reset-password-direct';
   static String get aiChatUrl => '$baseUrl/ai/chat';
   static String get paymentChargeUrl => '$baseUrl/payment/charge';
   static String get paymentNotificationUrl => '$baseUrl/payment/notification';

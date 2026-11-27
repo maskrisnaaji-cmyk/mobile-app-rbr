@@ -13,6 +13,7 @@ class AuthViewModel extends ChangeNotifier {
   AuthUser? _currentUser;
 
   bool _isForgotPasswordSuccess = false;
+  bool _isAccountVerified = false;
   String? _forgotPasswordRecipient;
 
   AuthViewModel({AuthRepository? repository})
@@ -23,6 +24,7 @@ class AuthViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   AuthUser? get currentUser => _currentUser;
   bool get isForgotPasswordSuccess => _isForgotPasswordSuccess;
+  bool get isAccountVerified => _isAccountVerified;
   String? get forgotPasswordRecipient => _forgotPasswordRecipient;
 
   void clearError() {
@@ -32,6 +34,7 @@ class AuthViewModel extends ChangeNotifier {
 
   void resetForgotPasswordState() {
     _isForgotPasswordSuccess = false;
+    _isAccountVerified = false;
     _forgotPasswordRecipient = null;
     _errorMessage = null;
     notifyListeners();
@@ -140,6 +143,65 @@ class AuthViewModel extends ChangeNotifier {
       await _repository.forgotPassword(identifier);
       _isForgotPasswordSuccess = true;
       _forgotPasswordRecipient = identifier;
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Tahap 1 Lupa Kata Sandi: Verifikasi kecocokan Email & No. Handphone
+  Future<bool> verifyAccount(String email, String phone) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _isAccountVerified = false;
+    notifyListeners();
+
+    try {
+      await _repository.verifyResetAccount(email.trim(), phone.trim());
+      _isAccountVerified = true;
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Tahap 2 Lupa Kata Sandi: Simpan kata sandi baru secara langsung
+  Future<bool> submitNewPassword({
+    required String email,
+    required String phone,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 6) {
+      _errorMessage = 'Kata sandi baru minimal 6 karakter.';
+      notifyListeners();
+      return false;
+    }
+
+    if (newPassword != confirmPassword) {
+      _errorMessage = 'Konfirmasi kata sandi baru tidak cocok.';
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.resetPasswordDirect(
+        email.trim(),
+        phone.trim(),
+        newPassword,
+      );
       return true;
     } catch (e) {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');

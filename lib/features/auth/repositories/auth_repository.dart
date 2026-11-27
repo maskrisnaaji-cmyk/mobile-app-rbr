@@ -78,6 +78,8 @@ abstract class AuthRepository {
   });
 
   Future<void> forgotPassword(String identifier);
+  Future<void> verifyResetAccount(String email, String phone);
+  Future<void> resetPasswordDirect(String email, String phone, String newPassword);
 }
 
 /// Implementasi repository autentikasi terhubung ke REST API & Google Sign-In SDK
@@ -346,6 +348,44 @@ class AuthRepositoryImpl implements AuthRepository {
       return;
     } else {
       throw Exception(data['message'] ?? 'Gagal memproses permintaan. Silakan coba lagi.');
+    }
+  }
+
+  @override
+  Future<void> verifyResetAccount(String email, String phone) async {
+    final response = await _client.post(
+      Uri.parse(ApiConfig.verifyResetAccountUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'phone': phone}),
+    );
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data['success'] == true) {
+      return;
+    } else {
+      throw Exception(data['message'] ?? 'Akun dengan kombinasi email dan nomor handphone tersebut tidak ditemukan.');
+    }
+  }
+
+  @override
+  Future<void> resetPasswordDirect(String email, String phone, String newPassword) async {
+    final response = await _client.post(
+      Uri.parse(ApiConfig.resetPasswordDirectUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'phone': phone,
+        'newPassword': newPassword,
+      }),
+    );
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data['success'] == true) {
+      return;
+    } else {
+      throw Exception(data['message'] ?? 'Gagal memperbarui kata sandi. Silakan coba lagi.');
     }
   }
 }

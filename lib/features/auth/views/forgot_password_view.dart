@@ -16,25 +16,53 @@ class ForgotPasswordView extends StatefulWidget {
 class _ForgotPasswordViewState extends State<ForgotPasswordView> {
   late final AuthViewModel _viewModel;
   final _formKey = GlobalKey<FormState>();
-  final _identifierController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
     super.initState();
     _viewModel = widget.viewModel ?? AppInjection.createAuthViewModel();
+    _viewModel.resetForgotPasswordState();
   }
 
   @override
   void dispose() {
-    _identifierController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleForgotPassword() async {
+  Future<void> _handleVerifyAccount() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final identifier = _identifierController.text.trim();
-    final success = await _viewModel.forgotPassword(identifier);
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final success = await _viewModel.verifyAccount(email, phone);
+
+    if (!mounted) return;
+
+    if (!success && _viewModel.errorMessage != null) {
+      _showErrorSnackBar(_viewModel.errorMessage!);
+    }
+  }
+
+  Future<void> _handleSaveNewPassword() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final success = await _viewModel.submitNewPassword(
+      email: _emailController.text.trim(),
+      phone: _phoneController.text.trim(),
+      newPassword: _newPasswordController.text,
+      confirmPassword: _confirmPasswordController.text,
+    );
 
     if (!mounted) return;
 
@@ -50,7 +78,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Instruksi atur ulang kata sandi telah dikirim.',
+                  'Kata sandi berhasil diperbarui. Silakan masuk dengan kata sandi baru.',
                   style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.white),
                 ),
               ),
@@ -58,27 +86,80 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
           ),
         ),
       );
+      Navigator.pop(context);
     } else if (_viewModel.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFC62828),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  _viewModel.errorMessage!,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      _showErrorSnackBar(_viewModel.errorMessage!);
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFFC62828),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration({
+    required String hintText,
+    required IconData prefixIcon,
+    Widget? suffixIcon,
+    bool isReadOnly = false,
+  }) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        color: AppColors.textMuted.withValues(alpha: 0.7),
+      ),
+      filled: true,
+      fillColor: isReadOnly ? const Color(0xFFF3EFEA) : Colors.white,
+      prefixIcon: Icon(
+        prefixIcon,
+        size: 18,
+        color: AppColors.textMuted,
+      ),
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.maroon, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1.0),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+      ),
+    );
   }
 
   @override
@@ -86,8 +167,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
-        final isSuccess = _viewModel.isForgotPasswordSuccess;
-        final recipientInfo = _viewModel.forgotPasswordRecipient;
+        final isAccountVerified = _viewModel.isAccountVerified;
         final errorMessage = _viewModel.errorMessage;
         final isLoading = _viewModel.isLoading;
 
@@ -126,17 +206,13 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                         const SizedBox(height: 10),
 
                         // Logo Icon Header (Brand Identity)
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: const BoxDecoration(
-                            color: AppColors.maroon,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.other_houses,
-                            color: Colors.white,
-                            size: 30,
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.asset(
+                            'assets/images/rbr_front.jpeg',
+                            width: 92,
+                            height: 92,
+                            fit: BoxFit.cover,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -156,7 +232,9 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
 
                         // Teks Penjelas (Helper Text)
                         Text(
-                          'Masukkan Email atau No. Handphone yang terdaftar di akun Rumah Budaya Ratna Anda. Kami akan mengirimkan instruksi untuk mengatur ulang kata sandi.',
+                          isAccountVerified
+                              ? 'Akun Anda telah terverifikasi. Silakan buat kata sandi baru untuk akun Rumah Budaya Ratna Anda.'
+                              : 'Masukkan Email dan No. Handphone yang terdaftar di akun Rumah Budaya Ratna Anda untuk verifikasi.',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
@@ -164,57 +242,30 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                             height: 1.5,
                           ),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 24),
 
-                        // Notifikasi Sukses
-                        if (isSuccess)
+                        // Banner Info Akun Terverifikasi (Tahap 2)
+                        if (isAccountVerified)
                           Container(
                             width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 24),
-                            padding: const EdgeInsets.all(18),
+                            margin: const EdgeInsets.only(bottom: 18),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
                               color: const Color(0xFFE8F5E9),
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: const Color(0xFFA5D6A7)),
                             ),
-                            child: Column(
+                            child: Row(
                               children: [
-                                const Icon(
-                                  Icons.mark_email_read_rounded,
-                                  color: Color(0xFF2E7D32),
-                                  size: 40,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Instruksi Terkirim!',
-                                  style: GoogleFonts.lora(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF1B5E20),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Petunjuk pemulihan kata sandi telah dikirim ke:\n$recipientInfo',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11.5,
-                                    color: const Color(0xFF2E7D32),
-                                    height: 1.45,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                TextButton(
-                                  onPressed: () {
-                                    _viewModel.resetForgotPasswordState();
-                                    _identifierController.clear();
-                                  },
+                                const Icon(Icons.verified_user_rounded, color: Color(0xFF2E7D32), size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
                                   child: Text(
-                                    'Kirim Ulang ke Akun Lain',
+                                    'Akun terverifikasi! Silakan masukkan kata sandi baru.',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.maroon,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF1B5E20),
                                     ),
                                   ),
                                 ),
@@ -223,7 +274,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                           ),
 
                         // Notifikasi Error (jika ada)
-                        if (errorMessage != null && !isSuccess)
+                        if (errorMessage != null)
                           Container(
                             width: double.infinity,
                             margin: const EdgeInsets.only(bottom: 20),
@@ -252,15 +303,82 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                             ),
                           ),
 
-                        // Form Input (Hanya ditampilkan jika belum sukses, atau untuk mengirim ulang)
-                        if (!isSuccess)
-                          Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                        // Form 2 Tahap
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Input Email
+                              Text(
+                                'Email',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textMain,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                enabled: !isLoading && !isAccountVerified,
+                                readOnly: isAccountVerified,
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textMain),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Email wajib diisi';
+                                  }
+                                  if (!value.contains('@')) {
+                                    return 'Format email tidak valid';
+                                  }
+                                  return null;
+                                },
+                                decoration: _buildInputDecoration(
+                                  hintText: 'nama@email.com',
+                                  prefixIcon: Icons.mail_outline_rounded,
+                                  isReadOnly: isAccountVerified,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Input No. Handphone
+                              Text(
+                                'No. Handphone',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textMain,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextFormField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                enabled: !isLoading && !isAccountVerified,
+                                readOnly: isAccountVerified,
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textMain),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'No. Handphone wajib diisi';
+                                  }
+                                  if (value.trim().length < 8) {
+                                    return 'Format No. Handphone tidak valid';
+                                  }
+                                  return null;
+                                },
+                                decoration: _buildInputDecoration(
+                                  hintText: '08123456789',
+                                  prefixIcon: Icons.phone_android_rounded,
+                                  isReadOnly: isAccountVerified,
+                                ),
+                              ),
+
+                              // Tahap 2: Input Kata Sandi Baru & Konfirmasi
+                              if (isAccountVerified) ...[
+                                const SizedBox(height: 16),
                                 Text(
-                                  'Email / No. Handphone',
+                                  'Kata Sandi Baru',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -269,93 +387,111 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                                 ),
                                 const SizedBox(height: 6),
                                 TextFormField(
-                                  controller: _identifierController,
-                                  keyboardType: TextInputType.emailAddress,
+                                  controller: _newPasswordController,
+                                  obscureText: _obscureNewPassword,
                                   enabled: !isLoading,
                                   style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textMain),
                                   validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Email atau No. Handphone wajib diisi';
+                                    if (value == null || value.isEmpty) {
+                                      return 'Kata sandi baru wajib diisi';
                                     }
-                                    if (value.trim().length < 4) {
-                                      return 'Format Email / No. Handphone terlalu pendek';
+                                    if (value.length < 6) {
+                                      return 'Kata sandi minimal 6 karakter';
                                     }
                                     return null;
                                   },
-                                  decoration: InputDecoration(
-                                    hintText: 'nama@email.com atau 08123456789',
-                                    hintStyle: GoogleFonts.plusJakartaSans(
-                                      fontSize: 12,
-                                      color: AppColors.textMuted.withValues(alpha: 0.7),
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    prefixIcon: const Icon(
-                                      Icons.mail_outline_rounded,
-                                      size: 18,
-                                      color: AppColors.textMuted,
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: AppColors.border),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: AppColors.border),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: AppColors.maroon, width: 1.5),
-                                    ),
-                                    errorBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Colors.redAccent, width: 1.0),
-                                    ),
-                                    focusedErrorBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+                                  decoration: _buildInputDecoration(
+                                    hintText: 'Minimal 6 karakter',
+                                    prefixIcon: Icons.lock_outline_rounded,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscureNewPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                        size: 18,
+                                        color: AppColors.textMuted,
+                                      ),
+                                      onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 20),
-
-                                // Tombol Utama: Kirim Instruksi
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 48,
-                                  child: ElevatedButton(
-                                    onPressed: isLoading ? null : _handleForgotPassword,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.maroon,
-                                      foregroundColor: Colors.white,
-                                      elevation: 1,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Konfirmasi Kata Sandi Baru',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textMain,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _confirmPasswordController,
+                                  obscureText: _obscureConfirmPassword,
+                                  enabled: !isLoading,
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textMain),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Konfirmasi kata sandi wajib diisi';
+                                    }
+                                    if (value != _newPasswordController.text) {
+                                      return 'Konfirmasi kata sandi tidak cocok';
+                                    }
+                                    return null;
+                                  },
+                                  decoration: _buildInputDecoration(
+                                    hintText: 'Ulangi kata sandi baru',
+                                    prefixIcon: Icons.lock_reset_rounded,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                        size: 18,
+                                        color: AppColors.textMuted,
                                       ),
+                                      onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                                     ),
-                                    child: isLoading
-                                        ? const SizedBox(
-                                            height: 20,
-                                            width: 20,
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : Text(
-                                            'Kirim Instruksi',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 0.3,
-                                            ),
-                                          ),
                                   ),
                                 ),
                               ],
-                            ),
+
+                              const SizedBox(height: 22),
+
+                              // Tombol Utama: Verifikasi Akun (Tahap 1) / Simpan Kata Sandi (Tahap 2)
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: isLoading
+                                      ? null
+                                      : (isAccountVerified ? _handleSaveNewPassword : _handleVerifyAccount),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.maroon,
+                                    foregroundColor: Colors.white,
+                                    elevation: 1,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(
+                                          isAccountVerified ? 'Simpan Kata Sandi' : 'Verifikasi Akun',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
                           ),
+                        ),
 
                         const SizedBox(height: 24),
 

@@ -154,7 +154,7 @@ class PustakaViewModel extends ChangeNotifier {
       final titleMatches = book.title.toLowerCase().contains(query);
       final authorMatches = book.author.toLowerCase().contains(query);
       final categoryMatches = book.category.toLowerCase().contains(query);
-      final descMatches = book.synopsis?.toLowerCase().contains(query) ?? false;
+      final descMatches = book.synopsis.toLowerCase().contains(query);
 
       final isCategorySelected = _selectedCategory == 'Semua' ||
           book.category == _selectedCategory ||

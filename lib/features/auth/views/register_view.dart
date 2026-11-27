@@ -132,14 +132,14 @@ class _RegisterViewState extends State<RegisterView> {
                           const SizedBox(height: 6),
 
                           // Top Logo
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: const BoxDecoration(
-                              color: AppColors.maroon,
-                              shape: BoxShape.circle,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.asset(
+                              'assets/images/rbr_front.jpeg',
+                              width: 92,
+                              height: 92,
+                              fit: BoxFit.cover,
                             ),
-                            child: const Icon(Icons.other_houses, color: Colors.white, size: 24),
                           ),
                           const SizedBox(height: 8),
                           Text(
