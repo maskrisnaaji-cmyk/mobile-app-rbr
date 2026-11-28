@@ -12,6 +12,10 @@ class StrukPembayaranView extends StatelessWidget {
   final String paymentMethod;
   final String tableName;
   final String? transactionTime;
+  final String? vaNumber;
+  final String? billerCode;
+  final String? billKey;
+  final String? transactionStatus;
 
   const StrukPembayaranView({
     super.key,
@@ -22,6 +26,10 @@ class StrukPembayaranView extends StatelessWidget {
     this.paymentMethod = 'QRIS (INSTAN)',
     this.tableName = 'Meja No. 04 (Dine-In)',
     this.transactionTime,
+    this.vaNumber,
+    this.billerCode,
+    this.billKey,
+    this.transactionStatus,
   });
 
   int get _effectiveTotal {
@@ -104,41 +112,8 @@ class StrukPembayaranView extends StatelessWidget {
                 child: Column(
                   children: [
                     const SizedBox(height: 10),
-                    // Check Icon Circle
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: const BoxDecoration(
-                        color: AppColors.maroon,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.check, color: Colors.white, size: 32),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'TRANSAKSI TERVERIFIKASI',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Pembayaran Berhasil',
-                      style: GoogleFonts.lora(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textMain,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'E-tiket / resi telah terbit dan dikirimkan secara otomatis ke email Anda.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppColors.textMuted),
-                    ),
+                    // Status Header
+                    _buildHeaderStatus(),
                     const SizedBox(height: 20),
 
                     // Struk Container
@@ -164,17 +139,34 @@ class StrukPembayaranView extends StatelessWidget {
                             children: [
                               Text(
                                 'KEDAI & GALERI RATNA',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                                style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textMuted),
                               ),
                               Text(
                                 orderNumber,
-                                style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.maroon),
+                                style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.maroon),
                               ),
                             ],
                           ),
                           const Divider(color: AppColors.border, height: 20),
-                          _buildDetailRow('Waktu Transaksi', transactionTime ?? '28 SEP 2026 • 18:30 WIB'),
+                          _buildDetailRow('Status Transaksi', _statusBadgeText()),
+                          _buildDetailRow('Waktu Transaksi',
+                              transactionTime ?? '28 SEP 2026 • 18:30 WIB'),
                           _buildDetailRow('Metode Pembayaran', paymentMethod),
+                          if (vaNumber != null && vaNumber!.isNotEmpty)
+                            _buildDetailRow('Nomor Virtual Account', vaNumber!),
+                          if (billerCode != null &&
+                              billerCode!.isNotEmpty &&
+                              billKey != null &&
+                              billKey!.isNotEmpty) ...[
+                            _buildDetailRow('Kode Biller (Mandiri)', billerCode!),
+                            _buildDetailRow('Kode Tagihan', billKey!),
+                          ],
                           _buildDetailRow('Nomor Meja', tableName),
                           const Divider(color: AppColors.border, height: 20),
 
@@ -242,6 +234,94 @@ class StrukPembayaranView extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  String _statusBadgeText() {
+    final status = (transactionStatus ?? 'settlement').toLowerCase().trim();
+    switch (status) {
+      case 'settlement':
+      case 'paid':
+      case 'selesai':
+        return 'LUNAS (SETTLEMENT)';
+      case 'pending':
+        return 'MENUNGGU PEMBAYARAN';
+      case 'expire':
+      case 'expired':
+        return 'KEDALUWARSA';
+      case 'cancel':
+      case 'deny':
+        return 'DIBATALKAN';
+      default:
+        return status.toUpperCase();
+    }
+  }
+
+  Widget _buildHeaderStatus() {
+    final status = (transactionStatus ?? 'settlement').toLowerCase().trim();
+    final bool isExpired = status == 'expire' || status == 'expired';
+    final bool isPending = status == 'pending';
+
+    final Color circleColor = isExpired
+        ? const Color(0xFFDC2626)
+        : (isPending ? const Color(0xFFD97706) : AppColors.maroon);
+
+    final IconData icon = isExpired
+        ? Icons.close_rounded
+        : (isPending ? Icons.access_time_rounded : Icons.check);
+
+    final String badgeText = isExpired
+        ? 'TRANSAKSI KEDALUWARSA'
+        : (isPending ? 'MENUNGGU PEMBAYARAN' : 'TRANSAKSI TERVERIFIKASI');
+
+    final String titleText = isExpired
+        ? 'Pembayaran Kedaluwarsa'
+        : (isPending ? 'Menunggu Pembayaran' : 'Pembayaran Berhasil');
+
+    final String descText = isExpired
+        ? 'Waktu pembayaran transaksi telah berakhir. Silakan lakukan pemesanan ulang.'
+        : (isPending
+            ? 'Pesanan telah diterima. Silakan selesaikan pembayaran ke kasir atau transfer VA.'
+            : 'E-tiket / resi telah terbit dan dikirimkan secara otomatis ke email Anda.');
+
+    return Column(
+      children: [
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: circleColor,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: Colors.white, size: 32),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          badgeText,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            color: AppColors.textMuted,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          titleText,
+          style: GoogleFonts.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textMain,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          descText,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.plusJakartaSans(
+              fontSize: 10, color: AppColors.textMuted),
+        ),
+      ],
     );
   }
 

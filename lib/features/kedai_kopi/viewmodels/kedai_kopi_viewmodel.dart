@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/features/kedai_kopi/models/cart_item_model.dart';
 import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
 import 'package:mobile_app/features/kedai_kopi/models/menu_model.dart';
+import 'package:mobile_app/features/booking_payment/models/payment_model.dart';
 import 'package:mobile_app/features/kedai_kopi/repositories/kedai_kopi_repository.dart';
 
 /// ViewModel untuk mengelola seluruh state dan logika bisnis fitur Kedai Kopi
@@ -37,6 +38,7 @@ class KedaiKopiViewModel extends ChangeNotifier {
 
   // ── State Transaksi Pembayaran ────────────────────────────────────────────
   int _selectedPaymentMethod = 0; // 0: QRIS, 1: Bayar di Kasir (Tunai), 2: Transfer Bank (Virtual Account)
+  String _selectedBank = 'bca'; // Bank aktif saat memilih VA
   bool _isSubmittingOrder = false;
 
   // ── Menu Fallback Default ─────────────────────────────────────────────────
@@ -97,6 +99,7 @@ class KedaiKopiViewModel extends ChangeNotifier {
   List<String> get categories => _categories;
   Map<String, int> get itemCounts => Map.unmodifiable(_itemCounts);
   int get selectedPaymentMethod => _selectedPaymentMethod;
+  String get selectedBank => _selectedBank;
   bool get isSubmittingOrder => _isSubmittingOrder;
 
   int get totalItems {
@@ -297,6 +300,14 @@ class KedaiKopiViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Memilih bank untuk Virtual Account
+  void selectBank(String bank) {
+    if (_selectedBank != bank) {
+      _selectedBank = bank;
+      notifyListeners();
+    }
+  }
+
   /// Mengirim transaksi charge pesanan kedai
   Future<Map<String, dynamic>?> submitOrderTransaction({
     required String orderId,
@@ -321,6 +332,16 @@ class KedaiKopiViewModel extends ChangeNotifier {
         couponCode: couponCode,
         userId: userId,
       );
+      if (result != null) {
+        final qrisData = QrisPaymentData.fromMap(result);
+        if (qrisData.qrCodeUrl != null) {
+          result['qr_code_url'] = qrisData.qrCodeUrl;
+          result['qr_url'] = qrisData.qrCodeUrl;
+        }
+        if (qrisData.qrString != null) {
+          result['qr_string'] = qrisData.qrString;
+        }
+      }
       return result;
     } finally {
       _isSubmittingOrder = false;

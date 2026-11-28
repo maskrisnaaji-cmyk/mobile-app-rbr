@@ -15,6 +15,8 @@ class VaPaymentView extends StatefulWidget {
   final int? rawAmount;
   final String vaNumber;
   final String bankName;
+  final String? billerCode;
+  final String? billKey;
   final String buttonLabel;
   final Widget? nextScreen;
   final PaymentStatusViewModel? viewModel;
@@ -35,6 +37,8 @@ class VaPaymentView extends StatefulWidget {
     this.rawAmount,
     this.vaNumber = '8830 9042 1817 000',
     this.bankName = 'BCA Virtual Account',
+    this.billerCode,
+    this.billKey,
     this.buttonLabel = 'CEK STATUS PEMBAYARAN',
     this.nextScreen,
     this.viewModel,
@@ -526,101 +530,58 @@ class _VaPaymentViewState extends State<VaPaymentView> {
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            'Nomor Virtual Account',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: AppColors.greyText,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: isExpiredNow ? const Color(0xFFF9FAFB) : AppColors.bgCanvas,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isExpiredNow
-                    ? const Color(0xFFE5E7EB)
-                    : AppColors.lightBorder,
+          // ── Mandiri: tampilkan Kode Biller + Kode Tagihan ─────────────
+          if (widget.billerCode != null && widget.billerCode!.isNotEmpty &&
+              widget.billKey != null && widget.billKey!.isNotEmpty) ...[
+            Text(
+              'Kode Biller (Mandiri)',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.greyText,
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.vaNumber,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
-                      color: isExpiredNow
-                          ? const Color(0xFF9CA3AF)
-                          : AppColors.darkText,
-                      decoration: isExpiredNow
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
-                  ),
-                ),
-                InkWell(
-                  onTap: isExpiredNow
-                      ? null
-                      : () {
-                          Clipboard.setData(ClipboardData(
-                              text: widget.vaNumber.replaceAll(' ', '')));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Nomor Virtual Account disalin ke papan klip!',
-                                style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12),
-                              ),
-                              backgroundColor: AppColors.darkText,
-                              duration: const Duration(seconds: 2),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isExpiredNow
-                          ? const Color(0xFFD1D5DB)
-                          : AppColors.maroon,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.copy_rounded,
-                            color: isExpiredNow
-                                ? const Color(0xFF6B7280)
-                                : Colors.white,
-                            size: 13),
-                        const SizedBox(width: 4),
-                        Text(
-                          'SALIN',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isExpiredNow
-                                ? const Color(0xFF6B7280)
-                                : Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 6),
+            _buildCopyRow(
+              context: context,
+              value: widget.billerCode!,
+              isExpiredNow: isExpiredNow,
+              snackLabel: 'Kode Biller disalin!',
             ),
-          ),
+            const SizedBox(height: 10),
+            Text(
+              'Kode Tagihan (Mandiri)',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.greyText,
+              ),
+            ),
+            const SizedBox(height: 6),
+            _buildCopyRow(
+              context: context,
+              value: widget.billKey!,
+              isExpiredNow: isExpiredNow,
+              snackLabel: 'Kode Tagihan disalin!',
+            ),
+          ] else ...[
+            // ── Non-Mandiri: tampilkan Nomor Virtual Account ─────────────
+            Text(
+              'Nomor Virtual Account',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.greyText,
+              ),
+            ),
+            const SizedBox(height: 6),
+            _buildCopyRow(
+              context: context,
+              value: widget.vaNumber,
+              isExpiredNow: isExpiredNow,
+              snackLabel: 'Nomor Virtual Account disalin ke papan klip!',
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,7 +599,9 @@ class _VaPaymentViewState extends State<VaPaymentView> {
               Expanded(
                 child: Text(
                   isExpiredNow
-                      ? 'Waktu pembayaran telah kedaluwarsa. Nomor VA di atas sudah dinonaktifkan.'
+                      ? (widget.billerCode != null && widget.billerCode!.isNotEmpty
+                          ? 'Waktu pembayaran telah kedaluwarsa. Kode tagihan di atas sudah dinonaktifkan.'
+                          : 'Waktu pembayaran telah kedaluwarsa. Nomor VA di atas sudah dinonaktifkan.')
                       : 'Proses verifikasi instan kurang dari 1 menit setelah transfer berhasil.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
@@ -650,6 +613,98 @@ class _VaPaymentViewState extends State<VaPaymentView> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Reusable row: nilai teks + tombol SALIN
+  Widget _buildCopyRow({
+    required BuildContext context,
+    required String value,
+    required bool isExpiredNow,
+    required String snackLabel,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isExpiredNow ? const Color(0xFFF9FAFB) : AppColors.bgCanvas,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isExpiredNow
+              ? const Color(0xFFE5E7EB)
+              : AppColors.lightBorder,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.1,
+                color: isExpiredNow
+                    ? const Color(0xFF9CA3AF)
+                    : AppColors.darkText,
+                decoration:
+                    isExpiredNow ? TextDecoration.lineThrough : null,
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: isExpiredNow
+                ? null
+                : () {
+                    Clipboard.setData(
+                        ClipboardData(text: value.replaceAll(' ', '')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          snackLabel,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12),
+                        ),
+                        backgroundColor: AppColors.darkText,
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isExpiredNow
+                    ? const Color(0xFFD1D5DB)
+                    : AppColors.maroon,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.copy_rounded,
+                      color: isExpiredNow
+                          ? const Color(0xFF6B7280)
+                          : Colors.white,
+                      size: 13),
+                  const SizedBox(width: 4),
+                  Text(
+                    'SALIN',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isExpiredNow
+                          ? const Color(0xFF6B7280)
+                          : Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -678,29 +733,57 @@ class _VaPaymentViewState extends State<VaPaymentView> {
           ),
           child: Column(
             children: [
-              _buildAccordionItem(
-                title: 'Petunjuk Transfer m-Banking',
-                initiallyExpanded: true,
-                steps: [
-                  'Buka aplikasi m-Banking Anda dan masukkan PIN/Kode Akses.',
-                  'Pilih menu Transfer lalu pilih Virtual Account.',
-                  'Masukkan nomor Virtual Account: ${widget.vaNumber}.',
-                  'Pastikan rincian Rumah Budaya Ratna dan nominal ${widget.totalAmount} sudah sesuai.',
-                  'Masukkan PIN untuk menyelesaikan pembayaran.',
-                ],
-              ),
-              const Divider(color: AppColors.lightBorder, height: 1),
-              _buildAccordionItem(
-                title: 'Petunjuk Transfer Melalui ATM',
-                initiallyExpanded: false,
-                steps: [
-                  'Masukkan kartu ATM dan 6 digit PIN Anda.',
-                  'Pilih menu Transaksi Lainnya > Transfer > ke Rekening Virtual Account.',
-                  'Masukkan nomor Virtual Account: ${widget.vaNumber}.',
-                  'Periksa data transaksi dan konfirmasi pembayaran.',
-                  'Simpan struk ATM sebagai bukti pembayaran yang sah.',
-                ],
-              ),
+              if (widget.billerCode != null && widget.billerCode!.isNotEmpty) ...[
+                // ── Petunjuk khusus Mandiri ─────────────────────────────
+                _buildAccordionItem(
+                  title: 'Petunjuk Mandiri m-Banking / Livin\'',
+                  initiallyExpanded: true,
+                  steps: [
+                    'Buka aplikasi Livin\' by Mandiri dan masuk dengan PIN.',
+                    'Pilih menu Bayar → Multipayment.',
+                    'Masukkan Kode Biller: ${widget.billerCode}.',
+                    'Masukkan Kode Tagihan: ${widget.billKey}.',
+                    'Pastikan nama dan nominal ${widget.totalAmount} sudah sesuai lalu konfirmasi.',
+                  ],
+                ),
+                const Divider(color: AppColors.lightBorder, height: 1),
+                _buildAccordionItem(
+                  title: 'Petunjuk Mandiri ATM',
+                  initiallyExpanded: false,
+                  steps: [
+                    'Masukkan kartu ATM Mandiri dan PIN.',
+                    'Pilih menu Bayar/Beli → Multipayment.',
+                    'Masukkan Kode Biller: ${widget.billerCode}.',
+                    'Masukkan Kode Tagihan: ${widget.billKey}.',
+                    'Periksa data transaksi dan tekan YA untuk konfirmasi.',
+                  ],
+                ),
+              ] else ...[
+                // ── Petunjuk VA standar ─────────────────────────────────
+                _buildAccordionItem(
+                  title: 'Petunjuk Transfer m-Banking',
+                  initiallyExpanded: true,
+                  steps: [
+                    'Buka aplikasi m-Banking Anda dan masukkan PIN/Kode Akses.',
+                    'Pilih menu Transfer lalu pilih Virtual Account.',
+                    'Masukkan nomor Virtual Account: ${widget.vaNumber}.',
+                    'Pastikan rincian Rumah Budaya Ratna dan nominal ${widget.totalAmount} sudah sesuai.',
+                    'Masukkan PIN untuk menyelesaikan pembayaran.',
+                  ],
+                ),
+                const Divider(color: AppColors.lightBorder, height: 1),
+                _buildAccordionItem(
+                  title: 'Petunjuk Transfer Melalui ATM',
+                  initiallyExpanded: false,
+                  steps: [
+                    'Masukkan kartu ATM dan 6 digit PIN Anda.',
+                    'Pilih menu Transaksi Lainnya > Transfer > ke Rekening Virtual Account.',
+                    'Masukkan nomor Virtual Account: ${widget.vaNumber}.',
+                    'Periksa data transaksi dan konfirmasi pembayaran.',
+                    'Simpan struk ATM sebagai bukti pembayaran yang sah.',
+                  ],
+                ),
+              ],
             ],
           ),
         ),

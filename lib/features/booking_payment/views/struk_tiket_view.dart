@@ -17,6 +17,10 @@ class StrukTiketView extends StatelessWidget {
   final int ticketCount;
   final String totalPrice;
   final String paymentMethod;
+  final String? vaNumber;
+  final String? billerCode;
+  final String? billKey;
+  final String? transactionStatus;
 
   const StrukTiketView({
     super.key,
@@ -32,6 +36,10 @@ class StrukTiketView extends StatelessWidget {
     this.ticketCount = 2,
     this.totalPrice = 'Rp 50.000',
     this.paymentMethod = 'QRIS Nasional',
+    this.vaNumber,
+    this.billerCode,
+    this.billKey,
+    this.transactionStatus,
   });
 
   @override
@@ -119,13 +127,55 @@ class StrukTiketView extends StatelessWidget {
       paymentMethod.toLowerCase().contains('tunai') ||
       paymentMethod.toLowerCase().contains('loket');
 
+  bool get _isExpired {
+    final status = (transactionStatus ?? '').toLowerCase().trim();
+    return status == 'expire' || status == 'expired';
+  }
+
+  bool get _isPending {
+    final status = (transactionStatus ?? '').toLowerCase().trim();
+    return status == 'pending' || _isCash;
+  }
+
   // --- Widget: Success Header Badge ---
   Widget _buildSuccessHeader() {
-    final statusColor = _isCash ? const Color(0xFFD97706) : const Color(0xFF10B981);
-    final statusBgColor = _isCash
-        ? const Color(0xFFD97706).withValues(alpha: 0.12)
-        : const Color(0xFF10B981).withValues(alpha: 0.1);
-    final textBadgeColor = _isCash ? const Color(0xFFB45309) : const Color(0xFF047857);
+    final statusColor = _isExpired
+        ? const Color(0xFFDC2626)
+        : (_isPending ? const Color(0xFFD97706) : const Color(0xFF10B981));
+    final statusBgColor = _isExpired
+        ? const Color(0xFFDC2626).withValues(alpha: 0.12)
+        : (_isPending
+            ? const Color(0xFFD97706).withValues(alpha: 0.12)
+            : const Color(0xFF10B981).withValues(alpha: 0.1));
+    final textBadgeColor = _isExpired
+        ? const Color(0xFFDC2626)
+        : (_isPending ? const Color(0xFFB45309) : const Color(0xFF047857));
+
+    final IconData headerIcon = _isExpired
+        ? Icons.close_rounded
+        : (_isCash
+            ? Icons.storefront_rounded
+            : (_isPending ? Icons.access_time_rounded : Icons.check_rounded));
+
+    final String badgeText = _isExpired
+        ? 'TRANSAKSI KEDALUWARSA'
+        : (_isCash
+            ? 'PESANAN TIKET DIBUAT (LOKET)'
+            : (_isPending
+                ? 'MENUNGGU PEMBAYARAN'
+                : 'TRANSAKSI TERVERIFIKASI'));
+
+    final String titleText = _isExpired
+        ? 'Pembayaran Kedaluwarsa'
+        : (_isPending ? 'Pesanan Tiket Dibuat' : 'Pembayaran Berhasil');
+
+    final String descText = _isExpired
+        ? 'Batas waktu pembayaran telah kedaluwarsa. Nomor VA / pesanan ini dinonaktifkan.'
+        : (_isCash
+            ? 'Silakan tunjukkan kode booking ini dan bayar tunai di loket tiket / meja kasir sebelum acara.'
+            : (_isPending
+                ? 'Pesanan tiket telah dibuat. Silakan selesaikan pembayaran ke nomor VA atau kasir.'
+                : 'E-tiket resmi telah terbit dan dikirimkan otomatis ke email Anda.'));
 
     return Column(
       children: [
@@ -144,7 +194,7 @@ class StrukTiketView extends StatelessWidget {
             ],
           ),
           child: Icon(
-            _isCash ? Icons.storefront_rounded : Icons.check_rounded,
+            headerIcon,
             color: Colors.white,
             size: 34,
           ),
@@ -157,7 +207,7 @@ class StrukTiketView extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            _isCash ? 'PESANAN TIKET DIBUAT (LOKET)' : 'TRANSAKSI TERVERIFIKASI',
+            badgeText,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 10,
               fontWeight: FontWeight.w800,
@@ -168,7 +218,7 @@ class StrukTiketView extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          _isCash ? 'Pesanan Tiket Dibuat' : 'Pembayaran Berhasil',
+          titleText,
           style: GoogleFonts.lora(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -177,9 +227,7 @@ class StrukTiketView extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          _isCash
-              ? 'Silakan tunjukkan kode booking ini dan bayar tunai di loket tiket / meja kasir sebelum acara.'
-              : 'E-tiket resmi telah terbit dan dikirimkan otomatis ke email Anda.',
+          descText,
           textAlign: TextAlign.center,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 11,
@@ -390,6 +438,15 @@ class StrukTiketView extends StatelessWidget {
                 _buildInfoRow(
                     'Jenis Tiket', '$ticketType ($ticketCount Tiket)'),
                 _buildInfoRow('Metode Pembayaran', paymentMethod),
+                if (vaNumber != null && vaNumber!.isNotEmpty)
+                  _buildInfoRow('Nomor Virtual Account', vaNumber!),
+                if (billerCode != null &&
+                    billerCode!.isNotEmpty &&
+                    billKey != null &&
+                    billKey!.isNotEmpty) ...[
+                  _buildInfoRow('Kode Biller (Mandiri)', billerCode!),
+                  _buildInfoRow('Kode Tagihan', billKey!),
+                ],
                 const Divider(color: AppColors.border, height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -414,39 +471,7 @@ class StrukTiketView extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: _isCash
-                            ? const Color(0xFFFEF3C7)
-                            : const Color(0xFF10B981).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                              _isCash
-                                  ? Icons.access_time_rounded
-                                  : Icons.check_circle_rounded,
-                              color: _isCash
-                                  ? const Color(0xFFB45309)
-                                  : const Color(0xFF047857),
-                              size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            _isCash ? 'BELUM LUNAS (LOKET)' : 'LUNAS',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: _isCash
-                                  ? const Color(0xFFB45309)
-                                  : const Color(0xFF047857),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildPaymentStatusBadge(),
                   ],
                 ),
                 const SizedBox(height: 18),
@@ -499,6 +524,55 @@ class StrukTiketView extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentStatusBadge() {
+    final status = (transactionStatus ?? '').toLowerCase().trim();
+    final bool isExpired = status == 'expire' || status == 'expired';
+    final bool isPending = status == 'pending' || _isCash;
+
+    final Color bgColor = isExpired
+        ? const Color(0xFFFEE2E2)
+        : (isPending
+            ? const Color(0xFFFEF3C7)
+            : const Color(0xFF10B981).withValues(alpha: 0.12));
+
+    final Color fgColor = isExpired
+        ? const Color(0xFFDC2626)
+        : (isPending ? const Color(0xFFB45309) : const Color(0xFF047857));
+
+    final IconData icon = isExpired
+        ? Icons.cancel_outlined
+        : (isPending ? Icons.access_time_rounded : Icons.check_circle_rounded);
+
+    final String label = isExpired
+        ? 'KEDALUWARSA'
+        : (_isCash
+            ? 'BELUM LUNAS (LOKET)'
+            : (isPending ? 'PENDING' : 'LUNAS (SETTLEMENT)'));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: fgColor, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: fgColor,
             ),
           ),
         ],

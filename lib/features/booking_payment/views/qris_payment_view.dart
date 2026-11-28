@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_pembayaran_view.dart';
@@ -531,18 +532,9 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
                   Opacity(
                     opacity: isExpiredNow ? 0.2 : 1.0,
                     child: SizedBox(
-                      width: 210,
-                      height: 210,
-                      child: (widget.qrUrl != null && widget.qrUrl!.isNotEmpty)
-                          ? Image.network(
-                              widget.qrUrl!,
-                              width: 210,
-                              height: 210,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) =>
-                                  CustomPaint(painter: _QrisPainter()),
-                            )
-                          : CustomPaint(painter: _QrisPainter()),
+                      width: 220,
+                      height: 220,
+                      child: _buildQrImage(),
                     ),
                   ),
                   if (isExpiredNow)
@@ -583,16 +575,6 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
             ),
           ),
           const SizedBox(height: 14),
-          Text(
-            'NMID : ID10200392019',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.8,
-              color: isExpiredNow ? AppColors.greyText : AppColors.darkText,
-            ),
-          ),
-          const SizedBox(height: 4),
           Text(
             isExpiredNow
                 ? 'Kode QR telah kedaluwarsa dan tidak dapat dipindai lagi.'
@@ -785,88 +767,124 @@ class _QrisPaymentViewState extends State<QrisPaymentView> {
       ],
     );
   }
-}
 
-/// CustomPainter untuk menggambar ilustrasi QR code
-class _QrisPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paintDark = Paint()..color = const Color(0xFF1E1C1A);
-    final paintLight = Paint()..color = Colors.white;
-    final cell = size.width / 25;
+  Widget _buildQrImage() {
+    final qrStr = widget.qrString?.trim();
+    final qrUrl = widget.qrUrl?.trim();
 
-    void drawDot(int col, int row) {
-      canvas.drawRect(
-        Rect.fromLTWH(col * cell, row * cell, cell - 0.5, cell - 0.5),
-        paintDark,
-      );
-    }
-
-    void drawFinderPattern(double startX, double startY) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(startX, startY, cell * 7, cell * 7),
-          const Radius.circular(4),
+    // 1. Prioritas Utama: render qr_string secara lokal via qr_flutter (Bebas CORS di Web & Mobile)
+    if (qrStr != null && qrStr.isNotEmpty) {
+      return Center(
+        child: QrImageView(
+          data: qrStr,
+          version: QrVersions.auto,
+          size: 210,
+          gapless: false,
+          backgroundColor: Colors.white,
+          errorCorrectionLevel: QrErrorCorrectLevel.M,
+          errorStateBuilder: (cxt, err) {
+            // Jika qr_string gagal diparse, fallback ke Image.network jika qrUrl ada
+            if (qrUrl != null && qrUrl.isNotEmpty) {
+              return _buildNetworkQr(qrUrl);
+            }
+            return _buildQrFallback(
+              icon: Icons.qr_code_2_rounded,
+              message: 'Gagal membuat kode QR lokal',
+            );
+          },
         ),
-        paintDark,
-      );
-      canvas.drawRect(
-        Rect.fromLTWH(startX + cell, startY + cell, cell * 5, cell * 5),
-        paintLight,
-      );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-              startX + cell * 2, startY + cell * 2, cell * 3, cell * 3),
-          const Radius.circular(2),
-        ),
-        paintDark,
       );
     }
 
-    drawFinderPattern(0, 0);
-    drawFinderPattern(size.width - cell * 7, 0);
-    drawFinderPattern(0, size.height - cell * 7);
+    // 2. Cadangan: gunakan Image.network jika qr_string kosong tapi qrUrl ada
+    if (qrUrl != null && qrUrl.isNotEmpty) {
+      return _buildNetworkQr(qrUrl);
+    }
 
-    final alignX = size.width - cell * 8;
-    final alignY = size.height - cell * 8;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(alignX, alignY, cell * 5, cell * 5),
-        const Radius.circular(3),
-      ),
-      paintDark,
+    // 3. Fallback jika kedua-duanya kosong
+    return _buildQrFallback(
+      icon: Icons.qr_code_2_rounded,
+      message: 'Kode QR tidak tersedia',
     );
-    canvas.drawRect(
-      Rect.fromLTWH(alignX + cell, alignY + cell, cell * 3, cell * 3),
-      paintLight,
-    );
-    drawDot((alignX / cell + 2).round(), (alignY / cell + 2).round());
-
-    for (int col = 8; col <= 16; col++) {
-      if (col % 2 == 0) drawDot(col, 6);
-    }
-    for (int row = 8; row <= 16; row++) {
-      if (row % 2 == 0) drawDot(6, row);
-    }
-
-    final dummyDots = [
-      [8, 1], [10, 2], [12, 1], [14, 3], [16, 2],
-      [1, 8], [3, 10], [2, 13], [4, 15], [0, 16],
-      [8, 8], [9, 10], [11, 8], [13, 9], [15, 11],
-      [8, 13], [10, 14], [12, 16], [14, 13], [16, 15],
-      [18, 8], [20, 9], [22, 8], [24, 11],
-      [18, 14], [20, 15], [22, 13], [24, 16],
-      [8, 18], [9, 20], [11, 22], [13, 24],
-      [14, 18], [15, 21], [16, 23],
-      [18, 18], [20, 20], [22, 22], [24, 24],
-      [19, 21], [21, 23], [23, 19],
-    ];
-    for (final dot in dummyDots) {
-      drawDot(dot[0], dot[1]);
-    }
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget _buildNetworkQr(String url) {
+    return Image.network(
+      url,
+      width: 210,
+      height: 210,
+      fit: BoxFit.contain,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        final totalBytes = loadingProgress.expectedTotalBytes;
+        final loadedBytes = loadingProgress.cumulativeBytesLoaded;
+        final progress = (totalBytes != null && totalBytes > 0)
+            ? loadedBytes / totalBytes
+            : null;
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  color: AppColors.maroon,
+                  strokeWidth: 2.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Memuat gambar QR...',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  color: AppColors.greyText,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return _buildQrFallback(
+          icon: Icons.broken_image_outlined,
+          message: 'Gagal memuat gambar QR',
+        );
+      },
+    );
+  }
+
+  Widget _buildQrFallback({required IconData icon, required String message}) {
+    return Container(
+      width: 220,
+      height: 220,
+      color: const Color(0xFFF9FAFB),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 48, color: AppColors.greyText),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkText,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Periksa koneksi internet Anda',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                color: AppColors.greyText,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -171,7 +171,19 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
             const SizedBox(height: 5),
             _buildDetailRow(Icons.table_restaurant_outlined, order.meja),
             const SizedBox(height: 5),
-            _buildDetailRow(Icons.payment_outlined, order.payment),
+            _buildDetailRow(Icons.payment_outlined, _formatPaymentLabel(order.payment)),
+            if (order.vaNumber != null && order.vaNumber!.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              _buildDetailRow(Icons.pin_outlined, 'No. VA: ${order.vaNumber}'),
+            ],
+            if (order.billerCode != null &&
+                order.billerCode!.isNotEmpty &&
+                order.billKey != null &&
+                order.billKey!.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              _buildDetailRow(Icons.pin_outlined,
+                  'Biller: ${order.billerCode} • Tagihan: ${order.billKey}'),
+            ],
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -197,8 +209,12 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
                       MaterialPageRoute(
                         builder: (_) => StrukPembayaranView(
                           orderNumber: order.orderNumber,
-                          paymentMethod: order.payment,
+                          paymentMethod: _formatPaymentLabel(order.payment),
                           tableName: order.meja,
+                          vaNumber: order.vaNumber,
+                          billerCode: order.billerCode,
+                          billKey: order.billKey,
+                          transactionStatus: order.status,
                         ),
                       ),
                     );
@@ -328,6 +344,23 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
               Icons.confirmation_num_outlined,
               '${ticket.ticketType} • ${ticket.ticketCount} tiket',
             ),
+            const SizedBox(height: 5),
+            _buildDetailRow(
+              Icons.payment_outlined,
+              _formatPaymentLabel(ticket.payment),
+            ),
+            if (ticket.vaNumber != null && ticket.vaNumber!.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              _buildDetailRow(Icons.pin_outlined, 'No. VA: ${ticket.vaNumber}'),
+            ],
+            if (ticket.billerCode != null &&
+                ticket.billerCode!.isNotEmpty &&
+                ticket.billKey != null &&
+                ticket.billKey!.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              _buildDetailRow(Icons.pin_outlined,
+                  'Biller: ${ticket.billerCode} • Tagihan: ${ticket.billKey}'),
+            ],
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -362,7 +395,11 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
                           ticketType: ticket.ticketType,
                           ticketCount: ticket.ticketCount,
                           totalPrice: ticket.totalPrice,
-                          paymentMethod: ticket.payment,
+                          paymentMethod: _formatPaymentLabel(ticket.payment),
+                          vaNumber: ticket.vaNumber,
+                          billerCode: ticket.billerCode,
+                          billKey: ticket.billKey,
+                          transactionStatus: ticket.status,
                         ),
                       ),
                     );
@@ -390,6 +427,45 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
   }
 
   // ─── Helper Widgets ──────────────────────────────────────────────────────
+  static String _formatPaymentLabel(String raw) {
+    final lower = raw.toLowerCase().trim();
+    switch (lower) {
+      case 'qris':
+      case 'qris (instan)':
+      case 'qris nasional':
+        return 'QRIS (INSTAN)';
+      case 'bca':
+      case 'va_bca':
+        return 'BCA Virtual Account';
+      case 'bni':
+      case 'va_bni':
+        return 'BNI Virtual Account';
+      case 'bri':
+      case 'va_bri':
+        return 'BRI Virtual Account';
+      case 'echannel':
+      case 'mandiri':
+      case 'va_mandiri':
+        return 'Mandiri Virtual Account';
+      case 'permata':
+      case 'va_permata':
+        return 'Permata Virtual Account';
+      case 'cimb':
+      case 'va_cimb':
+        return 'CIMB Niaga Virtual Account';
+      case 'cash':
+      case 'kasir':
+      case 'tunai':
+      case 'bayar di kasir (tunai)':
+        return 'Bayar di Kasir (Tunai)';
+      case '-':
+      case '':
+        return '-';
+      default:
+        return raw;
+    }
+  }
+
   Widget _buildDetailRow(IconData icon, String text) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,26 +489,56 @@ class _RiwayatPesananScreenState extends State<RiwayatPesananScreen>
   Widget _buildStatusBadge(String status) {
     Color bg;
     Color fg;
-    switch (status.toLowerCase()) {
+    String label;
+
+    switch (status.toLowerCase().trim()) {
+      case 'settlement':
+      case 'paid':
+        bg = const Color(0xFFDCFCE7);
+        fg = const Color(0xFF15803D);
+        label = 'SETTLEMENT (LUNAS)';
+        break;
+      case 'pending':
+        bg = const Color(0xFFFEF9C3);
+        fg = const Color(0xFFB45309);
+        label = 'PENDING';
+        break;
+      case 'expire':
+      case 'expired':
+        bg = const Color(0xFFFEE2E2);
+        fg = const Color(0xFFDC2626);
+        label = 'EXPIRED';
+        break;
+      case 'cancel':
+      case 'cancelled':
+      case 'deny':
+        bg = const Color(0xFFFEE2E2);
+        fg = const Color(0xFFDC2626);
+        label = 'DIBATALKAN';
+        break;
       case 'selesai':
       case 'hadir':
         bg = const Color(0xFFDCFCE7);
         fg = const Color(0xFF15803D);
+        label = status.toUpperCase();
         break;
       case 'dibatalkan':
         bg = const Color(0xFFFEE2E2);
         fg = const Color(0xFFDC2626);
+        label = 'DIBATALKAN';
         break;
       default:
         bg = const Color(0xFFFEF9C3);
         fg = const Color(0xFFB45309);
+        label = status.toUpperCase();
     }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
           color: bg, borderRadius: BorderRadius.circular(12)),
       child: Text(
-        status,
+        label,
         style: GoogleFonts.plusJakartaSans(
           fontSize: 10,
           fontWeight: FontWeight.bold,

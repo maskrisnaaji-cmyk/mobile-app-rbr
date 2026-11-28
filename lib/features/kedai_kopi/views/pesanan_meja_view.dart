@@ -11,6 +11,7 @@ import 'package:mobile_app/features/booking_payment/widgets/price_summary_card.d
 import 'package:mobile_app/features/booking_payment/views/qris_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/va_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_pembayaran_view.dart';
+import 'package:mobile_app/features/booking_payment/models/payment_model.dart';
 import 'package:mobile_app/features/kedai_kopi/viewmodels/kedai_kopi_viewmodel.dart';
 import 'package:mobile_app/features/kedai_kopi/models/coupon_model.dart';
 import 'package:mobile_app/features/notification/viewmodels/notification_viewmodel.dart';
@@ -852,12 +853,62 @@ class _PesananMejaViewState extends State<PesananMejaView> {
           PaymentOptionCard(
             title: 'Transfer Bank (Virtual Account)',
             badge: 'VA 24 JAM',
-            subtitle: 'BCA, Mandiri, BNI, BRI, Permata',
+            subtitle: 'BCA, BNI, BRI, Mandiri, Permata, CIMB',
             isSelected: _viewModel.selectedPaymentMethod == 2,
             onTap: () => _viewModel.selectPaymentMethod(2),
           ),
+          // ── Sub-panel pemilih bank VA ─────────────────────────────────
+          if (_viewModel.selectedPaymentMethod == 2) ...[
+            const SizedBox(height: 10),
+            _buildBankSelector(),
+          ],
         ],
       ),
+    );
+  }
+
+  static const _kBankOptions = [
+    {'code': 'bca',      'label': 'BCA'},
+    {'code': 'bni',      'label': 'BNI'},
+    {'code': 'bri',      'label': 'BRI'},
+    {'code': 'echannel', 'label': 'Mandiri'},
+    {'code': 'permata',  'label': 'Permata'},
+    {'code': 'cimb',     'label': 'CIMB'},
+  ];
+
+  Widget _buildBankSelector() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _kBankOptions.map((b) {
+        final isActive = _viewModel.selectedBank == b['code'];
+        return GestureDetector(
+          onTap: () => _viewModel.selectBank(b['code']!),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? AppColors.maroon.withValues(alpha: 0.1)
+                  : AppColors.bgCanvas,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isActive ? AppColors.maroon : AppColors.lightBorder,
+                width: isActive ? 1.5 : 1,
+              ),
+            ),
+            child: Text(
+              b['label']!,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight:
+                    isActive ? FontWeight.bold : FontWeight.w500,
+                color: isActive ? AppColors.maroon : AppColors.greyText,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -925,12 +976,11 @@ class _PesananMejaViewState extends State<PesananMejaView> {
               grossAmount: total,
               customerName: 'Pelanggan $table',
               paymentType: isQris ? 'qris' : 'bank_transfer',
-              bank: 'bca',
+              bank: isQris ? '' : _viewModel.selectedBank,
               items: items,
               couponCode: _selectedCoupon?.code,
               userId: UserSession.instance.userId,
             );
-
             if (!mounted) return;
             Navigator.pop(context); // Tutup loading dialog
 
@@ -971,6 +1021,13 @@ class _PesananMejaViewState extends State<PesananMejaView> {
             }
 
             if (isQris) {
+              final qrisData = QrisPaymentData.fromMap(chargeResult);
+              final effectiveQrUrl = qrisData.qrCodeUrl ??
+                  chargeResult?['qr_code_url'] as String? ??
+                  chargeResult?['qr_url'] as String?;
+              final effectiveQrString =
+                  qrisData.qrString ?? chargeResult?['qr_string'] as String?;
+
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -980,8 +1037,8 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                     badgeText: '$table • Dine-in',
                     totalAmount: _formatRupiah(paidAmount),
                     rawAmount: paidAmount,
-                    qrUrl: chargeResult?['qr_url'],
-                    qrString: chargeResult?['qr_string'],
+                    qrUrl: effectiveQrUrl,
+                    qrString: effectiveQrString,
                     buttonLabel: 'CEK STATUS PEMBAYARAN',
                     nextScreen: strukView,
                     kedaiOrderCode: cleanOrder,
@@ -1000,10 +1057,13 @@ class _PesananMejaViewState extends State<PesananMejaView> {
                     badgeText: '$table • Dine-in',
                     totalAmount: _formatRupiah(paidAmount),
                     rawAmount: paidAmount,
-                    vaNumber: chargeResult?['va_number'] ??
-                        '8830 9042 1817 000',
+                    vaNumber: chargeResult?['va_number'] as String? ??
+                        chargeResult?['permata_va_number'] as String? ??
+                        '—',
                     bankName:
-                        '${(chargeResult?['bank'] ?? 'BCA').toUpperCase()} Virtual Account',
+                        '${(chargeResult?['bank'] ?? _viewModel.selectedBank).toString().toUpperCase()} Virtual Account',
+                    billerCode: chargeResult?['biller_code'] as String?,
+                    billKey: chargeResult?['bill_key'] as String?,
                     buttonLabel: 'CEK STATUS PEMBAYARAN',
                     nextScreen: strukView,
                     kedaiOrderCode: cleanOrder,

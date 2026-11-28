@@ -60,6 +60,9 @@ class BookingCheckoutViewModel extends ChangeNotifier {
   CheckoutPaymentMethod _selectedPaymentMethod = CheckoutPaymentMethod.qris;
   CheckoutPaymentMethod get selectedPaymentMethod => _selectedPaymentMethod;
 
+  String _selectedBank = 'bca'; // Bank aktif saat memilih VA
+  String get selectedBank => _selectedBank;
+
   bool _isSubmitting = false;
   bool get isSubmitting => _isSubmitting;
 
@@ -136,6 +139,14 @@ class BookingCheckoutViewModel extends ChangeNotifier {
   void selectPaymentMethod(CheckoutPaymentMethod method) {
     if (_selectedPaymentMethod != method) {
       _selectedPaymentMethod = method;
+      notifyListeners();
+    }
+  }
+
+  /// Memilih bank untuk Virtual Account
+  void selectBank(String bank) {
+    if (_selectedBank != bank) {
+      _selectedBank = bank;
       notifyListeners();
     }
   }
@@ -257,7 +268,7 @@ class BookingCheckoutViewModel extends ChangeNotifier {
       customerEmail: customerEmail,
       customerPhone: customerPhone,
       paymentType: paymentTypeString,
-      bank: isCash ? 'cash' : 'bca',
+      bank: isCash ? 'cash' : _selectedBank,
       orderType: 'ticket',
       eventId: eventId,
       items: [
@@ -272,6 +283,18 @@ class BookingCheckoutViewModel extends ChangeNotifier {
       userId: userId,
     );
 
+    // Normalisasi mapping response QRIS dari backend-rbr & Midtrans (termasuk actions)
+    final qrisData = QrisPaymentData.fromMap(result);
+    if (result != null) {
+      if (qrisData.qrCodeUrl != null) {
+        result['qr_code_url'] = qrisData.qrCodeUrl;
+        result['qr_url'] = qrisData.qrCodeUrl;
+      }
+      if (qrisData.qrString != null) {
+        result['qr_string'] = qrisData.qrString;
+      }
+    }
+
     _isSubmitting = false;
     notifyListeners();
 
@@ -280,6 +303,8 @@ class BookingCheckoutViewModel extends ChangeNotifier {
       'order_id': result?['order_id'] ?? orderId,
       'is_qris': isQris,
       'is_cash': isCash,
+      'qr_code_url': qrisData.qrCodeUrl,
+      'qr_string': qrisData.qrString,
     };
   }
 
@@ -329,6 +354,16 @@ class PaymentStatusViewModel extends ChangeNotifier {
     notifyListeners();
 
     final statusData = await repository.checkPaymentStatus(orderId);
+    if (statusData != null) {
+      final qrisData = QrisPaymentData.fromMap(statusData);
+      if (qrisData.qrCodeUrl != null) {
+        statusData['qr_code_url'] = qrisData.qrCodeUrl;
+        statusData['qr_url'] = qrisData.qrCodeUrl;
+      }
+      if (qrisData.qrString != null) {
+        statusData['qr_string'] = qrisData.qrString;
+      }
+    }
     _lastStatusData = statusData;
 
     _isChecking = false;
@@ -404,27 +439,49 @@ class RiwayatPesananViewModel extends ChangeNotifier {
       date: 'Sabtu, 25 Okt 2026 • 14:32 WIB',
       items: ['Kopi Susu Gula Aren (x1)', 'Pisang Goreng Keju (x2)'],
       total: 45000,
-      status: 'Selesai',
+      status: 'settlement',
       meja: 'Meja No. 04 (Dine-In)',
-      payment: 'QRIS (INSTAN)',
+      payment: 'qris',
     ),
     PesananKedaiModel(
       orderNumber: '#ORD-8817',
       date: 'Rabu, 15 Okt 2026 • 11:10 WIB',
       items: ['Wedang Uwuh (x2)', 'Teh Rempah Nusantara (x1)'],
       total: 36000,
-      status: 'Selesai',
+      status: 'settlement',
       meja: 'Meja No. 02 (Dine-In)',
-      payment: 'QRIS (INSTAN)',
+      payment: 'bca',
+      vaNumber: '8830 9042 1817 000',
     ),
     PesananKedaiModel(
       orderNumber: '#ORD-8201',
       date: 'Jum, 03 Okt 2026 • 16:45 WIB',
       items: ['Kopi Hitam Tubruk (x1)'],
       total: 15000,
-      status: 'Selesai',
+      status: 'settlement',
       meja: 'Meja No. 01 (Dine-In)',
-      payment: 'Tunai',
+      payment: 'kasir',
+    ),
+    PesananKedaiModel(
+      orderNumber: '#ORD-7955',
+      date: 'Sel, 21 Okt 2026 • 09:15 WIB',
+      items: ['V60 Manual Brew (x1)', 'Kopi Susu Creamy (x1)'],
+      total: 43000,
+      status: 'pending',
+      meja: 'Meja No. 06 (Dine-In)',
+      payment: 'echannel',
+      billerCode: '70012',
+      billKey: '90421817001',
+    ),
+    PesananKedaiModel(
+      orderNumber: '#ORD-7730',
+      date: 'Sen, 20 Okt 2026 • 13:00 WIB',
+      items: ['Americano Signature (x2)'],
+      total: 34000,
+      status: 'expire',
+      meja: 'Meja No. 03 (Dine-In)',
+      payment: 'bri',
+      vaNumber: '1280 9042 1817 003',
     ),
   ];
 
@@ -438,8 +495,8 @@ class RiwayatPesananViewModel extends ChangeNotifier {
       ticketType: 'Tiket Reguler',
       ticketCount: 2,
       totalPrice: 'Rp 50.000',
-      payment: 'QRIS',
-      status: 'Hadir',
+      payment: 'qris',
+      status: 'settlement',
     ),
     TiketAgendaModel(
       bookingId: '#TKT-2988',
@@ -451,7 +508,7 @@ class RiwayatPesananViewModel extends ChangeNotifier {
       ticketCount: 1,
       totalPrice: 'Gratis',
       payment: '-',
-      status: 'Hadir',
+      status: 'hadir',
     ),
     TiketAgendaModel(
       bookingId: '#TKT-3109',
@@ -459,11 +516,64 @@ class RiwayatPesananViewModel extends ChangeNotifier {
       category: 'Workshop',
       eventTime: 'Min, 11 Okt 2026 • 10:00 WIB',
       location: 'Studio Kriya Lt. 1, Rumah Budaya Ratna',
-      ticketType: 'Tiket Reguler',
+      ticketType: 'Tiket Presale 1',
       ticketCount: 1,
       totalPrice: 'Rp 75.000',
-      payment: 'Transfer Bank',
-      status: 'Hadir',
+      payment: 'echannel',
+      status: 'settlement',
+      billerCode: '70012',
+      billKey: '31090001882',
+    ),
+    TiketAgendaModel(
+      bookingId: '#TKT-3200',
+      eventTitle: 'Pameran Seni Rupa: Bumi & Langit',
+      category: 'Pameran',
+      eventTime: 'Sab, 18 Okt 2026 • 10:00 WIB',
+      location: 'Galeri Utama, Rumah Budaya Ratna',
+      ticketType: 'Tiket Presale 2',
+      ticketCount: 2,
+      totalPrice: 'Rp 100.000',
+      payment: 'bni',
+      status: 'pending',
+      vaNumber: '9880 3200 1817 002',
+    ),
+    TiketAgendaModel(
+      bookingId: '#TKT-3315',
+      eventTitle: 'Festival Musik Tradisi Nusantara',
+      category: 'Festival',
+      eventTime: 'Min, 26 Okt 2026 • 18:00 WIB',
+      location: 'Pendopo Utama, Rumah Budaya Ratna',
+      ticketType: 'Tiket Reguler',
+      ticketCount: 1,
+      totalPrice: 'Rp 60.000',
+      payment: 'kasir',
+      status: 'hadir',
+    ),
+    TiketAgendaModel(
+      bookingId: '#TKT-3420',
+      eventTitle: 'Kelas Membatik Corak Klasik',
+      category: 'Lokakarya',
+      eventTime: 'Sab, 01 Nov 2026 • 09:00 WIB',
+      location: 'Pendopo Timur, Rumah Budaya Ratna',
+      ticketType: 'Tiket Presale 1',
+      ticketCount: 1,
+      totalPrice: 'Rp 80.000',
+      payment: 'permata',
+      status: 'expire',
+      vaNumber: '8520 3420 1817 004',
+    ),
+    TiketAgendaModel(
+      bookingId: '#TKT-3510',
+      eventTitle: 'Pentas Tari Bedhaya Kraton',
+      category: 'Pertunjukan',
+      eventTime: 'Min, 09 Nov 2026 • 19:30 WIB',
+      location: 'Pendopo Utama, Rumah Budaya Ratna',
+      ticketType: 'Tiket Reguler',
+      ticketCount: 1,
+      totalPrice: 'Rp 65.000',
+      payment: 'cimb',
+      status: 'settlement',
+      vaNumber: '5910 3510 1817 005',
     ),
   ];
 
