@@ -128,14 +128,19 @@ class Book {
         json['image_url'];
     final cover = resolveCoverImageUrl(rawCover, title: title);
 
+    final rawStatus = (json['status'] ?? json['book_status'])?.toString().trim();
+    final isAvail = rawStatus == null ||
+        rawStatus.isEmpty ||
+        rawStatus.toUpperCase() == 'TERSEDIA' ||
+        rawStatus.toLowerCase().contains('tersedia');
+    final parsedStatus = isAvail ? 'TERSEDIA' : 'DIPINJAM';
+
     return Book(
-      id: json['id'] != null ? json['id'].toString() : '',
+      id: (json['code'] ?? json['book_code'] ?? json['id'])?.toString() ?? '',
       title: title,
       author: json['author'] ?? 'Penulis',
       coverImage: cover,
-      status: ((json['status'] ?? json['book_status'])?.toString().trim().isNotEmpty == true)
-          ? (json['status'] ?? json['book_status']).toString().trim().toUpperCase()
-          : 'TERSEDIA',
+      status: parsedStatus,
       shelfLocation: json['shelfLocation'] ??
           json['rack_location'] ??
           json['rackLocation'] ??

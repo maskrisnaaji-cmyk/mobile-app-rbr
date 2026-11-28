@@ -36,9 +36,7 @@ class _BookDetailViewState extends State<BookDetailView> {
   void initState() {
     super.initState();
     _currentBook = widget.book;
-    if (_pustakaViewModel.isBookBorrowed(_currentBook)) {
-      _currentBook = _currentBook.copyWith(status: 'DIPINJAM');
-    } else if (_currentBook.status.isEmpty) {
+    if (_currentBook.status.isEmpty) {
       _currentBook = _currentBook.copyWith(status: 'TERSEDIA');
     }
     _checkBookmarkStatus();
@@ -532,6 +530,12 @@ class _BookDetailViewState extends State<BookDetailView> {
                                         setState(() {
                                           _currentBook = _currentBook.copyWith(status: 'DIPINJAM');
                                         });
+                                        if (_currentBook.id.isNotEmpty) {
+                                          _pustakaViewModel.updateBookStatus(_currentBook.id, 'DIPINJAM');
+                                        }
+                                        _pustakaViewModel.updateBookStatus(_currentBook.title, 'DIPINJAM');
+                                        _pustakaViewModel.fetchBooks();
+
                                         if (modalContext.mounted) {
                                           Navigator.pop(modalContext);
                                         }
@@ -1652,23 +1656,28 @@ class _BookDetailViewState extends State<BookDetailView> {
   Widget _buildActionButtons() {
     return Column(
       children: [
-        // Tombol Utama: Ajukan Peminjaman Fisik (Membuka Form Data Diri)
+        // Tombol Utama: Ajukan Peminjaman Fisik (Aktif hanya jika status TERSEDIA)
         SizedBox(
           width: double.infinity,
           height: 48,
           child: ElevatedButton.icon(
-            onPressed: _showBorrowFormModal,
-            icon: const Icon(Icons.assignment_ind_rounded, size: 20),
+            onPressed: isAvailable ? _showBorrowFormModal : null,
+            icon: Icon(
+              isAvailable ? Icons.assignment_ind_rounded : Icons.block_rounded,
+              size: 20,
+            ),
             label: Text(
-              'Ajukan Peminjaman Fisik',
+              isAvailable ? 'Ajukan Peminjaman Fisik' : 'Buku Sedang Dipinjam',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.maroon, // #6B1D2F
+              backgroundColor: isAvailable ? AppColors.maroon : Colors.grey.shade400,
               foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade300,
+              disabledForegroundColor: Colors.grey.shade600,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

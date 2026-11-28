@@ -81,6 +81,8 @@ class PustakaRepositoryImpl implements PustakaRepository {
   @override
   Future<List<Book>> getBooks() async {
     List<Book> books = [];
+    bool isFromBackend = false;
+
     try {
       final response = await _client
           .get(Uri.parse(ApiConfig.booksUrl))
@@ -92,32 +94,32 @@ class PustakaRepositoryImpl implements PustakaRepository {
           books = data
               .map((item) => Book.fromJson(item as Map<String, dynamic>))
               .toList();
+          isFromBackend = true;
         }
       }
     } catch (_) {
       // Fallback ke dummy books jika server offline
     }
+
     if (books.isEmpty) {
       books = List.from(Book.dummyBooks);
     }
 
-    // Pastikan status default adalah TERSEDIA, kecuali jika telah dipinjam
+    if (isFromBackend) {
+      // Status buku membaca value langsung dari respons API backend (TERSEDIA vs DIPINJAM)
+      return books;
+    }
+
+    // Fallback offline jika server backend tidak dapat dihubungi
     final borrowed = await getBorrowedBookIdentifiers();
-    books = books.map((b) {
+    return books.map((b) {
       final isLocallyBorrowed = borrowed.contains(b.id.toLowerCase().trim()) ||
           borrowed.contains(b.title.toLowerCase().trim());
       if (isLocallyBorrowed) {
         return b.copyWith(status: 'DIPINJAM');
       }
-      // Jika status dari API kosong atau default, pastikan TERSEDIA
-      final s = b.status.toUpperCase();
-      if (s.isEmpty || s.contains('TERSEDIA')) {
-        return b.copyWith(status: 'TERSEDIA');
-      }
       return b;
     }).toList();
-
-    return books;
   }
 
   @override

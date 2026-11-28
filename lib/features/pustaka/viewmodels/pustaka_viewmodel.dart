@@ -75,10 +75,6 @@ class PustakaViewModel extends ChangeNotifier {
 
   /// Cek apakah buku tertentu saat ini berstatus dipinjam secara dinamis
   bool isBookBorrowed(Book book) {
-    if (_borrowedBookIds.contains(book.id.toLowerCase().trim()) ||
-        _borrowedBookIds.contains(book.title.toLowerCase().trim())) {
-      return true;
-    }
     return book.isBorrowed;
   }
 
@@ -113,19 +109,7 @@ class PustakaViewModel extends ChangeNotifier {
 
     try {
       final loaded = await _repository.getBooks();
-      if (loaded.isNotEmpty) {
-        _allBooks = loaded.map((b) {
-          if (_borrowedBookIds.contains(b.id.toLowerCase().trim()) ||
-              _borrowedBookIds.contains(b.title.toLowerCase().trim())) {
-            return b.copyWith(status: 'DIPINJAM');
-          }
-          final statusUpper = b.status.toUpperCase();
-          if (statusUpper.isEmpty || statusUpper.contains('TERSEDIA')) {
-            return b.copyWith(status: 'TERSEDIA');
-          }
-          return b;
-        }).toList();
-      }
+      _allBooks = loaded;
       _applyFilter();
     } catch (e) {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -235,6 +219,9 @@ class PustakaViewModel extends ChangeNotifier {
         updateBookStatus(book.id, 'DIPINJAM');
       }
       updateBookStatus(book.title, 'DIPINJAM');
+
+      // Refresh data buku dari API backend agar status terkini tersinkronisasi
+      await fetchBooks();
 
       // Update loans state jika ada session
       await fetchLoans(token);

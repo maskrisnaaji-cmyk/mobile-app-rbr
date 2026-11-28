@@ -33,7 +33,7 @@ class BookCardGridItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imagePath = _getBookCoverImage(book);
-    final isAvailable = book.status.toLowerCase().contains('tersedia');
+    final isAvailable = book.isAvailable;
 
     return GestureDetector(
       onTap: () {
