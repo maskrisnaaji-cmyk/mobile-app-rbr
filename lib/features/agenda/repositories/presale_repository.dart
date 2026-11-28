@@ -33,11 +33,15 @@ class PresaleRepositoryImpl implements PresaleRepository {
 
     if (response.statusCode == 200) {
       final dynamic body = jsonDecode(response.body);
-      final List<dynamic> list = body is List ? body : (body['data'] as List? ?? []);
-      return list
-          .map((item) =>
-              PresaleTierModel.fromJson(item as Map<String, dynamic>))
-          .toList();
+      final dynamic rawList = body is List
+          ? body
+          : (body['tiers'] ?? body['data'] ?? body['items']);
+      if (rawList is List) {
+        return rawList
+            .map((item) =>
+                PresaleTierModel.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
     }
     return [];
   }
@@ -50,9 +54,12 @@ class PresaleRepositoryImpl implements PresaleRepository {
 
     if (response.statusCode == 200) {
       final dynamic body = jsonDecode(response.body);
-      final Map<String, dynamic> data =
-          body is Map<String, dynamic> ? body : (body['data'] as Map<String, dynamic>);
-      return PresaleTierModel.fromJson(data);
+      final dynamic rawData = body is Map<String, dynamic>
+          ? (body['tier'] ?? body['active_tier'] ?? body['data'] ?? body)
+          : null;
+      if (rawData is Map<String, dynamic>) {
+        return PresaleTierModel.fromJson(rawData);
+      }
     }
     if (response.statusCode == 404) return null;
     return null;

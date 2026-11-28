@@ -74,6 +74,27 @@ class BookingCheckoutViewModel extends ChangeNotifier {
   bool get isPresaleMode => _isPresaleMode;
   bool get isLoadingPresale => _isLoadingPresale;
 
+  /// Status apakah semua kuota tiket (Presale 1, 2, Reguler) sudah habis
+  bool get isSoldOut {
+    if (_isLoadingPresale) return false;
+    if (_isPresaleMode) {
+      if (_presaleTiers.isEmpty) return false;
+      return _selectedPresaleTier == null || _selectedPresaleTier!.remainingQuota <= 0;
+    }
+    return false;
+  }
+
+  /// Kuota maksimal yang dapat dibeli oleh pengguna (maksimal 5 atau sisa kuota tier aktif)
+  int get maxAllowedQuantity {
+    if (isSoldOut) return 0;
+    if (_isPresaleMode && _selectedPresaleTier != null) {
+      final rem = _selectedPresaleTier!.remainingQuota;
+      if (rem <= 0) return 0;
+      return rem < 5 ? rem : 5;
+    }
+    return 5;
+  }
+
   int get currentUnitPrice {
     if (_isPresaleMode && _selectedPresaleTier != null) {
       return _selectedPresaleTier!.price;
@@ -98,14 +119,15 @@ class BookingCheckoutViewModel extends ChangeNotifier {
   }
 
   void decrementQuantity() {
-    if (_ticketQuantity > 1) {
+    final minQty = maxAllowedQuantity > 0 ? 1 : 0;
+    if (_ticketQuantity > minQty) {
       _ticketQuantity--;
       notifyListeners();
     }
   }
 
   void incrementQuantity() {
-    if (_ticketQuantity < 5) {
+    if (_ticketQuantity < maxAllowedQuantity) {
       _ticketQuantity++;
       notifyListeners();
     }
@@ -119,7 +141,7 @@ class BookingCheckoutViewModel extends ChangeNotifier {
   }
 
   /// Memuat daftar tier presale untuk event tertentu.
-  /// Jika berhasil dan ada tier, aktifkan presale mode.
+  /// Menentukan secara otomatis tier yang sedang aktif berurutan: Presale 1 -> Presale 2 -> Reguler.
   Future<void> loadPresaleTiers(int eventId) async {
     _isLoadingPresale = true;
     notifyListeners();
@@ -129,22 +151,51 @@ class BookingCheckoutViewModel extends ChangeNotifier {
       _presaleTiers = tiers;
       _isPresaleMode = tiers.isNotEmpty;
 
-      // Auto-select tier yang sedang aktif jika ada
-      final activeOnes =
-          tiers.where((t) => t.isCurrentActive && !t.isSoldout).toList();
-      if (activeOnes.isNotEmpty) {
-        _selectedPresaleTier = activeOnes.first;
+      if (tiers.isNotEmpty) {
+        // Cari tier aktif berurutan:
+        // 1. Yang ditandai isCurrentActive && !isSoldout && remainingQuota > 0
+        // 2. Fallback ke tier pertama berurutan yang belum sold out (remainingQuota > 0)
+        PresaleTierModel? active;
+        final activeMatches = tiers.where(
+          (t) => t.isCurrentActive && !t.isSoldout && t.remainingQuota > 0,
+        ).toList();
+
+        if (activeMatches.isNotEmpty) {
+          active = activeMatches.first;
+        } else {
+          final availableMatches = tiers.where(
+            (t) => !t.isSoldout && t.remainingQuota > 0,
+          ).toList();
+          if (availableMatches.isNotEmpty) {
+            active = availableMatches.first;
+          }
+        }
+
+        _selectedPresaleTier = active;
+
+        // Validasi dan sesuaikan jumlah tiket berdasarkan sisa kuota tier aktif
+        if (active == null) {
+          _ticketQuantity = 0;
+        } else {
+          final maxQty = active.remainingQuota < 5 ? active.remainingQuota : 5;
+          if (_ticketQuantity > maxQty) {
+            _ticketQuantity = maxQty;
+          } else if (_ticketQuantity <= 0 && maxQty > 0) {
+            _ticketQuantity = 1;
+          }
+        }
       }
     } catch (_) {
       _presaleTiers = [];
       _isPresaleMode = false;
+      _selectedPresaleTier = null;
     } finally {
       _isLoadingPresale = false;
       notifyListeners();
     }
   }
 
-  /// Memilih tier presale yang diinginkan pengguna.
+  /// Memilih tier presale yang diinginkan pengguna (opsional/internal).
   void selectPresaleTier(PresaleTierModel tier) {
     _selectedPresaleTier = tier;
     notifyListeners();
@@ -159,6 +210,13 @@ class BookingCheckoutViewModel extends ChangeNotifier {
     String? couponCode,
     dynamic userId,
   }) async {
+    if (isSoldOut || _ticketQuantity <= 0) {
+      return {
+        'error': 'Tiket sudah habis (Sold Out).',
+        'quota_exceeded': true,
+      };
+    }
+
     _isSubmitting = true;
     notifyListeners();
 

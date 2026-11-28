@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_app/core/services/user_session.dart';
 import 'package:mobile_app/core/theme/colors.dart';
 import 'package:mobile_app/core/widgets/mobile_frame.dart';
-import 'package:mobile_app/features/agenda/widgets/presale_tier_card.dart';
+import 'package:mobile_app/features/agenda/models/presale_tier_model.dart';
 import 'package:mobile_app/features/booking_payment/views/qris_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/va_payment_view.dart';
 import 'package:mobile_app/features/booking_payment/views/struk_tiket_view.dart';
@@ -320,75 +320,21 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
     );
   }
 
-  // --- Widget: Pilihan Jenis Tiket ---
+  // --- Widget: Jenis Tiket Aktif (Otomatis Berurutan) ---
   Widget _buildTicketTypeSection() {
-    // --- Presale mode: tampilkan tier presale dinamis ---
-    if (_viewModel.isPresaleMode || _viewModel.isLoadingPresale) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'PILIHAN JENIS TIKET',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.maroon.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'PRESALE',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.maroon,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Loading spinner
-            if (_viewModel.isLoadingPresale)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: CircularProgressIndicator(color: AppColors.maroon),
-                ),
-              )
-            else
-              _buildPresaleTierList(),
-          ],
-        ),
-      );
-    }
-
-    // --- Mode normal: tampilkan card tiket statis ---
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,240 +342,322 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'PILIHAN JENIS TIKET',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.8,
-                  color: AppColors.textMuted,
-                ),
+              Row(
+                children: [
+                  const Icon(Icons.confirmation_number_outlined,
+                      color: AppColors.maroon, size: 17),
+                  const SizedBox(width: 8),
+                  Text(
+                    'JENIS TIKET AKTIF',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                      color: AppColors.textMain,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                'Pilih salah satu',
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10, color: AppColors.textMuted),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _viewModel.isSoldOut
+                      ? const Color(0xFFDC2626).withValues(alpha: 0.1)
+                      : const Color(0xFF047857).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  _viewModel.isSoldOut ? 'SOLD OUT' : 'TIKET AKTIF',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: _viewModel.isSoldOut
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFF047857),
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildTicketTypeCard(
-            index: 0,
-            title: 'Tiket Presale (Early Bird)',
-            badge: 'HEMAT 28% • Kuota Terbatas',
-            badgeColor: const Color(0xFF047857),
-            badgeBgColor: const Color(0xFF10B981).withValues(alpha: 0.12),
-            price: _viewModel.formatRupiah(_viewModel.presalePrice),
-            description:
-                'Akses penuh lokakarya, booklet materi, dan free kopi seduh.',
+
+          if (_viewModel.isLoadingPresale)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: CircularProgressIndicator(color: AppColors.maroon),
+              ),
+            )
+          else if (_viewModel.isSoldOut)
+            _buildSoldOutCard()
+          else if (_viewModel.isPresaleMode &&
+              _viewModel.selectedPresaleTier != null)
+            _buildActivePresaleTierCard(_viewModel.selectedPresaleTier!)
+          else
+            _buildStandardTicketCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSoldOutCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDC2626).withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.block_rounded,
+              color: Color(0xFFDC2626),
+              size: 20,
+            ),
           ),
-          const SizedBox(height: 10),
-          _buildTicketTypeCard(
-            index: 1,
-            title: 'Tiket Reguler',
-            badge: 'TERSEDIA',
-            badgeColor: AppColors.maroon,
-            badgeBgColor: AppColors.maroon.withValues(alpha: 0.08),
-            price: _viewModel.formatRupiah(_viewModel.regulerPrice),
-            description: 'Akses lokakarya dan sertifikat kehadiran digital.',
-          ),
-          const SizedBox(height: 10),
-          _buildTicketTypeCard(
-            index: 2,
-            title: 'Tiket OTS (On The Spot)',
-            badge: 'HANYA DI VENUE',
-            badgeColor: AppColors.textMuted,
-            badgeBgColor: AppColors.border,
-            price: 'Rp 45.000',
-            description:
-                'Hanya dapat dibeli langsung di lokasi acara (tidak dapat dibeli melalui aplikasi).',
-            enabled: false,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Semua Tiket Telah Habis Terjual',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF991B1B),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Seluruh kuota tiket untuk agenda ini sudah habis (Sold Out).',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10.5,
+                    color: const Color(0xFFB91C1C),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Menampilkan list tier presale secara inline.
-  Widget _buildPresaleTierList() {
-    final tiers = _viewModel.presaleTiers;
-
-    if (tiers.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Center(
-          child: Text(
-            'Belum ada data tier presale',
-            style: GoogleFonts.plusJakartaSans(
-                fontSize: 12, color: AppColors.textMuted),
-          ),
-        ),
-      );
-    }
-
-    final allSoldOut =
-        tiers.every((t) => t.isSoldout || !t.isActive);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Banner semua sold out
-        if (allSoldOut)
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDC2626).withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: const Color(0xFFDC2626).withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: Color(0xFFDC2626), size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Semua kuota presale habis — Tiket tidak tersedia',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFDC2626),
+  Widget _buildActivePresaleTierCard(PresaleTierModel tier) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF7F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.maroon, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.maroon,
+                      shape: BoxShape.circle,
                     ),
+                    child: const Icon(Icons.check, size: 12, color: Colors.white),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tiket ${tier.tierName}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMain,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF047857).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'TIKET AKTIF',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF047857),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${tier.formattedPrice} / orang',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.maroon,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Text(
+                        'Sisa ${tier.remainingQuota} tiket',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: tier.remainingQuota <= 5
+                              ? const Color(0xFFDC2626)
+                              : AppColors.textMain,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: tier.progressPercent,
+                    minHeight: 5,
+                    backgroundColor: AppColors.border,
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.maroon),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Penetapan tiket otomatis berurutan dari Presale 1 ke Presale 2 hingga Reguler sesuai ketersediaan kuota.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 9.5,
+                    color: AppColors.textMuted,
                   ),
                 ),
               ],
             ),
           ),
-
-        // Daftar PresaleTierCard
-        ...List.generate(tiers.length, (i) {
-          final tier = tiers[i];
-          return Padding(
-            padding: EdgeInsets.only(bottom: i < tiers.length - 1 ? 10 : 0),
-            child: PresaleTierCard(
-              tier: tier,
-              isSelected: _viewModel.selectedPresaleTier?.id == tier.id,
-              onTap: (tier.isCurrentActive && !tier.isSoldout)
-                  ? () => _viewModel.selectPresaleTier(tier)
-                  : null,
-            ),
-          );
-        }),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildTicketTypeCard({
-    required int index,
-    required String title,
-    required String badge,
-    required Color badgeColor,
-    required Color badgeBgColor,
-    required String price,
-    required String description,
-    bool enabled = true,
-  }) {
-    final isSelected = _viewModel.selectedTicketType == index;
-    return Opacity(
-      opacity: enabled ? 1 : 0.55,
-      child: InkWell(
-        onTap: enabled ? () => _viewModel.selectTicketType(index) : null,
+  Widget _buildStandardTicketCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF7F5),
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.maroon.withValues(alpha: 0.03)
-                : AppColors.bgCanvas,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? AppColors.maroon : AppColors.border,
-              width: isSelected ? 1.6 : 1.0,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        border: Border.all(color: AppColors.maroon, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        isSelected
-                            ? Icons.radio_button_checked_rounded
-                            : Icons.radio_button_off_rounded,
-                        color: !enabled
-                            ? AppColors.textMuted
-                            : isSelected
-                                ? AppColors.maroon
-                                : AppColors.textMuted,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        title,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textMain,
-                        ),
-                      ),
-                    ],
-                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: badgeBgColor,
-                      borderRadius: BorderRadius.circular(6),
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.maroon,
+                      shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      badge,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: badgeColor,
-                      ),
+                    child: const Icon(Icons.check, size: 12, color: Colors.white),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tiket Reguler',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMain,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Padding(
-                padding: const EdgeInsets.only(left: 26.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      description,
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10, color: AppColors.textMuted),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$price / orang',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.maroon,
-                      ),
-                    ),
-                  ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF047857).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'TIKET AKTIF',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF047857),
+                  ),
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_viewModel.formatRupiah(_viewModel.currentUnitPrice)} / orang',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.maroon,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Akses lokakarya dan sertifikat kehadiran digital.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   // --- Widget: Jumlah Tiket ---
   Widget _buildTicketQuantitySection() {
+    final isSoldOut = _viewModel.isSoldOut;
+    final maxQty = _viewModel.maxAllowedQuantity;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -654,9 +682,14 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
               ),
               const SizedBox(height: 2),
               Text(
-                'Maksimal 5 tiket per akun',
+                isSoldOut
+                    ? 'Tiket telah habis terjual (0 tiket)'
+                    : 'Maksimal $maxQty tiket (sesuai kuota aktif)',
                 style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10, color: AppColors.textMuted),
+                  fontSize: 10,
+                  color: isSoldOut ? const Color(0xFFDC2626) : AppColors.textMuted,
+                  fontWeight: isSoldOut ? FontWeight.w600 : FontWeight.normal,
+                ),
               ),
             ],
           ),
@@ -671,7 +704,7 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                 IconButton(
                   icon: const Icon(Icons.remove,
                       size: 16, color: AppColors.maroon),
-                  onPressed: _viewModel.ticketQuantity > 1
+                  onPressed: (!isSoldOut && _viewModel.ticketQuantity > 1)
                       ? _viewModel.decrementQuantity
                       : null,
                   constraints:
@@ -686,14 +719,14 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textMain,
+                      color: isSoldOut ? AppColors.textMuted : AppColors.textMain,
                     ),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add,
                       size: 16, color: AppColors.maroon),
-                  onPressed: _viewModel.ticketQuantity < 5
+                  onPressed: (!isSoldOut && _viewModel.ticketQuantity < maxQty)
                       ? _viewModel.incrementQuantity
                       : null,
                   constraints:
@@ -1347,10 +1380,16 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
 
   // --- Widget: Tombol Submit ---
   Widget _buildSubmitButton() {
+    final isSoldOut = _viewModel.isSoldOut ||
+        (_viewModel.isPresaleMode && _viewModel.selectedPresaleTier == null);
+    final canSubmit = !isSoldOut &&
+        _viewModel.ticketQuantity > 0 &&
+        !_viewModel.isSubmitting;
+
     return SizedBox(
       height: 52,
       child: ElevatedButton(
-        onPressed: _viewModel.isSubmitting
+        onPressed: !canSubmit
             ? null
             : () async {
                 if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -1528,16 +1567,17 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
                 }
               },
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.maroon,
+          backgroundColor: isSoldOut ? Colors.grey.shade400 : AppColors.maroon,
+          disabledBackgroundColor: Colors.grey.shade300,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14)),
-          elevation: 2,
+          elevation: isSoldOut ? 0 : 2,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'KONFIRMASI BAYAR',
+              isSoldOut ? 'TIKET HABIS' : 'KONFIRMASI BAYAR',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -1546,8 +1586,11 @@ class _BookingCheckoutViewState extends State<BookingCheckoutView> {
               ),
             ),
             const SizedBox(width: 6),
-            const Icon(Icons.arrow_forward_rounded,
-                color: Colors.white, size: 18),
+            Icon(
+              isSoldOut ? Icons.block_rounded : Icons.arrow_forward_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ],
         ),
       ),
